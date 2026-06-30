@@ -194,7 +194,7 @@ export function BookingWizard({ locale }: { locale: Locale }) {
             <Card
               key={item.zone.id}
               className={cn(
-                "cursor-pointer transition-colors hover:border-primary",
+                "rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5",
                 selectedZone?.zone.id === item.zone.id && "border-primary ring-2 ring-primary/20"
               )}
               onClick={() => {
@@ -238,7 +238,7 @@ export function BookingWizard({ locale }: { locale: Locale }) {
       )}
 
       {step === "details" && selectedZone && (
-        <Card>
+        <Card className="rounded-2xl shadow-lg border-primary/10">
           <CardHeader>
             <Button variant="ghost" className="w-fit -ml-2 mb-2" onClick={() => setStep("zone")}>
               ← {tr.book.step_zone}

@@ -31,7 +31,24 @@ export interface ZoneRate {
   end_date: string;
   price_cents_per_night: number;
   min_nights: number;
+  season: "summer" | "winter";
   created_at: string;
+}
+
+export interface ServiceItem {
+  id: string;
+  name: string;
+  name_en: string | null;
+  description: string | null;
+  description_en: string | null;
+  price_cents: number | null;
+  price_label_pt: string | null;
+  price_label_en: string | null;
+  icon: string;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Pitch {

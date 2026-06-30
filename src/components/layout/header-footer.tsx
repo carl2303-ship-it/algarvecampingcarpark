@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Tent, X } from "lucide-react";
-import { useState } from "react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Mail, MapPin, Menu, Phone, Tent } from "lucide-react";
+import { useEffect, useState } from "react";
+import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { SITE_NAME } from "@/lib/constants";
+import {
+  ADDRESS,
+  CONTACT_EMAIL,
+  CONTACT_PHONE,
+  MAPS_URL,
+  SITE_NAME,
+  SITE_SHORT_NAME,
+} from "@/lib/constants";
 import type { Locale } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -14,6 +21,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", key: "home" },
   { href: "/about", key: "about" },
+  { href: "/precos", key: "prices" },
   { href: "/location", key: "location" },
   { href: "/contact", key: "contact" },
 ] as const;
@@ -22,63 +30,127 @@ export function Header({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const otherLocale = locale === "pt" ? "en" : "pt";
-  const localePath = (path: string) =>
-    locale === "pt" ? path : `/en${path === "/" ? "" : path}`;
+  const localePath = (path: string) => {
+    if (locale === "pt") return path;
+    if (path === "/precos") return "/en/prices";
+    return `/en${path === "/" ? "" : path}`;
+  };
+
+  const isHome = pathname === localePath("/");
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const headerClass = cn(
+    "sticky top-0 z-50 transition-all duration-300",
+    scrolled || !isHome
+      ? "border-b bg-background/90 backdrop-blur-lg shadow-sm"
+      : "bg-transparent border-b border-transparent"
+  );
+
+  const linkClass = (active: boolean) =>
+    cn(
+      "text-sm font-medium transition-colors",
+      isHome && !scrolled
+        ? active
+          ? "text-white"
+          : "text-white/80 hover:text-white"
+        : active
+          ? "text-primary"
+          : "text-muted-foreground hover:text-primary"
+    );
+
+  const logoTextClass = isHome && !scrolled ? "text-white" : "text-foreground";
+  const bookBtnClass =
+    isHome && !scrolled
+      ? cn(buttonVariants(), "bg-white text-primary hover:bg-white/90 shadow-md")
+      : buttonVariants();
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href={localePath("/")} className="flex items-center gap-2 font-semibold">
-          <Tent className="h-6 w-6 text-primary" />
-          <span className="hidden sm:inline text-sm md:text-base">{SITE_NAME}</span>
+    <header className={headerClass}>
+      <div className="container mx-auto flex h-[72px] items-center justify-between px-4">
+        <Link href={localePath("/")} className="flex items-center gap-3 group">
+          <div
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
+              isHome && !scrolled
+                ? "bg-white/15 text-white backdrop-blur-sm"
+                : "bg-primary text-primary-foreground"
+            )}
+          >
+            <Tent className="h-5 w-5" />
+          </div>
+          <div className="hidden sm:block">
+            <span className={cn("block font-heading font-semibold text-sm leading-tight", logoTextClass)}>
+              {SITE_SHORT_NAME}
+            </span>
+            <span
+              className={cn(
+                "block text-xs",
+                isHome && !scrolled ? "text-white/60" : "text-muted-foreground"
+              )}
+            >
+              Armação de Pêra
+            </span>
+          </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden lg:flex items-center gap-8">
           {navItems.map((item) => (
             <Link
               key={item.key}
               href={localePath(item.href)}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname === localePath(item.href) && "text-primary"
-              )}
+              className={linkClass(pathname === localePath(item.href))}
             >
               {t.nav[item.key]}
             </Link>
           ))}
           <Link
             href={locale === "pt" ? "/en" : "/"}
-            className="text-sm text-muted-foreground hover:text-primary uppercase"
+            className={linkClass(false)}
           >
-            {otherLocale}
+            {otherLocale.toUpperCase()}
           </Link>
-          <Link href={localePath("/book")} className={buttonVariants()}>
+          <Link href={localePath("/book")} className={bookBtnClass}>
             {t.nav.book}
           </Link>
         </nav>
 
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "md:hidden")}>
+          <SheetTrigger
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              "lg:hidden",
+              isHome && !scrolled && "text-white hover:bg-white/10 hover:text-white"
+            )}
+          >
             <Menu className="h-5 w-5" />
           </SheetTrigger>
-          <SheetContent side="right" className="w-72">
-            <div className="flex flex-col gap-4 mt-8">
+          <SheetContent side="right" className="w-80">
+            <div className="flex flex-col gap-1 mt-8">
+              <p className="font-heading font-semibold text-lg mb-4 px-1">{SITE_SHORT_NAME}</p>
               {navItems.map((item) => (
                 <Link
                   key={item.key}
                   href={localePath(item.href)}
                   onClick={() => setOpen(false)}
-                  className="text-lg font-medium"
+                  className="rounded-lg px-3 py-3 text-base font-medium hover:bg-muted transition-colors"
                 >
                   {t.nav[item.key]}
                 </Link>
               ))}
+              <hr className="my-4" />
               <Link
                 href={locale === "pt" ? "/en" : "/"}
                 onClick={() => setOpen(false)}
-                className="text-muted-foreground uppercase"
+                className="px-3 text-muted-foreground uppercase text-sm"
               >
                 {otherLocale}
               </Link>
@@ -99,21 +171,92 @@ export function Header({ locale }: { locale: Locale }) {
 
 export function Footer({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
-  const localePath = (path: string) =>
-    locale === "pt" ? path : `/en${path === "/" ? "" : path}`;
+  const localePath = (path: string) => {
+    if (locale === "pt") return path;
+    if (path === "/precos") return "/en/prices";
+    return `/en${path === "/" ? "" : path}`;
+  };
 
   return (
-    <footer className="border-t bg-muted/30 mt-auto">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
+    <footer className="bg-primary text-primary-foreground mt-auto">
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-3 gap-12">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+                <Tent className="h-5 w-5" />
+              </div>
+              <span className="font-heading font-semibold">{SITE_SHORT_NAME}</span>
+            </div>
+            <p className="text-primary-foreground/70 text-sm leading-relaxed max-w-xs">
+              {t.footer.tagline}
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-sm uppercase tracking-wider mb-4 text-primary-foreground/60">
+              {t.footer.navigate}
+            </h3>
+            <nav className="flex flex-col gap-2">
+              {navItems.map((item) => (
+                <Link
+                  key={item.key}
+                  href={localePath(item.href)}
+                  className="text-sm text-primary-foreground/80 hover:text-white transition-colors"
+                >
+                  {t.nav[item.key]}
+                </Link>
+              ))}
+              <Link
+                href={localePath("/book")}
+                className="text-sm text-primary-foreground/80 hover:text-white transition-colors"
+              >
+                {t.nav.book}
+              </Link>
+            </nav>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-sm uppercase tracking-wider mb-4 text-primary-foreground/60">
+              {t.footer.contact}
+            </h3>
+            <ul className="space-y-3 text-sm text-primary-foreground/80">
+              <li>
+                <a href={`mailto:${CONTACT_EMAIL}`} className="flex items-center gap-2 hover:text-white">
+                  <Mail className="h-4 w-4 shrink-0" />
+                  {CONTACT_EMAIL}
+                </a>
+              </li>
+              <li>
+                <a href={`tel:${CONTACT_PHONE}`} className="flex items-center gap-2 hover:text-white">
+                  <Phone className="h-4 w-4 shrink-0" />
+                  {CONTACT_PHONE}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 hover:text-white"
+                >
+                  <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{ADDRESS}</span>
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-12 pt-8 border-t border-white/15 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-primary-foreground/60">
+          <p>
             © {new Date().getFullYear()} {SITE_NAME}. {t.footer.rights}.
           </p>
-          <div className="flex gap-4 text-sm">
-            <Link href={localePath("/privacy")} className="text-muted-foreground hover:text-primary">
+          <div className="flex gap-6">
+            <Link href={localePath("/privacy")} className="hover:text-white transition-colors">
               {t.footer.privacy}
             </Link>
-            <Link href={localePath("/terms")} className="text-muted-foreground hover:text-primary">
+            <Link href={localePath("/terms")} className="hover:text-white transition-colors">
               {t.footer.terms}
             </Link>
           </div>
