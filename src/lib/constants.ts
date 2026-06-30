@@ -1,0 +1,11 @@
+export const SITE_NAME = "Elodie & Romy's Algarve Camping Car Park";
+export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+export const CONTACT_EMAIL = "algarvecampingcarpark@gmail.com";
+export const CONTACT_PHONE = "+351 961 376 584";
+export const TOTAL_CAPACITY = 57;
+export const CHECK_IN_TIME = "14:00";
+export const CHECK_OUT_TIME = "12:00";
+export const PENDING_PAYMENT_EXPIRY_MINUTES = 30;
+export const DEFAULT_LOCALE = "pt" as const;
+export const LOCALES = ["pt", "en"] as const;
+export type Locale = (typeof LOCALES)[number];
