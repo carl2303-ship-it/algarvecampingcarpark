@@ -4,10 +4,8 @@ import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { GalleryCarousel } from "@/components/marketing/gallery-carousel";
 import { GoogleReviewsClient } from "@/components/marketing/google-reviews-client";
-import { GoogleReviewsSection } from "@/components/marketing/google-reviews";
 import { buttonVariants } from "@/components/ui/button";
 import { getGalleryImages } from "@/lib/gallery";
-import { getGoogleReviews } from "@/lib/google-reviews";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 
@@ -15,8 +13,6 @@ export default async function AboutPageContent({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
   const prefix = locale === "en" ? "/en" : "";
   const galleryImages = await getGalleryImages();
-  const useClientReviews = Boolean(process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY);
-  const reviews = useClientReviews ? null : await getGoogleReviews(locale);
 
   return (
     <MarketingLayout locale={locale}>
@@ -59,11 +55,7 @@ export default async function AboutPageContent({ locale }: { locale: Locale }) {
         </div>
       </section>
 
-      {useClientReviews ? (
-        <GoogleReviewsClient locale={locale} />
-      ) : (
-        <GoogleReviewsSection data={reviews!} locale={locale} />
-      )}
+      <GoogleReviewsClient locale={locale} />
 
       <section className="pb-20 md:pb-28">
         <div className="container mx-auto px-4 text-center">

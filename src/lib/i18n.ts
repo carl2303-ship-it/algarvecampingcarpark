@@ -72,7 +72,7 @@ const translations = {
       reviews_count: "avaliações no Google",
       reviews_cta: "Ver no Google Maps",
       reviews_api_note:
-        "Configure GOOGLE_PLACES_API_KEY no servidor para mostrar avaliações em tempo real do Google. Até lá, visite o Google Maps para ver todos os comentários.",
+        "As avaliações do Google não estão disponíveis neste momento. No Google Cloud, use uma chave API sem restrição HTTP referer e defina GOOGLE_PLACES_API_KEY no Netlify.",
     },
     location: {
       title: "Localização",
@@ -225,7 +225,7 @@ const translations = {
       reviews_count: "Google reviews",
       reviews_cta: "View on Google Maps",
       reviews_api_note:
-        "Set GOOGLE_PLACES_API_KEY on the server to display live Google reviews. Until then, visit Google Maps to read all reviews.",
+        "Google reviews are temporarily unavailable. In Google Cloud, use an API key without HTTP referer restriction and set GOOGLE_PLACES_API_KEY in Netlify.",
     },
     location: {
       title: "Location",

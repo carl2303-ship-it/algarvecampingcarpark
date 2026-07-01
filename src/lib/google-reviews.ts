@@ -44,6 +44,10 @@ const FALLBACK: GoogleReviewsData = {
   ],
 };
 
+export function getFallbackGoogleReviews(): GoogleReviewsData {
+  return FALLBACK;
+}
+
 interface LegacyPlacesResponse {
   status: string;
   error_message?: string;

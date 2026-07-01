@@ -26,9 +26,11 @@ function StarRating({ rating }: { rating: number }) {
 export function GoogleReviewsSection({
   data,
   locale,
+  loading = false,
 }: {
   data: GoogleReviewsData;
   locale: Locale;
+  loading?: boolean;
 }) {
   const t = getTranslations(locale).about;
 
@@ -69,7 +71,7 @@ export function GoogleReviewsSection({
           </div>
         </div>
 
-        {data.source === "fallback" && (
+        {data.source === "fallback" && !loading && (
           <p className="text-xs text-muted-foreground mb-6 rounded-lg border bg-background px-4 py-3">
             {t.reviews_api_note}
           </p>
