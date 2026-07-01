@@ -17,8 +17,7 @@ export const PRICING_WINTER_IMAGE =
 export const PRICING_SERVICES_IMAGE =
   "https://algarvecampingcarpark.pt/wp-content/uploads/2020/11/WhatsApp-Image-2020-10-23-at-10.29.00-e1604514590898.jpeg";
 export const HERO_IMAGE = "/images/hero.png";
-export const EXPERIENCE_IMAGE =
-  "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?auto=format&fit=crop&w=1200&q=80";
+export const EXPERIENCE_IMAGE = "/images/our-story.png";
 export const TOTAL_CAPACITY = 57;
 export const PARK_AREA_M2 = 37000;
 export const CHECK_IN_TIME = "14:00";

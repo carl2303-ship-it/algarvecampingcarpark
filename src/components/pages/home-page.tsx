@@ -145,7 +145,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-primary/15 ring-1 ring-black/5">
               <Image
                 src={EXPERIENCE_IMAGE}
-                alt="Praia do Algarve"
+                alt="Algarve Camping Car Park — vista aérea do parque"
                 fill
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
