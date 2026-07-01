@@ -23,6 +23,13 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+function getReviewsNotice(data: GoogleReviewsData, t: ReturnType<typeof getTranslations>["about"]) {
+  if (data.source !== "fallback") return null;
+  if (data.reason === "missing-key") return t.reviews_missing_key;
+  if (data.reason?.startsWith("REQUEST_DENIED")) return t.reviews_denied;
+  return t.reviews_api_note;
+}
+
 export function GoogleReviewsSection({
   data,
   locale,
@@ -33,6 +40,7 @@ export function GoogleReviewsSection({
   loading?: boolean;
 }) {
   const t = getTranslations(locale).about;
+  const reviewsNotice = data.source === "fallback" && !loading ? getReviewsNotice(data, t) : null;
 
   return (
     <section className="py-20 md:py-28 bg-muted/30 section-pattern">
@@ -71,9 +79,9 @@ export function GoogleReviewsSection({
           </div>
         </div>
 
-        {data.source === "fallback" && !loading && (
+        {reviewsNotice && (
           <p className="text-xs text-muted-foreground mb-6 rounded-lg border bg-background px-4 py-3">
-            {t.reviews_api_note}
+            {reviewsNotice}
           </p>
         )}
 

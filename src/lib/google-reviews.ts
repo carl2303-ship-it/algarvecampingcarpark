@@ -16,6 +16,7 @@ export interface GoogleReviewsData {
   reviews: GoogleReview[];
   source: "google" | "fallback";
   mapsUrl: string;
+  reason?: string;
 }
 
 const FALLBACK: GoogleReviewsData = {
