@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Algarve Camping Car Park">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a5c45"/>
+      <stop offset="100%" stop-color="#0f3d2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <path fill="#f4e4c1" d="M256 120c-72 0-130 58-130 130 0 48 26 90 65 112v50h130v-50c39-22 65-64 65-112 0-72-58-130-130-130z"/>
+  <path fill="#1a5c45" d="M196 302h120v40H196z"/>
+  <circle cx="200" cy="250" r="18" fill="#87ceeb"/>
+  <circle cx="312" cy="250" r="18" fill="#87ceeb"/>
+  <path fill="#2d8a5e" d="M120 380c40-30 88-46 136-46s96 16 136 46H120z"/>
+</svg>

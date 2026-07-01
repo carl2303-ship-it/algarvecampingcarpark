@@ -134,6 +134,17 @@ const translations = {
       navigate: "Navegar",
       contact: "Contacto",
     },
+    install: {
+      title: "Instale a app no seu telemóvel",
+      android_desc: "Acesso rápido às reservas, preçário e contactos — como uma app nativa.",
+      android_manual: "No Chrome: menu ⋮ → «Instalar aplicação» ou «Adicionar ao ecrã principal».",
+      ios_desc: "Adicione ao ecrã principal para aceder rapidamente, sem abrir o browser.",
+      ios_step1: "Toque em Partilhar no Safari",
+      ios_step2: "Escolha «Adicionar ao ecrã principal»",
+      install_btn: "Instalar app",
+      later: "Agora não",
+      dismiss: "Fechar",
+    },
   },
   en: {
     nav: {
@@ -267,6 +278,17 @@ const translations = {
       tagline: "Motorhome service area in the heart of the Algarve.",
       navigate: "Navigate",
       contact: "Contact",
+    },
+    install: {
+      title: "Install the app on your phone",
+      android_desc: "Quick access to bookings, prices and contacts — just like a native app.",
+      android_manual: 'In Chrome: menu ⋮ → "Install app" or "Add to Home screen".',
+      ios_desc: "Add to your home screen for fast access without opening the browser.",
+      ios_step1: "Tap Share in Safari",
+      ios_step2: 'Choose "Add to Home Screen"',
+      install_btn: "Install app",
+      later: "Not now",
+      dismiss: "Close",
     },
   },
 } as const;

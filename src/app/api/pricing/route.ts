@@ -5,7 +5,7 @@ export const revalidate = 60;
 
 export async function GET() {
   try {
-    const catalog = await getPricingCatalog();
+    const catalog = await getPricingCatalog({ required: true });
     return NextResponse.json(catalog);
   } catch (error) {
     console.error("Pricing catalog error:", error);

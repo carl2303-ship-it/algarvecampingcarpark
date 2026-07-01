@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createPublicServerClient, getPublicSupabaseConfig } from "@/lib/supabase/public-server";
 import type { Zone, ZoneRate } from "@/types/database";
 
 import type { ServiceItem } from "@/types/database";
@@ -11,8 +11,23 @@ export interface PricingCatalog {
   services: ServiceItem[];
 }
 
-export async function getPricingCatalog(): Promise<PricingCatalog> {
-  const supabase = createAdminClient();
+export const EMPTY_PRICING_CATALOG: PricingCatalog = {
+  zones: [],
+  rates: [],
+  services: [],
+};
+
+export async function getPricingCatalog(options?: {
+  required?: boolean;
+}): Promise<PricingCatalog> {
+  const required = options?.required ?? false;
+
+  if (!getPublicSupabaseConfig()) {
+    if (required) throw new Error("Supabase public credentials are not configured");
+    return EMPTY_PRICING_CATALOG;
+  }
+
+  const supabase = createPublicServerClient();
 
   const [zonesRes, ratesRes, servicesRes] = await Promise.all([
     supabase.from("zones").select("*").eq("active", true).order("sort_order"),
@@ -20,9 +35,12 @@ export async function getPricingCatalog(): Promise<PricingCatalog> {
     supabase.from("service_items").select("*").eq("active", true).order("sort_order"),
   ]);
 
-  if (zonesRes.error) throw zonesRes.error;
-  if (ratesRes.error) throw ratesRes.error;
-  if (servicesRes.error) throw servicesRes.error;
+  if (zonesRes.error || ratesRes.error || servicesRes.error) {
+    const error = zonesRes.error ?? ratesRes.error ?? servicesRes.error;
+    if (required) throw error;
+    console.warn("Pricing catalog fallback:", error?.message);
+    return EMPTY_PRICING_CATALOG;
+  }
 
   return {
     zones: (zonesRes.data ?? []).map((z) => ({

@@ -25,6 +25,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "https://algarvecampingcarpark.pt"
   ),
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Algarve Camping",
+  },
+  applicationName: "Algarve Camping Car Park",
+  formatDetection: {
+    telephone: true,
+  },
 };
 
 export default function RootLayout({
