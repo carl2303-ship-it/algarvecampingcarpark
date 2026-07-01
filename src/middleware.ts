@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+const PUBLIC_ADMIN_PATHS = new Set([
+  "/admin/login",
+  "/admin/forgot-password",
+  "/admin/reset-password",
+]);
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -30,13 +36,15 @@ export async function middleware(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const isLoginPage = request.nextUrl.pathname === "/admin/login";
+    const pathname = request.nextUrl.pathname;
+    const isPublicAdminPage = PUBLIC_ADMIN_PATHS.has(pathname);
+    const isLoginPage = pathname === "/admin/login";
 
-    if (!user && !isLoginPage) {
+    if (!user && !isPublicAdminPage) {
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
-    if (user && user.app_metadata?.role !== "admin" && !isLoginPage) {
+    if (user && user.app_metadata?.role !== "admin" && !isPublicAdminPage) {
       return NextResponse.redirect(new URL("/admin/login?error=unauthorized", request.url));
     }
 

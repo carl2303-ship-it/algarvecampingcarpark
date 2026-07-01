@@ -44,6 +44,31 @@ WHERE email = '${CONTACT_EMAIL}';`}
 
       <Card>
         <CardHeader>
+          <CardTitle>Login admin em produção (Netlify/Vercel)</CardTitle>
+          <CardDescription>
+            Se o login funciona em local mas não no site publicado, verifique:
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            <strong className="text-foreground">1. Variáveis no hosting</strong> —{" "}
+            NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY
+            (depois redeploy).
+          </p>
+          <p>
+            <strong className="text-foreground">2. Supabase → Authentication → URL Configuration</strong>
+            {" "}— Site URL = URL do site publicado; Redirect URLs inclui o domínio
+            (ex. https://teu-site.netlify.app/**).
+          </p>
+          <p>
+            <strong className="text-foreground">3. Role admin</strong> — o utilizador precisa de{" "}
+            <code className="text-xs bg-muted px-1 rounded">app_metadata.role = admin</code>.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Variáveis de ambiente</CardTitle>
         </CardHeader>
         <CardContent>

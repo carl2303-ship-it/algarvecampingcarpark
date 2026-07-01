@@ -1,47 +1,75 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/client";
+import { PasswordInput } from "@/components/admin/password-input";
 
-export function AdminLoginForm() {
+export function AdminLoginForm({
+  initialError,
+  resetSuccess,
+}: {
+  initialError?: string | null;
+  resetSuccess?: boolean;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const supabase = createClient();
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialError === "unauthorized") {
+      setError("Acesso não autorizado. A conta precisa da role admin no Supabase.");
+    }
+    if (initialError === "auth") {
+      setError("Link de autenticação inválido ou expirado. Tente novamente.");
+    }
+  }, [initialError]);
+
+  useEffect(() => {
+    if (resetSuccess) {
+      setSuccess("Password atualizada com sucesso. Já pode entrar.");
+    }
+  }, [resetSuccess]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(null);
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "same-origin",
+      });
 
-    if (authError || !data.user) {
-      setError("Credenciais inválidas");
+      const data = (await res.json()) as { error?: string; message?: string };
+
+      if (!res.ok) {
+        if (data.error === "config") {
+          setError(
+            "O site em produção não está ligado ao Supabase. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no Netlify e faça redeploy."
+          );
+        } else {
+          setError(data.message ?? "Não foi possível entrar.");
+        }
+        setLoading(false);
+        return;
+      }
+
+      window.location.assign("/admin");
+    } catch {
+      setError("Erro de ligação. Tente novamente.");
       setLoading(false);
-      return;
     }
-
-    if (data.user.app_metadata?.role !== "admin") {
-      await supabase.auth.signOut();
-      setError("Acesso não autorizado");
-      setLoading(false);
-      return;
-    }
-
-    router.push("/admin");
-    router.refresh();
   }
 
   return (
@@ -52,8 +80,13 @@ export function AdminLoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {success && (
+            <div className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 p-3 rounded-lg">
+              {success}
+            </div>
+          )}
           {error && (
-            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
+            <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg leading-relaxed">
               {error}
             </div>
           )}
@@ -64,16 +97,25 @@ export function AdminLoginForm() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link
+                href="/admin/forgot-password"
+                className="text-xs text-primary hover:underline"
+              >
+                Esqueci a password
+              </Link>
+            </div>
+            <PasswordInput
               id="password"
-              type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
+              autoComplete="current-password"
               required
             />
           </div>
