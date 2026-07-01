@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Calendar, LayoutDashboard, LogOut, Map, Settings, Tent } from "lucide-react";
+import { Calendar, Images, LayoutDashboard, LogOut, Map, Settings, Tent } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SiteLogo } from "@/components/brand/site-logo";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ const nav = [
   { href: "/admin/reservations", label: "Reservas", icon: Tent },
   { href: "/admin/calendar", label: "Calendário", icon: Calendar },
   { href: "/admin/zones", label: "Zonas & Tarifas", icon: Map },
+  { href: "/admin/gallery", label: "Galeria", icon: Images },
   { href: "/admin/settings", label: "Definições", icon: Settings },
 ];
 
@@ -28,7 +30,10 @@ export function AdminSidebar() {
 
   return (
     <aside className="w-64 border-r bg-muted/30 min-h-screen p-4 flex flex-col">
-      <div className="font-semibold text-lg mb-8 px-2">Admin ACCP</div>
+      <Link href="/admin" className="flex items-center gap-3 mb-8 px-2">
+        <SiteLogo size="sm" />
+        <span className="font-semibold text-sm leading-tight">Admin</span>
+      </Link>
       <nav className="space-y-1 flex-1">
         {nav.map((item) => (
           <Link

@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordInput } from "@/components/admin/password-input";
+import { SiteLogo } from "@/components/brand/site-logo";
 
 export function AdminResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -54,7 +55,8 @@ export function AdminResetPasswordForm() {
 
   return (
     <Card className="w-full max-w-md">
-      <CardHeader>
+      <CardHeader className="items-center text-center">
+        <SiteLogo size="xl" className="mb-2" />
         <CardTitle>Nova password</CardTitle>
         <CardDescription>Defina uma nova password para a conta admin.</CardDescription>
       </CardHeader>

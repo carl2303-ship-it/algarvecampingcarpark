@@ -51,6 +51,17 @@ export interface ServiceItem {
   updated_at: string;
 }
 
+export interface GalleryImageRecord {
+  id: string;
+  src: string;
+  title_pt: string;
+  title_en: string | null;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Pitch {
   id: string;
   zone_id: string;

@@ -58,10 +58,10 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
       <section className="relative min-h-[100svh] flex items-center overflow-hidden -mt-[72px] pt-[72px]">
         <Image
           src={HERO_IMAGE}
-          alt="Costa do Algarve"
+          alt="Algarve Camping Car Park — vista aérea do parque"
           fill
           priority
-          className="object-cover object-center scale-105"
+          className="object-cover object-center"
           sizes="100vw"
         />
         <div className="absolute inset-0 hero-gradient" />

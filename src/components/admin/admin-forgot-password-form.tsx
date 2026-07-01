@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SiteLogo } from "@/components/brand/site-logo";
 
 export function AdminForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -44,7 +45,8 @@ export function AdminForgotPasswordForm() {
 
   return (
     <Card className="w-full max-w-md">
-      <CardHeader>
+      <CardHeader className="items-center text-center">
+        <SiteLogo size="xl" className="mb-2" />
         <CardTitle>Recuperar password</CardTitle>
         <CardDescription>
           Enviaremos um link para redefinir a password da conta admin.

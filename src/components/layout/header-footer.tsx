@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, MapPin, Menu, Phone, Tent } from "lucide-react";
+import { Mail, MapPin, Menu, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { SiteLogo } from "@/components/brand/site-logo";
 import {
   ADDRESS,
   CONTACT_EMAIL,
   CONTACT_PHONE,
   MAPS_URL,
   SITE_NAME,
-  SITE_SHORT_NAME,
 } from "@/lib/constants";
 import type { Locale } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
@@ -67,7 +67,7 @@ export function Header({ locale }: { locale: Locale }) {
           : "text-muted-foreground hover:text-primary"
     );
 
-  const logoTextClass = isHome && !scrolled ? "text-white" : "text-foreground";
+
   const bookBtnClass =
     isHome && !scrolled
       ? cn(buttonVariants(), "bg-white text-primary hover:bg-white/90 shadow-md")
@@ -76,30 +76,16 @@ export function Header({ locale }: { locale: Locale }) {
   return (
     <header className={headerClass}>
       <div className="container mx-auto flex h-[72px] items-center justify-between px-4">
-        <Link href={localePath("/")} className="flex items-center gap-3 group">
-          <div
+        <Link href={localePath("/")} className="flex items-center gap-3 group shrink-0">
+          <SiteLogo size="lg" priority className="drop-shadow-sm" />
+          <span
             className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
-              isHome && !scrolled
-                ? "bg-white/15 text-white backdrop-blur-sm"
-                : "bg-primary text-primary-foreground"
+              "hidden md:block text-xs max-w-[9rem] leading-snug",
+              isHome && !scrolled ? "text-white/70" : "text-muted-foreground"
             )}
           >
-            <Tent className="h-5 w-5" />
-          </div>
-          <div className="hidden sm:block">
-            <span className={cn("block font-heading font-semibold text-sm leading-tight", logoTextClass)}>
-              {SITE_SHORT_NAME}
-            </span>
-            <span
-              className={cn(
-                "block text-xs",
-                isHome && !scrolled ? "text-white/60" : "text-muted-foreground"
-              )}
-            >
-              Armação de Pêra
-            </span>
-          </div>
+            Armação de Pêra
+          </span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-8">
@@ -135,7 +121,10 @@ export function Header({ locale }: { locale: Locale }) {
           </SheetTrigger>
           <SheetContent side="right" className="w-80">
             <div className="flex flex-col gap-1 mt-8">
-              <p className="font-heading font-semibold text-lg mb-4 px-1">{SITE_SHORT_NAME}</p>
+              <div className="flex items-center gap-3 mb-4 px-1">
+                <SiteLogo size="md" />
+                <span className="text-xs text-muted-foreground">Armação de Pêra</span>
+              </div>
               {navItems.map((item) => (
                 <Link
                   key={item.key}
@@ -183,10 +172,7 @@ export function Footer({ locale }: { locale: Locale }) {
         <div className="grid md:grid-cols-3 gap-12">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-                <Tent className="h-5 w-5" />
-              </div>
-              <span className="font-heading font-semibold">{SITE_SHORT_NAME}</span>
+              <SiteLogo size="lg" />
             </div>
             <p className="text-primary-foreground/70 text-sm leading-relaxed max-w-xs">
               {t.footer.tagline}

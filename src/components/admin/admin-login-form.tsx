@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordInput } from "@/components/admin/password-input";
+import { SiteLogo } from "@/components/brand/site-logo";
 
 export function AdminLoginForm({
   initialError,
@@ -74,7 +75,8 @@ export function AdminLoginForm({
 
   return (
     <Card className="w-full max-w-md">
-      <CardHeader>
+      <CardHeader className="items-center text-center">
+        <SiteLogo size="xl" className="mb-2" />
         <CardTitle>Administração</CardTitle>
         <CardDescription>Algarve Camping Car Park</CardDescription>
       </CardHeader>

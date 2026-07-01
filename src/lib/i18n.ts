@@ -42,7 +42,7 @@ const translations = {
       experience_eyebrow: "A nossa história",
       experience_title: "Aberto desde março de 2020",
       experience_text:
-        "Criado pela Elodie e pelo Romy, o Algarve Camping Car Park nasceu da vontade de oferecer uma área de serviço acolhedora e diferente — em plena natureza, mas perto do comércio e das praias.",
+        "Criado e gerido pela Elodie e a Romy, o Algarve Camping Car Park nasceu da vontade de oferecer uma área de serviço acolhedora e diferente — em plena natureza, mas perto do comércio e das praias.",
       experience_cta: "Conhecer o parque",
       location_eyebrow: "Onde estamos",
       location_title: "Sítio da Torre, Quintão",
@@ -65,6 +65,14 @@ const translations = {
         "Vista mar em zonas premium",
         "Acesso fácil e estacionamento amplo",
       ],
+      gallery_title: "Galeria",
+      gallery_subtitle: "Conheça o parque, as zonas e a paisagem envolvente.",
+      reviews_title: "Avaliações dos visitantes",
+      reviews_subtitle: "Opiniões reais de quem já passou pelo parque.",
+      reviews_count: "avaliações no Google",
+      reviews_cta: "Ver no Google Maps",
+      reviews_api_note:
+        "Configure GOOGLE_PLACES_API_KEY no servidor para mostrar avaliações em tempo real do Google. Até lá, visite o Google Maps para ver todos os comentários.",
     },
     location: {
       title: "Localização",
@@ -119,7 +127,7 @@ const translations = {
       guest_name: "Nome completo",
       guest_email: "Email",
       guest_phone: "Telefone",
-      vehicle_plate: "Matrícula (opcional)",
+      vehicle_plate: "Matrícula",
       num_guests: "Número de pessoas",
       notes: "Notas (opcional)",
       success_title: "Reserva confirmada!",
@@ -210,6 +218,14 @@ const translations = {
         "Sea view in premium zones",
         "Easy access and ample parking",
       ],
+      gallery_title: "Gallery",
+      gallery_subtitle: "Explore the park, its zones and the surrounding landscape.",
+      reviews_title: "Guest reviews",
+      reviews_subtitle: "Real feedback from visitors who stayed at the park.",
+      reviews_count: "Google reviews",
+      reviews_cta: "View on Google Maps",
+      reviews_api_note:
+        "Set GOOGLE_PLACES_API_KEY on the server to display live Google reviews. Until then, visit Google Maps to read all reviews.",
     },
     location: {
       title: "Location",

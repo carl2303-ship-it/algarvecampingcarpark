@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, Share, Smartphone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SiteLogo } from "@/components/brand/site-logo";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 import {
@@ -86,8 +87,8 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
     >
       <div className="mx-auto max-w-lg rounded-2xl border bg-card/95 p-4 shadow-2xl shadow-primary/10 ring-1 ring-black/5 backdrop-blur-md">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xl">
-            {isIos ? "📱" : "📲"}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 p-1">
+            <SiteLogo size="xs" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">

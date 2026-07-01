@@ -31,6 +31,15 @@ export const metadata: Metadata = {
     title: "Algarve Camping",
   },
   applicationName: "Algarve Camping Car Park",
+  themeColor: "#0e7a8c",
+  icons: {
+    icon: [
+      { url: "/icons/app-icon.png", type: "image/png" },
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: "/icons/app-icon.png",
+    shortcut: "/favicon.png",
+  },
   formatDetection: {
     telephone: true,
   },
