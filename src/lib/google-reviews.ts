@@ -93,11 +93,19 @@ function mapLegacyResponse(data: LegacyPlacesResponse): GoogleReviewsData | null
   };
 }
 
+export function getGooglePlacesApiKey(): string | undefined {
+  return (
+    process.env.GOOGLE_PLACES_API_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY?.trim() ||
+    undefined
+  );
+}
+
 export async function fetchGoogleReviews(
   locale: Locale,
   apiKey: string,
   placeId: string = process.env.GOOGLE_PLACE_ID ?? GOOGLE_PLACE_ID
-): Promise<GoogleReviewsData> {
+): Promise<{ data: GoogleReviewsData; googleStatus?: string; googleError?: string }> {
   const language = locale === "en" ? "en" : "pt";
   const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
   url.searchParams.set("place_id", placeId);
@@ -110,27 +118,32 @@ export async function fetchGoogleReviews(
     const res = await fetch(url.toString());
     if (!res.ok) {
       console.warn("Google Places API HTTP error:", res.status);
-      return FALLBACK;
+      return { data: FALLBACK, googleStatus: "HTTP_ERROR", googleError: String(res.status) };
     }
 
     const data = (await res.json()) as LegacyPlacesResponse;
     if (data.status !== "OK") {
       console.warn("Google Places API error:", data.status, data.error_message);
-      return FALLBACK;
+      return {
+        data: FALLBACK,
+        googleStatus: data.status,
+        googleError: data.error_message,
+      };
     }
 
-    return mapLegacyResponse(data) ?? FALLBACK;
+    return { data: mapLegacyResponse(data) ?? FALLBACK };
   } catch (error) {
     console.warn("Google reviews fetch failed:", error);
-    return FALLBACK;
+    return { data: FALLBACK, googleStatus: "FETCH_ERROR", googleError: String(error) };
   }
 }
 
 export async function getGoogleReviews(locale: Locale = "pt"): Promise<GoogleReviewsData> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  const apiKey = getGooglePlacesApiKey();
   if (!apiKey) {
     return FALLBACK;
   }
 
-  return fetchGoogleReviews(locale, apiKey);
+  const { data } = await fetchGoogleReviews(locale, apiKey);
+  return data;
 }
