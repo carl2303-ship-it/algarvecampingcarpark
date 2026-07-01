@@ -1,4 +1,5 @@
 import { MAPS_EMBED, MAPS_URL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { ExternalLink, MapPin } from "lucide-react";
 import Link from "next/link";
 
@@ -6,14 +7,21 @@ export function MapEmbed({
   title,
   openLabel,
   className,
+  aspectClassName = "aspect-[16/10] md:aspect-[21/9]",
 }: {
   title: string;
   openLabel: string;
   className?: string;
+  aspectClassName?: string;
 }) {
   return (
     <div className={className}>
-      <div className="relative aspect-[16/10] md:aspect-[21/9] rounded-2xl overflow-hidden border shadow-xl shadow-primary/10 ring-1 ring-black/5">
+      <div
+        className={cn(
+          "relative rounded-2xl overflow-hidden border shadow-xl shadow-primary/10 ring-1 ring-black/5",
+          aspectClassName
+        )}
+      >
         <iframe
           title={title}
           src={MAPS_EMBED}

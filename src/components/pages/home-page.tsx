@@ -209,7 +209,11 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </div>
-            <MapEmbed title="Mapa" openLabel={t.location.open_maps} />
+            <MapEmbed
+              title="Mapa"
+              openLabel={t.location.open_maps}
+              aspectClassName="aspect-square"
+            />
           </div>
         </div>
       </section>
