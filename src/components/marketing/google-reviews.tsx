@@ -106,8 +106,13 @@ export function GoogleReviewsSection({
                 </div>
               </div>
               <StarRating rating={review.rating} />
-              <p className="text-sm text-muted-foreground leading-relaxed mt-3 flex-1 line-clamp-6">
-                {review.text}
+              <p
+                className={cn(
+                  "text-sm leading-relaxed mt-3 flex-1 line-clamp-6",
+                  review.text ? "text-muted-foreground" : "text-muted-foreground/70 italic"
+                )}
+              >
+                {review.text || t.reviews_no_text}
               </p>
             </article>
           ))}

@@ -71,6 +71,7 @@ const translations = {
       reviews_subtitle: "Opiniões reais de quem já passou pelo parque.",
       reviews_count: "avaliações no Google",
       reviews_cta: "Ver no Google Maps",
+      reviews_no_text: "Avaliação com estrelas, sem comentário escrito.",
       reviews_api_note:
         "As avaliações do Google não estão disponíveis neste momento. No Google Cloud, use uma chave API sem restrição HTTP referer e defina GOOGLE_PLACES_API_KEY no Netlify.",
     },
@@ -224,6 +225,7 @@ const translations = {
       reviews_subtitle: "Real feedback from visitors who stayed at the park.",
       reviews_count: "Google reviews",
       reviews_cta: "View on Google Maps",
+      reviews_no_text: "Star rating without a written comment.",
       reviews_api_note:
         "Google reviews are temporarily unavailable. In Google Cloud, use an API key without HTTP referer restriction and set GOOGLE_PLACES_API_KEY in Netlify.",
     },

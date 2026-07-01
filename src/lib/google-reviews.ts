@@ -7,6 +7,7 @@ export interface GoogleReview {
   text: string;
   relativeTime: string;
   photoUrl?: string;
+  time?: number;
 }
 
 export interface GoogleReviewsData {
@@ -60,6 +61,7 @@ interface LegacyPlacesResponse {
       relative_time_description?: string;
       text?: string;
       profile_photo_url?: string;
+      time?: number;
     }>;
   };
 }
@@ -70,14 +72,15 @@ function mapLegacyResponse(data: LegacyPlacesResponse): GoogleReviewsData | null
   }
 
   const reviews: GoogleReview[] = data.result.reviews
-    .filter((r) => r.text)
     .map((r) => ({
       author: r.author_name ?? "Google User",
       rating: r.rating ?? 5,
-      text: r.text!,
+      text: r.text?.trim() ?? "",
       relativeTime: r.relative_time_description ?? "",
       photoUrl: r.profile_photo_url,
-    }));
+      time: r.time,
+    }))
+    .sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
 
   if (reviews.length === 0) return null;
 
@@ -101,6 +104,7 @@ export async function fetchGoogleReviews(
   url.searchParams.set("fields", "reviews,rating,user_ratings_total");
   url.searchParams.set("key", apiKey);
   url.searchParams.set("language", language);
+  url.searchParams.set("reviews_sort", "newest");
 
   try {
     const res = await fetch(url.toString());
