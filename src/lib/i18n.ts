@@ -75,7 +75,7 @@ const translations = {
       reviews_api_note:
         "As avaliações do Google não estão disponíveis neste momento. No Google Cloud, use uma chave API sem restrição HTTP referer e defina GOOGLE_PLACES_API_KEY no Netlify.",
       reviews_missing_key:
-        "Chave API não encontrada no servidor. No Netlify, adicione GOOGLE_PLACES_API_KEY (ou NEXT_PUBLIC_GOOGLE_PLACES_API_KEY) e faça um novo deploy.",
+        "Chave API não encontrada no servidor. No Netlify, adicione GOOGLE_PLACES_API_KEY (sem NEXT_PUBLIC_) e faça um novo deploy.",
       reviews_denied:
         "A chave API foi rejeitada pelo Google. No Google Cloud Console, remova a restrição HTTP referer (use «None») e mantenha apenas a Places API ativa.",
     },
@@ -233,7 +233,7 @@ const translations = {
       reviews_api_note:
         "Google reviews are temporarily unavailable. In Google Cloud, use an API key without HTTP referer restriction and set GOOGLE_PLACES_API_KEY in Netlify.",
       reviews_missing_key:
-        "API key not found on the server. Add GOOGLE_PLACES_API_KEY (or NEXT_PUBLIC_GOOGLE_PLACES_API_KEY) in Netlify and redeploy.",
+        "API key not found on the server. Add GOOGLE_PLACES_API_KEY (not NEXT_PUBLIC_) in Netlify and redeploy.",
       reviews_denied:
         "The API key was rejected by Google. In Google Cloud Console, remove the HTTP referer restriction (use «None») and keep only Places API enabled.",
     },

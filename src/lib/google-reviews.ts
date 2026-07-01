@@ -95,11 +95,7 @@ function mapLegacyResponse(data: LegacyPlacesResponse): GoogleReviewsData | null
 }
 
 export function getGooglePlacesApiKey(): string | undefined {
-  return (
-    process.env.GOOGLE_PLACES_API_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY?.trim() ||
-    undefined
-  );
+  return process.env.GOOGLE_PLACES_API_KEY?.trim() || undefined;
 }
 
 export async function fetchGoogleReviews(
