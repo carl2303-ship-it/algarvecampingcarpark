@@ -31,7 +31,8 @@ export interface ZoneRate {
   end_date: string;
   price_cents_per_night: number;
   min_nights: number;
-  season: "summer" | "winter";
+  season: "august" | "summer" | "low" | "winter";
+  price_cents_3_4_guests: number;
   created_at: string;
 }
 

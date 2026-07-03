@@ -55,21 +55,22 @@ export async function getPricingCatalog(options?: {
 export function groupRatesBySeason(
   zones: Zone[],
   rates: ZoneRate[]
-): { summer: SeasonRates; winter: SeasonRates } {
+): { august: SeasonRates; summer: SeasonRates; low: SeasonRates } {
+  const august: SeasonRates = [];
   const summer: SeasonRates = [];
-  const winter: SeasonRates = [];
+  const low: SeasonRates = [];
 
   for (const zone of zones) {
     const zoneRates = rates.filter((r) => r.zone_id === zone.id);
     for (const rate of zoneRates) {
       const entry: ZoneRateEntry = { zone, rate };
-      const season = rate.season;
-      if (season === "summer") summer.push(entry);
-      else winter.push(entry);
+      if (rate.season === "august") august.push(entry);
+      else if (rate.season === "summer") summer.push(entry);
+      else low.push(entry);
     }
   }
 
-  return { summer, winter };
+  return { august, summer, low };
 }
 
 export interface ZoneRateEntry {

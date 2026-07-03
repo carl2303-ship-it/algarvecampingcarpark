@@ -8,7 +8,8 @@ const updateSchema = z.object({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   price_cents_per_night: z.number().int().min(0).optional(),
   min_nights: z.number().int().min(1).optional(),
-  season: z.enum(["summer", "winter"]).optional(),
+  price_cents_3_4_guests: z.number().int().min(0).optional(),
+  season: z.enum(["august", "summer", "low", "winter"]).optional(),
 });
 
 export async function PATCH(

@@ -5,6 +5,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const checkIn = searchParams.get("check_in");
   const checkOut = searchParams.get("check_out");
+  const numGuests = Math.min(10, Math.max(1, parseInt(searchParams.get("num_guests") ?? "2", 10) || 2));
 
   if (!checkIn || !checkOut) {
     return NextResponse.json(
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const availability = await getZoneAvailability(checkIn, checkOut);
+    const availability = await getZoneAvailability(checkIn, checkOut, numGuests);
     return NextResponse.json({ availability });
   } catch (error) {
     console.error("Availability error:", error);

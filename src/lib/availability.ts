@@ -31,7 +31,8 @@ export async function getZoneRates(zoneId: string): Promise<ZoneRate[]> {
 
 export async function getZoneAvailability(
   checkIn: string,
-  checkOut: string
+  checkOut: string,
+  numGuests = 2
 ): Promise<ZoneAvailability[]> {
   const supabase = createAdminClient();
 
@@ -56,7 +57,7 @@ export async function getZoneAvailability(
     const rates = await getZoneRates(zone.id);
 
     try {
-      const pricing = calculateTotalPrice(rates, checkIn, checkOut);
+      const pricing = calculateTotalPrice(rates, checkIn, checkOut, numGuests);
       if (pricing.nights < pricing.minNights) continue;
 
       results.push({
@@ -78,7 +79,8 @@ export async function getZoneAvailability(
 export async function validateBookingAvailability(
   zoneId: string,
   checkIn: string,
-  checkOut: string
+  checkOut: string,
+  numGuests = 2
 ): Promise<{ available: boolean; pricing: ReturnType<typeof calculateTotalPrice> }> {
   const supabase = createAdminClient();
 
@@ -95,7 +97,7 @@ export async function validateBookingAvailability(
   }
 
   const rates = await getZoneRates(zoneId);
-  const pricing = calculateTotalPrice(rates, checkIn, checkOut);
+  const pricing = calculateTotalPrice(rates, checkIn, checkOut, numGuests);
 
   if (pricing.nights < pricing.minNights) {
     return { available: false, pricing };

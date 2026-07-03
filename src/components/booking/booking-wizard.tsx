@@ -48,7 +48,7 @@ export function BookingWizard({ locale }: { locale: Locale }) {
     setError(null);
     try {
       const res = await fetch(
-        `/api/availability?check_in=${checkInStr}&check_out=${checkOutStr}`
+        `/api/availability?check_in=${checkInStr}&check_out=${checkOutStr}&num_guests=${numGuests}`
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erro");
@@ -173,6 +173,18 @@ export function BookingWizard({ locale }: { locale: Locale }) {
                 {format(checkOut, "dd MMM yyyy", { locale: dateLocale })}
               </p>
             )}
+            <div>
+              <Label htmlFor="guests-dates">{tr.book.num_guests}</Label>
+              <Input
+                id="guests-dates"
+                type="number"
+                min={1}
+                max={10}
+                value={numGuests}
+                onChange={(e) => setNumGuests(parseInt(e.target.value, 10) || 1)}
+                className="mt-2 max-w-[120px]"
+              />
+            </div>
             <Button
               onClick={searchAvailability}
               disabled={!checkIn || !checkOut || loading}

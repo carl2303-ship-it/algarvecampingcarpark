@@ -9,7 +9,8 @@ const rateSchema = z.object({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   price_cents_per_night: z.number().int().min(0),
   min_nights: z.number().int().min(1).default(1),
-  season: z.enum(["summer", "winter"]),
+  season: z.enum(["august", "summer", "low", "winter"]),
+  price_cents_3_4_guests: z.number().int().min(0),
 });
 
 export async function GET() {

@@ -25,7 +25,8 @@ export async function POST(request: Request) {
     const { available, pricing } = await validateBookingAvailability(
       data.zone_id,
       data.check_in,
-      data.check_out
+      data.check_out,
+      data.num_guests
     );
 
     if (!available) {

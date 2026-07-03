@@ -16,6 +16,8 @@ import { CTABanner, SectionHeading } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import {
   EXPERIENCE_IMAGE,
+  GPS_DECIMAL,
+  GPS_DMS,
   HERO_IMAGE,
   PARK_AREA_M2,
   TOTAL_CAPACITY,
@@ -204,6 +206,12 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
                   </li>
                 ))}
               </ul>
+              <div className="mb-8 space-y-1 text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">GPS:</span> {GPS_DECIMAL}
+                </p>
+                <p>{GPS_DMS}</p>
+              </div>
               <Link href={`${prefix}/location`} className={buttonVariants()}>
                 {t.home.location_cta}
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -213,6 +221,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
               title="Mapa"
               openLabel={t.location.open_maps}
               aspectClassName="aspect-square"
+              className="w-full max-w-[500px] mx-auto lg:mx-0 lg:ml-auto"
             />
           </div>
         </div>

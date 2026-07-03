@@ -5,6 +5,8 @@ export const CONTACT_EMAIL = "algarvecampingcarpark@gmail.com";
 export const CONTACT_PHONE = "+351 961 376 584";
 export const CONTACT_PHONE_RAW = "+351961376584";
 export const ADDRESS = "Sítio da Torre, Quintão, 8365-184 Armação de Pêra, Portugal";
+export const GPS_DECIMAL = "N 37.11303, W 8.37508";
+export const GPS_DMS = `N 37º06'47" W 8º,22'30"`;
 export const MAPS_URL = "https://maps.app.goo.gl/h1kn8V2EnjmwkY58A";
 export const GOOGLE_PLACE_ID = "ChIJQ6GsxRXRGg0RKpiETIlzp9I";
 export const GOOGLE_REVIEWS_URL = `https://www.google.com/maps/place/?q=place_id:${GOOGLE_PLACE_ID}`;

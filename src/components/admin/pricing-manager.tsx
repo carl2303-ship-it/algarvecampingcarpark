@@ -26,6 +26,19 @@ import { formatPrice } from "@/lib/pricing";
 import { getServiceVisual, ICON_OPTIONS } from "@/lib/pricing-icons";
 import type { Zone, ZoneRate, ServiceItem } from "@/types/database";
 
+type RateSeason = ZoneRate["season"];
+
+const SEASON_OPTIONS: { value: RateSeason; label: string }[] = [
+  { value: "august", label: "🌞 Agosto" },
+  { value: "summer", label: "☀️ Verão" },
+  { value: "low", label: "🌿 Época baixa" },
+  { value: "winter", label: "🌊 Inverno" },
+];
+
+function seasonLabel(season: RateSeason) {
+  return SEASON_OPTIONS.find((s) => s.value === season)?.label ?? season;
+}
+
 interface RateWithZone extends ZoneRate {
   zone?: { name: string } | null;
 }
@@ -50,8 +63,9 @@ export function PricingManager({
     start_date: "",
     end_date: "",
     price_euros: "",
+    price_euros_3_4: "",
     min_nights: "1",
-    season: "summer" as "summer" | "winter",
+    season: "summer" as RateSeason,
   });
 
   const [newService, setNewService] = useState({
@@ -86,11 +100,12 @@ export function PricingManager({
         start_date: newRate.start_date,
         end_date: newRate.end_date,
         price_cents_per_night: Math.round(parseFloat(newRate.price_euros) * 100),
+        price_cents_3_4_guests: Math.round(parseFloat(newRate.price_euros_3_4) * 100),
         min_nights: parseInt(newRate.min_nights, 10),
         season: newRate.season,
       }),
     });
-    setNewRate((r) => ({ ...r, start_date: "", end_date: "", price_euros: "" }));
+    setNewRate((r) => ({ ...r, start_date: "", end_date: "", price_euros: "", price_euros_3_4: "" }));
     setSaving(false);
     refreshRates();
   }
@@ -104,7 +119,8 @@ export function PricingManager({
       body: JSON.stringify({
         start_date: editRate.start_date,
         end_date: editRate.end_date,
-        price_cents_per_night: Math.round((editRate.price_cents_per_night ?? 0)),
+        price_cents_per_night: Math.round(editRate.price_cents_per_night ?? 0),
+        price_cents_3_4_guests: Math.round(editRate.price_cents_3_4_guests ?? 0),
         min_nights: editRate.min_nights,
         season: editRate.season,
       }),
@@ -192,7 +208,8 @@ export function PricingManager({
                 <TableHead>Época</TableHead>
                 <TableHead>Início</TableHead>
                 <TableHead>Fim</TableHead>
-                <TableHead>Preço/noite</TableHead>
+                <TableHead>Preço 2 p.</TableHead>
+                <TableHead>Preço 3-4 p.</TableHead>
                 <TableHead>Mín.</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
@@ -201,20 +218,21 @@ export function PricingManager({
               {rates.map((rate) =>
                 editRate.id === rate.id ? (
                   <TableRow key={rate.id}>
-                    <TableCell colSpan={7}>
-                      <div className="grid md:grid-cols-6 gap-3 items-end">
+                    <TableCell colSpan={8}>
+                      <div className="grid md:grid-cols-7 gap-3 items-end">
                         <div>
                           <Label className="text-xs">Época</Label>
                           <Select
                             value={editRate.season}
                             onValueChange={(v) =>
-                              setEditRate((r) => ({ ...r, season: (v as "summer" | "winter") ?? r.season }))
+                              setEditRate((r) => ({ ...r, season: (v as RateSeason) ?? r.season }))
                             }
                           >
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="summer">☀️ Verão</SelectItem>
-                              <SelectItem value="winter">🌊 Inverno</SelectItem>
+                              {SEASON_OPTIONS.map((s) => (
+                                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -235,7 +253,7 @@ export function PricingManager({
                           />
                         </div>
                         <div>
-                          <Label className="text-xs">€/noite</Label>
+                          <Label className="text-xs">€ 2 pessoas</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -244,6 +262,20 @@ export function PricingManager({
                               setEditRate((r) => ({
                                 ...r,
                                 price_cents_per_night: Math.round(parseFloat(e.target.value) * 100),
+                              }))
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">€ 3-4 pessoas</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={((editRate.price_cents_3_4_guests ?? 0) / 100).toFixed(2)}
+                            onChange={(e) =>
+                              setEditRate((r) => ({
+                                ...r,
+                                price_cents_3_4_guests: Math.round(parseFloat(e.target.value) * 100),
                               }))
                             }
                           />
@@ -273,13 +305,12 @@ export function PricingManager({
                   <TableRow key={rate.id}>
                     <TableCell>{rate.zone?.name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {rate.season === "summer" ? "☀️ Verão" : "🌊 Inverno"}
-                      </Badge>
+                      <Badge variant="outline">{seasonLabel(rate.season)}</Badge>
                     </TableCell>
                     <TableCell>{rate.start_date}</TableCell>
                     <TableCell>{rate.end_date}</TableCell>
                     <TableCell className="font-medium">{formatPrice(rate.price_cents_per_night)}</TableCell>
+                    <TableCell className="font-medium">{formatPrice(rate.price_cents_3_4_guests)}</TableCell>
                     <TableCell>{rate.min_nights}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -317,13 +348,14 @@ export function PricingManager({
               <Select
                 value={newRate.season}
                 onValueChange={(v) =>
-                  setNewRate((r) => ({ ...r, season: (v as "summer" | "winter") ?? r.season }))
+                  setNewRate((r) => ({ ...r, season: (v as RateSeason) ?? r.season }))
                 }
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="summer">☀️ Verão</SelectItem>
-                  <SelectItem value="winter">🌊 Inverno</SelectItem>
+                  {SEASON_OPTIONS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -336,8 +368,12 @@ export function PricingManager({
               <Input type="date" value={newRate.end_date} onChange={(e) => setNewRate((r) => ({ ...r, end_date: e.target.value }))} required />
             </div>
             <div className="space-y-2">
-              <Label>€/noite</Label>
+              <Label>€ 2 pessoas</Label>
               <Input type="number" step="0.01" value={newRate.price_euros} onChange={(e) => setNewRate((r) => ({ ...r, price_euros: e.target.value }))} required />
+            </div>
+            <div className="space-y-2">
+              <Label>€ 3-4 pessoas</Label>
+              <Input type="number" step="0.01" value={newRate.price_euros_3_4} onChange={(e) => setNewRate((r) => ({ ...r, price_euros_3_4: e.target.value }))} required />
             </div>
             <div className="space-y-2">
               <Label>Mín. noites</Label>

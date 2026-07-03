@@ -2,7 +2,7 @@ import { Car, Plane, ShoppingBag, Umbrella } from "lucide-react";
 import { PageHero } from "@/components/marketing/sections";
 import { MapEmbed } from "@/components/marketing/map-embed";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
-import { ADDRESS } from "@/lib/constants";
+import { ADDRESS, GPS_DECIMAL, GPS_DMS } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 
@@ -34,7 +34,13 @@ export default function LocationPageContent({ locale }: { locale: Locale }) {
                 {t.location.getting_here}
               </h2>
               <p className="text-muted-foreground leading-relaxed mb-6">{ADDRESS}</p>
-              <p className="text-muted-foreground leading-relaxed">{t.location.directions}</p>
+              <p className="text-muted-foreground leading-relaxed mb-6">{t.location.directions}</p>
+              <div className="space-y-1 text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">GPS:</span> {GPS_DECIMAL}
+                </p>
+                <p>{GPS_DMS}</p>
+              </div>
             </div>
             <div className="space-y-4">
               {distances.map((d, i) => {
