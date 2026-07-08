@@ -135,7 +135,7 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
         <CardHeader>
           <CardTitle>Adicionar foto</CardTitle>
           <CardDescription>
-            A imagem é redimensionada automaticamente para 5:3 (1500×900). Máximo 5 MB. Aparece na página Sobre.
+            Use JPG, PNG ou WebP até 5 MB. A imagem aparece na página Sobre.
           </CardDescription>
         </CardHeader>
         <CardContent>

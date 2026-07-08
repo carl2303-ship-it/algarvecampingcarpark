@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { processGalleryImage } from "@/lib/process-gallery-image";
+import { getImageExtension } from "@/lib/gallery-upload";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function isUploadFile(value: FormDataEntryValue | null): value is File {
+  return value instanceof File;
+}
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +23,7 @@ export async function POST(request: Request) {
     const title_pt = String(formData.get("title_pt") ?? "").trim();
     const title_en = String(formData.get("title_en") ?? "").trim() || null;
 
-    if (!(file instanceof File)) {
+    if (!isUploadFile(file)) {
       return NextResponse.json({ error: "Ficheiro em falta" }, { status: 400 });
     }
     if (!title_pt) {
@@ -35,34 +39,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    let processed: Buffer;
-    let contentType = "image/jpeg";
-    let extension = "jpg";
-
-    try {
-      processed = await processGalleryImage(buffer);
-    } catch (imageError) {
-      console.error("Gallery image processing failed:", imageError);
-      processed = buffer;
-      contentType = file.type;
-      extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const extension = getImageExtension(file.type);
+    if (!extension) {
+      return NextResponse.json({ error: "Formato de imagem inválido." }, { status: 400 });
     }
 
-    if (processed.length > MAX_BYTES) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const contentType = file.type;
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+
+    let supabase;
+    try {
+      supabase = createAdminClient();
+    } catch (adminError) {
+      console.error("Gallery admin client error:", adminError);
       return NextResponse.json(
-        { error: "Imagem processada demasiado grande. Tente uma foto com resolução menor." },
-        { status: 400 }
+        { error: "Configuração do servidor incompleta. Contacte o administrador." },
+        { status: 500 }
       );
     }
 
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
-    const supabase = createAdminClient();
-
     const { error: uploadError } = await supabase.storage
       .from("gallery")
-      .upload(filename, processed, { contentType, upsert: false });
+      .upload(filename, buffer, { contentType, upsert: false });
 
     if (uploadError) {
       console.error("Gallery storage upload failed:", uploadError);
