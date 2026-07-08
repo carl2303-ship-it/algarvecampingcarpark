@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { BookCta } from "@/components/booking/book-cta";
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { buttonVariants } from "@/components/ui/button";
@@ -178,10 +179,10 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
           <p className="text-center text-sm text-muted-foreground leading-relaxed">{t.prices.note}</p>
 
           <div className="text-center">
-            <Link href={bookPath} className={cn(buttonVariants({ size: "lg" }))}>
+            <BookCta locale={locale} href={bookPath} className={cn(buttonVariants({ size: "lg" }))}>
               {t.prices.cta}
               <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
+            </BookCta>
           </div>
         </div>
       </section>

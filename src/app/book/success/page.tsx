@@ -1,10 +1,16 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
+import { BOOKING_ENABLED } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
 
 export default function BookSuccessPage() {
+  if (!BOOKING_ENABLED) {
+    redirect("/book");
+  }
+
   const t = getTranslations("pt");
   return (
     <MarketingLayout locale="pt">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
+import { BookCta } from "@/components/booking/book-cta";
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { GalleryCarousel } from "@/components/marketing/gallery-carousel";
@@ -59,10 +60,10 @@ export default async function AboutPageContent({ locale }: { locale: Locale }) {
 
       <section className="pb-20 md:pb-28">
         <div className="container mx-auto px-4 text-center">
-          <Link href={`${prefix}/book`} className={buttonVariants({ size: "lg" })}>
+          <BookCta locale={locale} href={`${prefix}/book`} className={buttonVariants({ size: "lg" })}>
             {locale === "pt" ? "Reservar o seu lugar" : "Book your pitch"}
             <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
+          </BookCta>
         </div>
       </section>
     </MarketingLayout>

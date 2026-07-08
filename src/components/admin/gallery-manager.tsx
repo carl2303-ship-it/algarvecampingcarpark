@@ -27,6 +27,7 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
   const [editForm, setEditForm] = useState({ title_pt: "", title_en: "" });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [titlePt, setTitlePt] = useState("");
   const [titleEn, setTitleEn] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -105,6 +106,7 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
     if (!file || !titlePt.trim()) return;
 
     setUploading(true);
+    setUploadError(null);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("title_pt", titlePt.trim());
@@ -121,8 +123,8 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
       if (fileRef.current) fileRef.current.value = "";
       refresh();
     } else {
-      const data = await res.json();
-      alert(data.error ?? "Erro ao carregar imagem");
+      const data = await res.json().catch(() => ({}));
+      setUploadError(data.error ?? "Erro ao carregar imagem");
     }
     setUploading(false);
   }
@@ -133,7 +135,7 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
         <CardHeader>
           <CardTitle>Adicionar foto</CardTitle>
           <CardDescription>
-            A imagem é redimensionada automaticamente para 5:3 (1500×900). Aparece na página Sobre.
+            A imagem é redimensionada automaticamente para 5:3 (1500×900). Máximo 5 MB. Aparece na página Sobre.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,6 +153,11 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
               <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} />
             </div>
             <div className="md:col-span-2">
+              {uploadError && (
+                <p className="mb-3 text-sm text-destructive" role="alert">
+                  {uploadError}
+                </p>
+              )}
               <Button type="submit" disabled={uploading}>
                 {uploading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

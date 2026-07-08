@@ -8,6 +8,9 @@ export const ADDRESS = "Sítio da Torre, Quintão, 8365-184 Armação de Pêra, 
 export const GPS_DECIMAL = "N 37.11303, W 8.37508";
 export const GPS_DMS = `N 37º06'47" W 8º,22'30"`;
 export const MAPS_URL = "https://maps.app.goo.gl/h1kn8V2EnjmwkY58A";
+export const FACEBOOK_URL = "https://www.facebook.com/algarvecampingcarpark/";
+export const INSTAGRAM_URL = "https://www.instagram.com/algarve.camping.car.park/";
+export const COMPLAINTS_BOOK_URL = "https://www.livroreclamacoes.pt/Pedido/Reclamacao";
 export const GOOGLE_PLACE_ID = "ChIJQ6GsxRXRGg0RKpiETIlzp9I";
 export const GOOGLE_REVIEWS_URL = `https://www.google.com/maps/place/?q=place_id:${GOOGLE_PLACE_ID}`;
 export const MAPS_EMBED =
@@ -22,9 +25,11 @@ export const HERO_IMAGE = "/images/hero.png";
 export const EXPERIENCE_IMAGE = "/images/our-story.png";
 export const TOTAL_CAPACITY = 57;
 export const PARK_AREA_M2 = 37000;
-export const CHECK_IN_TIME = "14:00";
-export const CHECK_OUT_TIME = "12:00";
+export const CHECK_IN_TIME = "11:00";
+export const CHECK_OUT_TIME = "11:00";
 export const PENDING_PAYMENT_EXPIRY_MINUTES = 30;
+/** Set to true when Stripe and pitch inventory are ready for production bookings. */
+export const BOOKING_ENABLED = false;
 export const DEFAULT_LOCALE = "pt" as const;
 export const LOCALES = ["pt", "en"] as const;
 export type Locale = (typeof LOCALES)[number];

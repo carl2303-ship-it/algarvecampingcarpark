@@ -9,10 +9,12 @@ import {
   Waves,
   Zap,
 } from "lucide-react";
+import { BookCta } from "@/components/booking/book-cta";
 import { buttonVariants } from "@/components/ui/button";
 import { FeatureCard, StatItem } from "@/components/marketing/feature-card";
 import { MapEmbed } from "@/components/marketing/map-embed";
-import { CTABanner, SectionHeading } from "@/components/marketing/sections";
+import { CTABanner } from "@/components/marketing/cta-banner";
+import { SectionHeading } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import {
   EXPERIENCE_IMAGE,
@@ -81,7 +83,8 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
               {t.home.hero_subtitle}
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link
+              <BookCta
+                locale={locale}
                 href={bookPath}
                 className={cn(
                   buttonVariants({ size: "lg" }),
@@ -90,7 +93,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
               >
                 {t.home.cta_book}
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
+              </BookCta>
               <Link
                 href={`${prefix}/location`}
                 className={cn(
@@ -232,6 +235,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
         description={t.home.cta_banner_text}
         buttonLabel={t.home.cta_book}
         buttonHref={bookPath}
+        locale={locale}
       />
     </MarketingLayout>
   );

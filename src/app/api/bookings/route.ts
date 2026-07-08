@@ -3,7 +3,7 @@ import { z } from "zod";
 import { validateBookingAvailability } from "@/lib/availability";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createCheckoutSession } from "@/lib/stripe";
-import { PENDING_PAYMENT_EXPIRY_MINUTES } from "@/lib/constants";
+import { BOOKING_ENABLED, PENDING_PAYMENT_EXPIRY_MINUTES } from "@/lib/constants";
 
 const bookingSchema = z.object({
   zone_id: z.string().uuid(),
@@ -18,6 +18,13 @@ const bookingSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!BOOKING_ENABLED) {
+    return NextResponse.json(
+      { error: "As reservas online estão temporariamente indisponíveis. Contacte-nos para verificar disponibilidade." },
+      { status: 503 }
+    );
+  }
+
   try {
     const body = await request.json();
     const data = bookingSchema.parse(body);

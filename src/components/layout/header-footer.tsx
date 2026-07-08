@@ -7,10 +7,14 @@ import { useEffect, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SiteLogo } from "@/components/brand/site-logo";
+import { FooterBrandRow } from "@/components/brand/footer-brand-row";
+import { SocialLinks } from "@/components/brand/social-links";
+import { BookCta } from "@/components/booking/book-cta";
 import {
   ADDRESS,
   CONTACT_EMAIL,
   CONTACT_PHONE,
+  COMPLAINTS_BOOK_URL,
   MAPS_URL,
   SITE_NAME,
 } from "@/lib/constants";
@@ -104,9 +108,9 @@ export function Header({ locale }: { locale: Locale }) {
           >
             {otherLocale.toUpperCase()}
           </Link>
-          <Link href={localePath("/book")} className={bookBtnClass}>
+          <BookCta locale={locale} href={localePath("/book")} className={bookBtnClass}>
             {t.nav.book}
-          </Link>
+          </BookCta>
         </nav>
 
         <Sheet open={open} onOpenChange={setOpen}>
@@ -143,13 +147,14 @@ export function Header({ locale }: { locale: Locale }) {
               >
                 {otherLocale}
               </Link>
-              <Link
+              <BookCta
+                locale={locale}
                 href={localePath("/book")}
                 onClick={() => setOpen(false)}
                 className={cn(buttonVariants(), "mt-4")}
               >
                 {t.nav.book}
-              </Link>
+              </BookCta>
             </div>
           </SheetContent>
         </Sheet>
@@ -171,12 +176,18 @@ export function Footer({ locale }: { locale: Locale }) {
       <div className="container mx-auto px-4 py-16">
         <div className="grid md:grid-cols-3 gap-12">
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <SiteLogo size="lg" />
+            <div className="mb-4">
+              <FooterBrandRow locale={locale} />
             </div>
             <p className="text-primary-foreground/70 text-sm leading-relaxed max-w-xs">
               {t.footer.tagline}
             </p>
+            <div className="mt-5">
+              <p className="text-xs uppercase tracking-wider text-primary-foreground/60 mb-3">
+                {t.footer.social}
+              </p>
+              <SocialLinks variant="footer" />
+            </div>
           </div>
 
           <div>
@@ -193,12 +204,13 @@ export function Footer({ locale }: { locale: Locale }) {
                   {t.nav[item.key]}
                 </Link>
               ))}
-              <Link
+              <BookCta
+                locale={locale}
                 href={localePath("/book")}
-                className="text-sm text-primary-foreground/80 hover:text-white transition-colors"
+                className="text-sm text-primary-foreground/80 hover:text-white transition-colors text-left"
               >
                 {t.nav.book}
-              </Link>
+              </BookCta>
             </nav>
           </div>
 
@@ -238,13 +250,21 @@ export function Footer({ locale }: { locale: Locale }) {
           <p>
             © {new Date().getFullYear()} {SITE_NAME}. {t.footer.rights}.
           </p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center sm:justify-end gap-x-6 gap-y-2">
             <Link href={localePath("/privacy")} className="hover:text-white transition-colors">
               {t.footer.privacy}
             </Link>
             <Link href={localePath("/terms")} className="hover:text-white transition-colors">
               {t.footer.terms}
             </Link>
+            <a
+              href={COMPLAINTS_BOOK_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              {t.footer.complaints_book}
+            </a>
           </div>
         </div>
       </div>

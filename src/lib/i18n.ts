@@ -96,6 +96,8 @@ const translations = {
       subtitle: "Elodie & Romy estão disponíveis para ajudar",
       email_label: "Email",
       phone_label: "Telefone",
+      facebook_label: "Facebook",
+      instagram_label: "Instagram",
       hosts: "Elodie & Romy — os seus anfitriões",
     },
     prices: {
@@ -149,14 +151,25 @@ const translations = {
       success_title: "Reserva confirmada!",
       success_message: "Receberá um email de confirmação em breve.",
       cancelled: "Pagamento cancelado. Pode tentar novamente.",
+      unavailable_title: "Reservas online em breve",
+      unavailable_message:
+        "As reservas online estarão disponíveis em breve. Entretanto, contacte-nos para verificar a disponibilidade do parque.",
+      unavailable_contact: "Contactar-nos",
+      unavailable_back: "Voltar ao início",
     },
     footer: {
       rights: "Todos os direitos reservados",
       privacy: "Privacidade",
       terms: "Termos",
+      complaints_book: "Livro de Reclamações",
       tagline: "Área de serviço para autocaravanas no coração do Algarve.",
       navigate: "Navegar",
       contact: "Contacto",
+      social: "Redes sociais",
+      partner_logos: {
+        "clean-safe": "Selo Clean & Safe — Turismo de Portugal",
+        "algarve-rede": "Rede Algarve Autocaravanismo",
+      },
     },
     install: {
       title: "Instale a app no seu telemóvel",
@@ -265,6 +278,8 @@ const translations = {
       subtitle: "Elodie & Romy are here to help",
       email_label: "Email",
       phone_label: "Phone",
+      facebook_label: "Facebook",
+      instagram_label: "Instagram",
       hosts: "Elodie & Romy — your hosts",
     },
     prices: {
@@ -318,14 +333,25 @@ const translations = {
       success_title: "Booking confirmed!",
       success_message: "You will receive a confirmation email shortly.",
       cancelled: "Payment cancelled. You can try again.",
+      unavailable_title: "Online booking coming soon",
+      unavailable_message:
+        "Online booking will be available soon. In the meantime, please contact us to check pitch availability.",
+      unavailable_contact: "Contact us",
+      unavailable_back: "Back to home",
     },
     footer: {
       rights: "All rights reserved",
       privacy: "Privacy",
       terms: "Terms",
+      complaints_book: "Complaints Book",
       tagline: "Motorhome service area in the heart of the Algarve.",
       navigate: "Navigate",
       contact: "Contact",
+      social: "Social media",
+      partner_logos: {
+        "clean-safe": "Clean & Safe seal — Turismo de Portugal",
+        "algarve-rede": "Algarve Motorhome Network",
+      },
     },
     install: {
       title: "Install the app on your phone",

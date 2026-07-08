@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { SITE_NAME, SITE_SHORT_NAME, SITE_URL } from "@/lib/constants";
+import { SITE_NAME, SITE_SHORT_NAME } from "@/lib/constants";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -30,6 +30,6 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
-    id: SITE_URL,
+    id: "/",
   };
 }
