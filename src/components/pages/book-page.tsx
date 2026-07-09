@@ -5,13 +5,16 @@ import { PageHero } from "@/components/marketing/sections";
 import { BOOKING_ENABLED } from "@/lib/constants";
 import type { Locale } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
+import { getPitchMapSpotByCode } from "@/lib/pitch-map";
+import { getParkSettings } from "@/lib/park-settings";
+import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
 
 export default async function BookPageContent({
   locale,
   searchParams,
 }: {
   locale: Locale;
-  searchParams: Promise<{ cancelled?: string }>;
+  searchParams: Promise<{ cancelled?: string; pitch?: string }>;
 }) {
   if (!BOOKING_ENABLED) {
     return <BookingDisabledView locale={locale} />;
@@ -19,6 +22,10 @@ export default async function BookPageContent({
 
   const params = await searchParams;
   const t = getTranslations(locale);
+  const parkSettings = await getParkSettings();
+  const preferredSpot: PitchMapSpot | null = params.pitch
+    ? await getPitchMapSpotByCode(params.pitch.toUpperCase())
+    : null;
 
   return (
     <MarketingLayout locale={locale}>
@@ -38,7 +45,7 @@ export default async function BookPageContent({
             {t.book.cancelled}
           </div>
         )}
-        <BookingWizard locale={locale} />
+        <BookingWizard locale={locale} preferredSpot={preferredSpot} parkSettings={parkSettings} />
       </div>
     </MarketingLayout>
   );

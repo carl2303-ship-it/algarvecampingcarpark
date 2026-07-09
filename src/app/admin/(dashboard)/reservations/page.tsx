@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { CheckInDialog } from "@/components/admin/check-in-dialog";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { releaseReservationPitch } from "@/lib/reservation-checkout";
 import { formatPrice } from "@/lib/pricing";
 import type { Pitch, Reservation } from "@/types/database";
 
@@ -38,12 +39,18 @@ export default async function ReservationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h1 className="text-3xl font-bold">Reservas</h1>
-        <a href="/api/admin/export" className={buttonVariants({ variant: "outline" })}>
-          <Download className="mr-2 h-4 w-4" />
-          Exportar CSV
-        </a>
+        <div className="flex gap-2">
+          <Link href="/admin/reservations/new" className={buttonVariants()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nova reserva
+          </Link>
+          <a href="/api/admin/export" className={buttonVariants({ variant: "outline" })}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar CSV
+          </a>
+        </div>
       </div>
 
       <div className="rounded-lg border overflow-x-auto">
@@ -79,7 +86,7 @@ export default async function ReservationsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {(r.pitch as { code: string } | null)?.code ?? "—"}
+                  {r.pitch_code ?? (r.pitch as { code: string } | null)?.code ?? "—"}
                 </TableCell>
                 <TableCell>
                   {r.status === "confirmed" && (
@@ -89,7 +96,11 @@ export default async function ReservationsPage() {
                     />
                   )}
                   {r.status === "checked_in" && (
-                    <CheckOutButton reservationId={r.id} pitchId={r.pitch_id} />
+                    <CheckOutButton
+                      reservationId={r.id}
+                      pitchId={r.pitch_id}
+                      pitchCode={r.pitch_code ?? null}
+                    />
                   )}
                 </TableCell>
               </TableRow>
@@ -104,9 +115,11 @@ export default async function ReservationsPage() {
 function CheckOutButton({
   reservationId,
   pitchId,
+  pitchCode,
 }: {
   reservationId: string;
   pitchId: string | null;
+  pitchCode: string | null;
 }) {
   return (
     <form
@@ -120,12 +133,7 @@ function CheckOutButton({
             checked_out_at: new Date().toISOString(),
           })
           .eq("id", reservationId);
-        if (pitchId) {
-          await supabase
-            .from("pitches")
-            .update({ status: "available" })
-            .eq("id", pitchId);
-        }
+        await releaseReservationPitch({ pitch_id: pitchId, pitch_code: pitchCode });
       }}
     >
       <Button size="sm" variant="outline" type="submit">

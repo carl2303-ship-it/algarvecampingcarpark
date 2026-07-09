@@ -1,10 +1,12 @@
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
-import { getTermsContent } from "@/lib/legal/terms-content";
 import type { Locale } from "@/lib/constants";
+import { getTermsContent } from "@/lib/legal/terms-content";
+import { getParkSettings } from "@/lib/park-settings";
 
-export function TermsPageContent({ locale }: { locale: Locale }) {
-  const content = getTermsContent(locale);
+export async function TermsPageContent({ locale }: { locale: Locale }) {
+  const parkSettings = await getParkSettings();
+  const content = getTermsContent(locale, parkSettings);
 
   return (
     <MarketingLayout locale={locale}>

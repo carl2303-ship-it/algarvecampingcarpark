@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format, addDays, startOfToday } from "date-fns";
 import { pt, enUS } from "date-fns/locale";
 import { CalendarIcon, Loader2, MapPin, Zap, Waves } from "lucide-react";
@@ -12,17 +12,26 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/pricing";
-import type { Locale } from "@/lib/constants";
+import type { Locale, ParkSettings } from "@/lib/constants";
 import { getTranslations, t as translate } from "@/lib/i18n";
 import type { ZoneAvailability } from "@/types/database";
-import { CHECK_IN_TIME, CHECK_OUT_TIME } from "@/lib/constants";
+import { getSpotZoneSlug, type PitchMapSpot } from "@/lib/park-pitch-map-defaults";
 import { cn } from "@/lib/utils";
 
 type Step = "dates" | "zone" | "details";
 
-export function BookingWizard({ locale }: { locale: Locale }) {
+export function BookingWizard({
+  locale,
+  preferredSpot = null,
+  parkSettings,
+}: {
+  locale: Locale;
+  preferredSpot?: PitchMapSpot | null;
+  parkSettings: ParkSettings;
+}) {
   const tr = getTranslations(locale);
   const dateLocale = locale === "pt" ? pt : enUS;
+  const zoneAutoApplied = useRef(false);
 
   const [step, setStep] = useState<Step>("dates");
   const [checkIn, setCheckIn] = useState<Date | undefined>();
@@ -38,6 +47,25 @@ export function BookingWizard({ locale }: { locale: Locale }) {
   const [vehiclePlate, setVehiclePlate] = useState("");
   const [numGuests, setNumGuests] = useState(2);
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (!preferredSpot) return;
+    const label =
+      locale === "pt"
+        ? `Lugar preferido: ${preferredSpot.code}`
+        : `Preferred pitch: ${preferredSpot.code}`;
+    setNotes(label);
+  }, [preferredSpot, locale]);
+
+  useEffect(() => {
+    if (!preferredSpot || availability.length === 0 || zoneAutoApplied.current) return;
+    const slug = getSpotZoneSlug(preferredSpot);
+    const match = availability.find((item) => item.zone.slug === slug);
+    if (match) {
+      setSelectedZone(match);
+      zoneAutoApplied.current = true;
+    }
+  }, [availability, preferredSpot]);
 
   const checkInStr = checkIn ? format(checkIn, "yyyy-MM-dd") : "";
   const checkOutStr = checkOut ? format(checkOut, "yyyy-MM-dd") : "";
@@ -108,6 +136,15 @@ export function BookingWizard({ locale }: { locale: Locale }) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {preferredSpot && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+          <p className="font-medium text-primary">
+            {translate(locale, "book.preferred_pitch", { code: preferredSpot.code })}
+          </p>
+          <p className="text-muted-foreground mt-1">{tr.book.preferred_pitch_hint}</p>
+        </div>
+      )}
+
       <div className="flex gap-2">
         {(["dates", "zone", "details"] as Step[]).map((s, i) => (
           <div
@@ -133,7 +170,7 @@ export function BookingWizard({ locale }: { locale: Locale }) {
           <CardHeader>
             <CardTitle>{tr.book.select_dates}</CardTitle>
             <CardDescription>
-              {tr.book.check_in}: {CHECK_IN_TIME} · {tr.book.check_out}: {CHECK_OUT_TIME}
+              {tr.book.check_in}: {parkSettings.check_in_time} · {tr.book.check_out}: {parkSettings.check_out_time}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -207,7 +244,10 @@ export function BookingWizard({ locale }: { locale: Locale }) {
               key={item.zone.id}
               className={cn(
                 "rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-0.5",
-                selectedZone?.zone.id === item.zone.id && "border-primary ring-2 ring-primary/20"
+                selectedZone?.zone.id === item.zone.id && "border-primary ring-2 ring-primary/20",
+                preferredSpot &&
+                  getSpotZoneSlug(preferredSpot) === item.zone.slug &&
+                  "border-primary/60"
               )}
               onClick={() => {
                 setSelectedZone(item);
@@ -257,6 +297,11 @@ export function BookingWizard({ locale }: { locale: Locale }) {
             </Button>
             <CardTitle>{zoneName(selectedZone.zone)}</CardTitle>
             <CardDescription>
+              {preferredSpot && (
+                <span className="block font-medium text-primary mb-1">
+                  {translate(locale, "book.preferred_pitch", { code: preferredSpot.code })}
+                </span>
+              )}
               {formatPrice(selectedZone.total_price_cents)} · {selectedZone.nights}{" "}
               {tr.book.nights}
             </CardDescription>

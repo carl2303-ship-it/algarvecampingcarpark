@@ -1,5 +1,9 @@
-import { CHECK_IN_TIME, CHECK_OUT_TIME } from "@/lib/constants";
-import type { Locale } from "@/lib/constants";
+import {
+  DEFAULT_PARK_SETTINGS,
+  formatTimeForLocale,
+  type Locale,
+  type ParkSettings,
+} from "@/lib/constants";
 
 export type TermsSection = {
   title: string;
@@ -68,23 +72,6 @@ const termsPt: TermsContent = {
         "Se as novas datas corresponderem a uma época com tarifário diferente (ex: passagem de época baixa para época alta), o cliente terá de pagar a respectiva diferença de valor.",
       ],
     },
-    {
-      title: "5. Check-in, Check-out e Prolongamento da Estadia",
-      list: [
-        {
-          label: "Horário de Check-in",
-          text: `A partir das ${CHECK_IN_TIME.replace(":", "h")}.`,
-        },
-        {
-          label: "Horário de Check-out",
-          text: `O lugar deve ser libertado até às ${CHECK_OUT_TIME.replace(":", "h")} do dia de saída. (Outro horário, sob pedido.)`,
-        },
-        {
-          label: "Prolongamento",
-          text: "Se o cliente desejar ficar mais dias do que o contratado na reserva original, a extensão estará estritamente sujeita à disponibilidade de vagas no momento e deverá ser paga no balcão do parque ou através de um novo link gerado na nossa app.",
-        },
-      ],
-    },
   ],
   lastUpdatedLabel: "Última atualização",
   lastUpdated: "Julho de 2026",
@@ -141,28 +128,58 @@ const termsEn: TermsContent = {
         "If the new dates fall in a season with a different rate (e.g. moving from low to high season), the customer must pay the corresponding price difference.",
       ],
     },
-    {
+  ],
+  lastUpdatedLabel: "Last updated",
+  lastUpdated: "July 2026",
+};
+
+function buildHoursSection(locale: Locale, settings: ParkSettings): TermsSection {
+  if (locale === "en") {
+    return {
       title: "5. Check-in, Check-out and Stay Extension",
       list: [
         {
           label: "Check-in Time",
-          text: `From ${CHECK_IN_TIME}.`,
+          text: `From ${settings.check_in_time}.`,
         },
         {
           label: "Check-out Time",
-          text: `The pitch must be vacated by ${CHECK_OUT_TIME} on the departure day. (Other times available upon request.)`,
+          text: `The pitch must be vacated by ${settings.check_out_time} on the departure day. (Other times available upon request.)`,
         },
         {
           label: "Extension",
           text: "If the customer wishes to stay longer than originally booked, the extension is strictly subject to pitch availability at the time and must be paid at the park reception or through a new payment link generated in our app.",
         },
       ],
-    },
-  ],
-  lastUpdatedLabel: "Last updated",
-  lastUpdated: "July 2026",
-};
+    };
+  }
 
-export function getTermsContent(locale: Locale): TermsContent {
-  return locale === "en" ? termsEn : termsPt;
+  return {
+    title: "5. Check-in, Check-out e Prolongamento da Estadia",
+    list: [
+      {
+        label: "Horário de Check-in",
+        text: `A partir das ${formatTimeForLocale(settings.check_in_time)}.`,
+      },
+      {
+        label: "Horário de Check-out",
+        text: `O lugar deve ser libertado até às ${formatTimeForLocale(settings.check_out_time)} do dia de saída. (Outro horário, sob pedido.)`,
+      },
+      {
+        label: "Prolongamento",
+        text: "Se o cliente desejar ficar mais dias do que o contratado na reserva original, a extensão estará estritamente sujeita à disponibilidade de vagas no momento e deverá ser paga no balcão do parque ou através de um novo link gerado na nossa app.",
+      },
+    ],
+  };
+}
+
+export function getTermsContent(
+  locale: Locale,
+  settings: ParkSettings = DEFAULT_PARK_SETTINGS
+): TermsContent {
+  const base = locale === "en" ? termsEn : termsPt;
+  return {
+    ...base,
+    sections: [...base.sections, buildHoursSection(locale, settings)],
+  };
 }

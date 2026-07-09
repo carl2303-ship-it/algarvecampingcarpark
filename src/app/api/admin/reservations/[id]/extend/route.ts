@@ -1,0 +1,139 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getAdminUser } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getZoneRates } from "@/lib/availability";
+import { calculateTotalPrice } from "@/lib/pricing";
+import { createExtensionCheckoutSession } from "@/lib/stripe";
+import { sendExtensionPaymentLink } from "@/lib/email";
+
+export const dynamic = "force-dynamic";
+
+const extendSchema = z.object({
+  check_out: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  send_payment_link: z.boolean().default(true),
+});
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+
+  try {
+    const body = extendSchema.parse(await request.json());
+    const supabase = createAdminClient();
+
+    const { data: reservation, error: fetchError } = await supabase
+      .from("reservations")
+      .select("*, zone:zones(name)")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !reservation) {
+      return NextResponse.json({ error: "Reserva não encontrada" }, { status: 404 });
+    }
+
+    if (!["confirmed", "checked_in"].includes(reservation.status)) {
+      return NextResponse.json({ error: "Reserva não pode ser prolongada neste estado" }, { status: 400 });
+    }
+
+    if (body.check_out <= reservation.check_in) {
+      return NextResponse.json({ error: "Data de partida inválida" }, { status: 400 });
+    }
+
+    if (body.check_out <= reservation.check_out) {
+      return NextResponse.json(
+        { error: "A nova data de partida deve ser posterior à atual" },
+        { status: 400 }
+      );
+    }
+
+    const rates = await getZoneRates(reservation.zone_id);
+    const oldTotal = reservation.total_cents;
+    const newPricing = calculateTotalPrice(
+      rates,
+      reservation.check_in,
+      body.check_out,
+      reservation.num_guests
+    );
+    const extensionCents = newPricing.totalCents - oldTotal;
+
+    const oldCheckOut = reservation.check_out;
+
+    const { error: updateError } = await supabase
+      .from("reservations")
+      .update({
+        check_out: body.check_out,
+        total_cents: newPricing.totalCents,
+        payment_status: extensionCents > 0 ? "partial" : reservation.payment_status,
+      })
+      .eq("id", id);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    let payment_url: string | null = null;
+
+    if (extensionCents > 0 && body.send_payment_link) {
+      try {
+        const session = await createExtensionCheckoutSession({
+          reservationId: id,
+          extensionCents,
+          guestEmail: reservation.guest_email,
+          guestName: reservation.guest_name,
+          pitchCode: reservation.pitch_code ?? "—",
+          oldCheckOut,
+          newCheckOut: body.check_out,
+        });
+
+        payment_url = session.url;
+
+        await supabase.from("payments").insert({
+          reservation_id: id,
+          amount_cents: extensionCents,
+          currency: "eur",
+          status: "pending",
+          stripe_session_id: session.id,
+          notes: `Extensão até ${body.check_out}`,
+        });
+
+        await sendExtensionPaymentLink({
+          guestEmail: reservation.guest_email,
+          guestName: reservation.guest_name,
+          pitchCode: reservation.pitch_code ?? "—",
+          oldCheckOut,
+          newCheckOut: body.check_out,
+          extensionCents,
+          paymentUrl: session.url!,
+        });
+      } catch (stripeError) {
+        console.error("Extension Stripe session error:", stripeError);
+        return NextResponse.json({
+          success: true,
+          warning: "Estadia prolongada mas o link Stripe não foi enviado. Configure STRIPE_SECRET_KEY.",
+          extension_cents: extensionCents,
+          check_out: body.check_out,
+        });
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      check_out: body.check_out,
+      total_cents: newPricing.totalCents,
+      extension_cents: extensionCents,
+      payment_url,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues }, { status: 400 });
+    }
+    const message = error instanceof Error ? error.message : "Erro ao prolongar estadia";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

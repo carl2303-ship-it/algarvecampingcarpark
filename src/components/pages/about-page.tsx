@@ -1,12 +1,13 @@
-import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { BookCta } from "@/components/booking/book-cta";
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { GalleryCarousel } from "@/components/marketing/gallery-carousel";
 import { GoogleReviewsClient } from "@/components/marketing/google-reviews-client";
+import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
 import { buttonVariants } from "@/components/ui/button";
 import { getGalleryImages } from "@/lib/gallery";
+import { getPitchMapSpots } from "@/lib/pitch-map";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 
@@ -14,6 +15,7 @@ export default async function AboutPageContent({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
   const prefix = locale === "en" ? "/en" : "";
   const galleryImages = await getGalleryImages();
+  const pitchMapSpots = await getPitchMapSpots();
 
   return (
     <MarketingLayout locale={locale}>
@@ -41,6 +43,12 @@ export default async function AboutPageContent({ locale }: { locale: Locale }) {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="pb-20 md:pb-28">
+        <div className="container mx-auto px-4 max-w-[1440px]">
+          <ParkPitchMap locale={locale} spots={pitchMapSpots} />
         </div>
       </section>
 

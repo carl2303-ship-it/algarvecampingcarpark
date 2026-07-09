@@ -2,8 +2,27 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { PARK_AERIAL_IMAGE } from "@/lib/park-pitch-map-defaults";
-import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
+import { ArrowRight, Ruler, Zap, ZapOff, Waves } from "lucide-react";
+import { BookCta } from "@/components/booking/book-cta";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  PARK_AERIAL_IMAGE,
+  PARK_AERIAL_ASPECT_CLASS,
+  PARK_AERIAL_MAP_MAX_WIDTH_CLASS,
+  LEGEND_SWATCH_STYLES,
+  getSpotMarkerClass,
+  getSpotVisualType,
+  getSpotZoneSlug,
+  type PitchMapSpot,
+  type SpotVisualType,
+} from "@/lib/park-pitch-map-defaults";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -23,18 +42,122 @@ function PitchMarker({
       title={spot.code}
       aria-label={spot.code}
       onClick={() => onSelect(spot.code)}
-      className={cn(
-        "absolute -translate-x-1/2 -translate-y-1/2 rounded px-1 py-0.5 text-[9px] sm:text-[10px] font-bold leading-none shadow-sm border transition-transform hover:scale-110 hover:z-20",
-        spot.panoramic
-          ? "bg-emerald-500/90 text-white border-emerald-300"
-          : "bg-white/90 text-primary border-white/80",
-        spot.electric && !spot.panoramic && "ring-1 ring-red-400/80",
-        selected && "scale-125 z-30 ring-2 ring-amber-400"
-      )}
+      className={cn(getSpotMarkerClass(spot, selected))}
       style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
     >
       {spot.code}
     </button>
+  );
+}
+
+function formatDimensions(
+  spot: PitchMapSpot,
+  locale: Locale,
+  labels: { width: string; length: string; separator: string }
+) {
+  if (spot.width_m == null && spot.length_m == null) return null;
+  const width = spot.width_m != null ? `${spot.width_m} m` : "—";
+  const length = spot.length_m != null ? `${spot.length_m} m` : "—";
+  return locale === "pt"
+    ? `${labels.width}: ${width} · ${labels.length}: ${length}`
+    : `${labels.width}: ${width} ${labels.separator} ${labels.length}: ${length}`;
+}
+
+function SpotDetailDialog({
+  locale,
+  spot,
+  open,
+  onOpenChange,
+}: {
+  locale: Locale;
+  spot: PitchMapSpot | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const t = getTranslations(locale);
+  const prefix = locale === "en" ? "/en" : "";
+  const mapT = t.about.pitch_map;
+
+  if (!spot) return null;
+
+  const dimensions = formatDimensions(spot, locale, {
+    width: mapT.width_label,
+    length: mapT.length_label,
+    separator: mapT.dimensions_separator,
+  });
+  const zoneSlug = getSpotZoneSlug(spot);
+  const zoneLabel =
+    zoneSlug === "premium-vista-mar"
+      ? mapT.zone_premium
+      : zoneSlug === "sem-eletricidade"
+        ? mapT.zone_no_electric
+        : mapT.zone_electric;
+
+  const bookHref = `${prefix}/book?pitch=${encodeURIComponent(spot.code)}`;
+  const visualType = getSpotVisualType(spot);
+  const traitLabel =
+    visualType === "panoramic-electric"
+      ? mapT.panoramic_electric
+      : visualType === "panoramic-no-electric"
+        ? mapT.panoramic_no_electric
+        : visualType === "electric"
+          ? mapT.electric
+          : mapT.no_electric;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
+        <div className="relative aspect-[4/3] bg-muted">
+          {spot.image_url ? (
+            <Image
+              src={spot.image_url}
+              alt={mapT.spot_photo_alt.replace("{code}", spot.code)}
+              fill
+              className="object-cover"
+              sizes="(max-width: 640px) 100vw, 448px"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm px-6 text-center">
+              {mapT.no_photo}
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 space-y-4">
+          <DialogHeader className="text-left space-y-2">
+            <DialogTitle className="font-heading text-2xl">{spot.code}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {spot.code}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p className="flex items-center gap-2">
+              {visualType === "panoramic-electric" || visualType === "panoramic-no-electric" ? (
+                <Waves className="h-4 w-4 text-emerald-600" />
+              ) : visualType === "electric" ? (
+                <Zap className="h-4 w-4 text-red-500" />
+              ) : (
+                <ZapOff className="h-4 w-4 text-slate-500" />
+              )}
+              <span>{traitLabel}</span>
+            </p>
+                <p>{zoneLabel}</p>
+                {dimensions && (
+                  <p className="flex items-center gap-2">
+                    <Ruler className="h-4 w-4" />
+                    {dimensions}
+                  </p>
+                )}
+              </div>
+
+          <BookCta locale={locale} href={bookHref} className={cn(buttonVariants({ size: "lg" }), "w-full")}>
+            {mapT.reserve}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </BookCta>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -46,26 +169,29 @@ export function ParkPitchMap({
   spots: PitchMapSpot[];
 }) {
   const t = getTranslations(locale);
-  const [selected, setSelected] = useState<string | null>(null);
-  const selectedSpot = spots.find((spot) => spot.code === selected);
+  const mapT = t.about.pitch_map;
+  const [selectedCode, setSelectedCode] = useState<string | null>(null);
+  const selectedSpot = spots.find((spot) => spot.code === selectedCode) ?? null;
 
   return (
     <div className="space-y-4">
       <div className="text-center max-w-2xl mx-auto">
-        <h2 className="font-heading text-2xl md:text-3xl font-semibold mb-2">
-          {t.location.pitch_map_title}
-        </h2>
-        <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
-          {t.location.pitch_map_subtitle}
-        </p>
+        <h2 className="font-heading text-2xl md:text-3xl font-semibold mb-2">{mapT.title}</h2>
+        <p className="text-muted-foreground text-sm md:text-base leading-relaxed">{mapT.subtitle}</p>
       </div>
 
-      <div className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border shadow-xl shadow-primary/10 ring-1 ring-black/5 bg-muted aspect-[16/10]">
+      <div
+        className={cn(
+          "relative mx-auto w-full overflow-hidden rounded-2xl border shadow-xl shadow-primary/10 ring-1 ring-black/5 bg-muted",
+          PARK_AERIAL_MAP_MAX_WIDTH_CLASS,
+          PARK_AERIAL_ASPECT_CLASS
+        )}
+      >
         <Image
           src={PARK_AERIAL_IMAGE}
-          alt={t.location.pitch_map_image_alt}
+          alt={mapT.image_alt}
           fill
-          className="object-cover"
+          className="object-contain"
           sizes="(max-width: 1024px) 100vw, 1152px"
           priority={false}
         />
@@ -75,42 +201,37 @@ export function ParkPitchMap({
             <PitchMarker
               key={spot.code}
               spot={spot}
-              selected={selected === spot.code}
-              onSelect={setSelected}
+              selected={selectedCode === spot.code}
+              onSelect={setSelectedCode}
             />
           ))}
         </div>
-
-        {selectedSpot && (
-          <div className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 sm:w-56 rounded-xl bg-black/75 text-white px-4 py-3 text-sm backdrop-blur-sm">
-            <p className="font-semibold text-base">{selectedSpot.code}</p>
-            <p className="text-white/80 text-xs mt-1">
-              {selectedSpot.panoramic
-                ? t.location.pitch_map_panoramic
-                : t.location.pitch_map_standard}
-              {" · "}
-              {selectedSpot.electric
-                ? t.location.pitch_map_electric
-                : t.location.pitch_map_no_electric}
-            </p>
-          </div>
-        )}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-4 text-xs sm:text-sm text-muted-foreground">
-        <span className="inline-flex items-center gap-2">
-          <span className="h-3 w-5 rounded border bg-white ring-1 ring-red-400/80" />
-          {t.location.pitch_map_legend_electric}
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="h-3 w-5 rounded bg-emerald-500 border border-emerald-300" />
-          {t.location.pitch_map_legend_panoramic}
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="h-3 w-5 rounded bg-white/90 border border-white/80" />
-          {t.location.pitch_map_legend_standard}
-        </span>
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-3 sm:gap-x-6 text-xs sm:text-sm text-muted-foreground max-w-3xl mx-auto">
+        {(
+          [
+            ["electric", mapT.legend_electric],
+            ["no-electric", mapT.legend_no_electric],
+            ["panoramic-electric", mapT.legend_panoramic_electric],
+            ["panoramic-no-electric", mapT.legend_panoramic_no_electric],
+          ] as const satisfies ReadonlyArray<[SpotVisualType, string]>
+        ).map(([type, label]) => (
+          <span key={type} className="inline-flex items-center gap-2">
+            <span className={LEGEND_SWATCH_STYLES[type]} />
+            {label}
+          </span>
+        ))}
       </div>
+
+      <SpotDetailDialog
+        locale={locale}
+        spot={selectedSpot}
+        open={selectedCode !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCode(null);
+        }}
+      />
     </div>
   );
 }

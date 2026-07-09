@@ -94,6 +94,12 @@ export interface Reservation {
   num_guests: number;
   notes: string | null;
   total_cents: number;
+  paid_cents?: number;
+  partial_payment_cents?: number;
+  partial_payment_method?: string | null;
+  payment_method?: string | null;
+  pitch_code?: string | null;
+  created_by_admin?: boolean;
   stripe_session_id: string | null;
   stripe_payment_intent_id: string | null;
   expires_at: string | null;
@@ -113,6 +119,8 @@ export interface Payment {
   amount_cents: number;
   currency: string;
   status: PaymentStatus;
+  payment_method?: string | null;
+  notes?: string | null;
   created_at: string;
 }
 

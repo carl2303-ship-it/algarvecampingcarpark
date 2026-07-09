@@ -1,40 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface BlockedDate {
   id: string;
   start_date: string;
   end_date: string;
   reason: string | null;
-  zone: { name: string } | null;
+  pitch_code: string | null;
 }
 
-interface Zone {
-  id: string;
-  name: string;
+interface PitchOption {
+  code: string;
 }
 
-export function BlockedDatesManager({ zones }: { zones: Zone[] }) {
+export function BlockedDatesManager({ pitches }: { pitches: PitchOption[] }) {
   const [items, setItems] = useState<BlockedDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [zoneId, setZoneId] = useState<string>("all");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pitchCode, setPitchCode] = useState(pitches[0]?.code ?? "");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
+
+  const sortedPitches = useMemo(
+    () =>
+      [...pitches].sort((a, b) =>
+        a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: "base" })
+      ),
+    [pitches]
+  );
 
   async function load() {
     const res = await fetch("/api/admin/blocked-dates");
@@ -49,12 +50,13 @@ export function BlockedDatesManager({ zones }: { zones: Zone[] }) {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
+    if (!pitchCode) return;
     setSaving(true);
     await fetch("/api/admin/blocked-dates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        zone_id: zoneId === "all" ? null : zoneId,
+        pitch_code: pitchCode,
         start_date: startDate,
         end_date: endDate,
         reason: reason || undefined,
@@ -67,6 +69,13 @@ export function BlockedDatesManager({ zones }: { zones: Zone[] }) {
     load();
   }
 
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    await fetch(`/api/admin/blocked-dates?id=${id}`, { method: "DELETE" });
+    setDeletingId(null);
+    load();
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -74,36 +83,49 @@ export function BlockedDatesManager({ zones }: { zones: Zone[] }) {
       </CardHeader>
       <CardContent className="space-y-6">
         <form onSubmit={handleAdd} className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Zona</Label>
-            <Select value={zoneId} onValueChange={(v) => setZoneId(v ?? "all")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as zonas</SelectItem>
-                {zones.map((z) => (
-                  <SelectItem key={z.id} value={z.id}>
-                    {z.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-2 md:col-span-2">
+            <Label>Lugar</Label>
+            <select
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+              value={pitchCode}
+              onChange={(event) => setPitchCode(event.target.value)}
+              required
+            >
+              {sortedPitches.map((pitch) => (
+                <option key={pitch.code} value={pitch.code}>
+                  {pitch.code}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-2">
             <Label>Motivo</Label>
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Manutenção, fecho..." />
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Manutenção, fecho..."
+            />
           </div>
           <div className="space-y-2">
             <Label>Início</Label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              required
+            />
           </div>
           <div className="space-y-2">
             <Label>Fim</Label>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              required
+            />
           </div>
           <div className="md:col-span-2">
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || !pitchCode}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
               Adicionar bloqueio
             </Button>
@@ -117,17 +139,30 @@ export function BlockedDatesManager({ zones }: { zones: Zone[] }) {
         ) : (
           <ul className="space-y-2">
             {items.map((item) => (
-              <li key={item.id} className="flex justify-between items-center border rounded-lg p-3 text-sm">
+              <li
+                key={item.id}
+                className="flex justify-between items-center gap-3 border rounded-lg p-3 text-sm"
+              >
                 <div>
                   <p className="font-medium">
-                    {item.start_date} → {item.end_date}
+                    Lugar {item.pitch_code ?? "—"} · {item.start_date} → {item.end_date}
                   </p>
-                  <p className="text-muted-foreground">
-                    {item.zone?.name ?? "Todas as zonas"}
-                    {item.reason ? ` · ${item.reason}` : ""}
-                  </p>
+                  {item.reason && <p className="text-muted-foreground">{item.reason}</p>}
                 </div>
-                <Trash2 className="h-4 w-4 text-muted-foreground" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={deletingId === item.id}
+                  onClick={() => handleDelete(item.id)}
+                  aria-label="Remover bloqueio"
+                >
+                  {deletingId === item.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
               </li>
             ))}
           </ul>

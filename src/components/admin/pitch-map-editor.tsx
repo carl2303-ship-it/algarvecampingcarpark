@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, MapPin, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, MapPin, Save, Upload } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PARK_AERIAL_IMAGE } from "@/lib/park-pitch-map-defaults";
+import { getSpotMarkerClass, getSpotZoneSlug, PARK_AERIAL_IMAGE, PARK_AERIAL_ASPECT_CLASS } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import { cn } from "@/lib/utils";
 
@@ -17,13 +17,10 @@ function clampPercent(value: number) {
 
 function spotClassName(spot: PitchMapSpotRecord, selected: boolean, dragging: boolean) {
   return cn(
-    "absolute -translate-x-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-[10px] font-bold leading-none shadow-md border cursor-grab select-none touch-none",
-    dragging ? "cursor-grabbing z-40 scale-110" : "z-10",
-    spot.panoramic
-      ? "bg-emerald-500 text-white border-emerald-300"
-      : "bg-white text-primary border-white/80",
-    spot.electric && !spot.panoramic && "ring-2 ring-red-400",
-    selected && "ring-2 ring-amber-400 z-30"
+    getSpotMarkerClass(spot, selected).replace("hover:scale-110 hover:z-20", ""),
+    "px-1 py-px text-[7px] shadow-md cursor-grab select-none touch-none",
+    dragging ? "cursor-grabbing z-40 scale-[1.1]" : "z-10",
+    selected && !dragging && "z-30"
   );
 }
 
@@ -37,14 +34,17 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
   const selected = spots.find((spot) => spot.code === selectedCode) ?? spots[0];
 
   const filteredSpots = useMemo(() => {
     const query = filter.trim().toUpperCase();
-    if (!query) return spots;
-    return spots.filter((spot) => spot.code.includes(query));
+    const list = query ? spots.filter((spot) => spot.code.includes(query)) : spots;
+    return [...list].sort((a, b) =>
+      a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: "base" })
+    );
   }, [filter, spots]);
 
   const updateSpot = useCallback((code: string, patch: Partial<PitchMapSpotRecord>) => {
@@ -90,6 +90,28 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
     };
   }, [draggingCode, positionFromClient, updateSpot]);
 
+  async function handlePhotoUpload(file: File) {
+    if (!selected) return;
+    setUploadingPhoto(true);
+    setMessage(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("code", selected.code);
+    const res = await fetch("/api/admin/pitch-map/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json().catch(() => ({}));
+    setUploadingPhoto(false);
+    if (res.ok) {
+      updateSpot(selected.code, { image_url: data.image_url });
+      setMessage(`Fotografia do lugar ${selected.code} atualizada.`);
+      setDirty(false);
+    } else {
+      setMessage(data.error ?? "Erro ao carregar fotografia.");
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setMessage(null);
@@ -104,6 +126,10 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
           panoramic: spot.panoramic,
           electric: spot.electric,
           sort_order: index + 1,
+          image_url: spot.image_url ?? null,
+          width_m: spot.width_m ?? null,
+          length_m: spot.length_m ?? null,
+          zone_slug: spot.zone_slug ?? getSpotZoneSlug(spot),
         })),
       }),
     });
@@ -186,9 +212,13 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                 <input
                   type="checkbox"
                   checked={selected.panoramic}
-                  onChange={(event) =>
-                    updateSpot(selected.code, { panoramic: event.target.checked })
-                  }
+                  onChange={(event) => {
+                    const panoramic = event.target.checked;
+                    updateSpot(selected.code, {
+                      panoramic,
+                      zone_slug: getSpotZoneSlug({ ...selected, panoramic }),
+                    });
+                  }}
                 />
                 Panorâmico
               </label>
@@ -196,12 +226,106 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                 <input
                   type="checkbox"
                   checked={selected.electric}
-                  onChange={(event) =>
-                    updateSpot(selected.code, { electric: event.target.checked })
-                  }
+                  onChange={(event) => {
+                    const electric = event.target.checked;
+                    updateSpot(selected.code, {
+                      electric,
+                      zone_slug: getSpotZoneSlug({ ...selected, electric }),
+                    });
+                  }}
                 />
                 Com eletricidade
               </label>
+
+              <div>
+                <Label className="text-xs">Zona de reserva</Label>
+                <select
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                  value={selected.zone_slug ?? getSpotZoneSlug(selected)}
+                  onChange={(event) =>
+                    updateSpot(selected.code, { zone_slug: event.target.value })
+                  }
+                >
+                  <option value="com-eletricidade">Com eletricidade</option>
+                  <option value="sem-eletricidade">Sem eletricidade</option>
+                  <option value="premium-vista-mar">Premium vista mar</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Largura (m)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    placeholder="ex: 8"
+                    value={selected.width_m ?? ""}
+                    onChange={(event) =>
+                      updateSpot(selected.code, {
+                        width_m: event.target.value ? Number(event.target.value) : null,
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Comprimento (m)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    placeholder="ex: 6"
+                    value={selected.length_m ?? ""}
+                    onChange={(event) =>
+                      updateSpot(selected.code, {
+                        length_m: event.target.value ? Number(event.target.value) : null,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs">Fotografia do lugar</Label>
+                {selected.image_url ? (
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-lg border bg-muted">
+                    <Image
+                      src={selected.image_url}
+                      alt={`Lugar ${selected.code}`}
+                      fill
+                      className="object-cover"
+                      sizes="280px"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Sem fotografia carregada.</p>
+                )}
+                <label
+                  className={cn(
+                    buttonVariants({ variant: "outline", size: "sm" }),
+                    "inline-flex cursor-pointer",
+                    uploadingPhoto && "pointer-events-none opacity-50"
+                  )}
+                >
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    disabled={uploadingPhoto}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void handlePhotoUpload(file);
+                      event.target.value = "";
+                    }}
+                  />
+                  {uploadingPhoto ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  Carregar foto
+                </label>
+              </div>
             </div>
           )}
 
@@ -228,13 +352,16 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
           <div
             ref={mapRef}
             onClick={handleMapClick}
-            className="relative w-full overflow-hidden rounded-xl border bg-muted aspect-[16/10] cursor-crosshair"
+            className={cn(
+              "relative w-full overflow-hidden rounded-xl border bg-muted cursor-crosshair",
+              PARK_AERIAL_ASPECT_CLASS
+            )}
           >
             <Image
               src={PARK_AERIAL_IMAGE}
               alt="Vista aérea do parque"
               fill
-              className="object-cover pointer-events-none"
+              className="object-contain pointer-events-none"
               sizes="(max-width: 1280px) 100vw, 1152px"
               draggable={false}
             />

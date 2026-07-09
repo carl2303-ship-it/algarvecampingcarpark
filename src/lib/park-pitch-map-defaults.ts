@@ -4,7 +4,68 @@ export type PitchMapSpot = {
   y: number;
   panoramic: boolean;
   electric: boolean;
+  image_url?: string | null;
+  width_m?: number | null;
+  length_m?: number | null;
+  zone_slug?: string | null;
+  category?: string | null;
+  max_amperage?: number;
+  status?: "available" | "occupied" | "maintenance";
 };
+
+export const ZONE_SLUGS = [
+  "com-eletricidade",
+  "sem-eletricidade",
+  "premium-vista-mar",
+] as const;
+
+export type ZoneSlug = (typeof ZONE_SLUGS)[number];
+
+export type SpotVisualType =
+  | "electric"
+  | "no-electric"
+  | "panoramic-electric"
+  | "panoramic-no-electric";
+
+export function getSpotVisualType(
+  spot: Pick<PitchMapSpot, "panoramic" | "electric">
+): SpotVisualType {
+  if (spot.panoramic && spot.electric) return "panoramic-electric";
+  if (spot.panoramic) return "panoramic-no-electric";
+  if (!spot.electric) return "no-electric";
+  return "electric";
+}
+
+export function getSpotZoneSlug(spot: Pick<PitchMapSpot, "panoramic" | "electric" | "zone_slug">): ZoneSlug {
+  if (spot.zone_slug && ZONE_SLUGS.includes(spot.zone_slug as ZoneSlug)) {
+    return spot.zone_slug as ZoneSlug;
+  }
+  if (spot.panoramic && spot.electric) return "premium-vista-mar";
+  if (!spot.electric) return "sem-eletricidade";
+  return "com-eletricidade";
+}
+
+const MARKER_BASE =
+  "absolute -translate-x-1/2 -translate-y-1/2 rounded px-0.5 py-px text-[6px] sm:text-[7px] font-bold leading-none shadow-sm border transition-transform hover:scale-110 hover:z-20";
+
+const MARKER_STYLES: Record<SpotVisualType, string> = {
+  electric: "bg-white/90 text-primary border-white/80 ring-1 ring-red-400/80",
+  "no-electric": "bg-slate-500/90 text-white border-slate-300",
+  "panoramic-electric": "bg-emerald-500/90 text-white border-emerald-300 ring-1 ring-red-400/80",
+  "panoramic-no-electric": "bg-emerald-700/90 text-white border-emerald-200",
+};
+
+export const LEGEND_SWATCH_STYLES: Record<SpotVisualType, string> = {
+  electric: "h-3 w-5 rounded border bg-white ring-1 ring-red-400/80",
+  "no-electric": "h-3 w-5 rounded bg-slate-500 border border-slate-300",
+  "panoramic-electric": "h-3 w-5 rounded bg-emerald-500 border border-emerald-300 ring-1 ring-red-400/80",
+  "panoramic-no-electric": "h-3 w-5 rounded bg-emerald-700 border border-emerald-200",
+};
+
+export function getSpotMarkerClass(spot: Pick<PitchMapSpot, "panoramic" | "electric">, selected = false) {
+  const selectedClass = selected ? "scale-[1.15] z-30 ring-2 ring-amber-400" : "";
+  return `${MARKER_BASE} ${MARKER_STYLES[getSpotVisualType(spot)]} ${selectedClass}`;
+}
 
 function spread(count: number, startX: number, endX: number): number[] {
   if (count <= 0) return [];
@@ -51,3 +112,7 @@ export const DEFAULT_PITCH_MAP: PitchMapSpot[] = [
 ];
 
 export const PARK_AERIAL_IMAGE = "/images/park-aerial.jpg";
+
+/** Matches public/images/park-aerial.jpg (1024×541) so markers align without edge cropping. */
+export const PARK_AERIAL_ASPECT_CLASS = "aspect-[1024/541]";
+export const PARK_AERIAL_MAP_MAX_WIDTH_CLASS = "max-w-[1400px]";

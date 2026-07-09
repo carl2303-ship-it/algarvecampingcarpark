@@ -27,6 +27,33 @@ export const TOTAL_CAPACITY = 57;
 export const PARK_AREA_M2 = 37000;
 export const CHECK_IN_TIME = "11:00";
 export const CHECK_OUT_TIME = "11:00";
+
+export type ParkSettings = {
+  reception_open: string;
+  reception_close: string;
+  check_in_time: string;
+  check_out_time: string;
+};
+
+export const DEFAULT_PARK_SETTINGS: ParkSettings = {
+  reception_open: "09:00",
+  reception_close: "18:00",
+  check_in_time: CHECK_IN_TIME,
+  check_out_time: CHECK_OUT_TIME,
+};
+
+export function formatTimeForLocale(time: string, locale: "pt" | "en" = "pt"): string {
+  if (locale === "pt") {
+    return time.replace(":", "h");
+  }
+  return time;
+}
+
+export function formatReceptionHours(settings: ParkSettings, locale: "pt" | "en" = "pt"): string {
+  const open = formatTimeForLocale(settings.reception_open, locale);
+  const close = formatTimeForLocale(settings.reception_close, locale);
+  return `${open} – ${close}`;
+}
 export const PENDING_PAYMENT_EXPIRY_MINUTES = 30;
 /** Set to true when Stripe and pitch inventory are ready for production bookings. */
 export const BOOKING_ENABLED = false;
