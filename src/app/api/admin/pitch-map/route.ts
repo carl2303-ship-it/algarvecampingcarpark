@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/supabase/server";
@@ -54,6 +55,9 @@ export async function PUT(request: Request) {
       console.error("Pitch map save error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    revalidatePath("/location");
+    revalidatePath("/en/location");
 
     return NextResponse.json({ success: true, count: rows.length });
   } catch (error) {
