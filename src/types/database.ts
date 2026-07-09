@@ -63,6 +63,15 @@ export interface GalleryImageRecord {
   updated_at: string;
 }
 
+export interface PitchMapSpotRecord {
+  code: string;
+  x: number;
+  y: number;
+  panoramic: boolean;
+  electric: boolean;
+  sort_order: number;
+}
+
 export interface Pitch {
   id: string;
   zone_id: string;

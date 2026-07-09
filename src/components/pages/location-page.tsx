@@ -1,6 +1,8 @@
 import { Car, Plane, ShoppingBag, Umbrella } from "lucide-react";
 import { PageHero } from "@/components/marketing/sections";
 import { MapEmbed } from "@/components/marketing/map-embed";
+import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
+import { getPitchMapSpots } from "@/lib/pitch-map";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { ADDRESS, GPS_DECIMAL, GPS_DMS } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
@@ -8,9 +10,10 @@ import type { Locale } from "@/lib/constants";
 
 const distanceIcons = [ShoppingBag, Umbrella, Plane] as const;
 
-export default function LocationPageContent({ locale }: { locale: Locale }) {
+export default async function LocationPageContent({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
   const distances = Object.values(t.location.distances);
+  const pitchMapSpots = await getPitchMapSpots();
 
   return (
     <MarketingLayout locale={locale}>
@@ -21,11 +24,12 @@ export default function LocationPageContent({ locale }: { locale: Locale }) {
       />
 
       <section className="py-20 md:py-28">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 space-y-20">
+          <ParkPitchMap locale={locale} spots={pitchMapSpots} />
+
           <MapEmbed
             title={t.location.title}
             openLabel={t.location.open_maps}
-            className="mb-16"
           />
 
           <div className="grid md:grid-cols-2 gap-12 max-w-5xl mx-auto">

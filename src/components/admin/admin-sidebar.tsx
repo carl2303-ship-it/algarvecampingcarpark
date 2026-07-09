@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Calendar, Images, LayoutDashboard, LogOut, Map, Settings, Tent } from "lucide-react";
+import { Calendar, Images, LayoutDashboard, LogOut, Map, MapPinned, Settings, Tent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteLogo } from "@/components/brand/site-logo";
 import { createClient } from "@/lib/supabase/client";
@@ -14,6 +14,7 @@ const nav = [
   { href: "/admin/calendar", label: "Calendário", icon: Calendar },
   { href: "/admin/zones", label: "Zonas & Tarifas", icon: Map },
   { href: "/admin/gallery", label: "Galeria", icon: Images },
+  { href: "/admin/pitch-map", label: "Mapa de lugares", icon: MapPinned },
   { href: "/admin/settings", label: "Definições", icon: Settings },
 ];
 
