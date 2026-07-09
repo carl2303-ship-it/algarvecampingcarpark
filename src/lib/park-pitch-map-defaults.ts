@@ -17,6 +17,7 @@ export const ZONE_SLUGS = [
   "com-eletricidade",
   "sem-eletricidade",
   "premium-vista-mar",
+  "premium-sem-eletricidade",
 ] as const;
 
 export type ZoneSlug = (typeof ZONE_SLUGS)[number];
@@ -41,6 +42,7 @@ export function getSpotZoneSlug(spot: Pick<PitchMapSpot, "panoramic" | "electric
     return spot.zone_slug as ZoneSlug;
   }
   if (spot.panoramic && spot.electric) return "premium-vista-mar";
+  if (spot.panoramic && !spot.electric) return "premium-sem-eletricidade";
   if (!spot.electric) return "sem-eletricidade";
   return "com-eletricidade";
 }

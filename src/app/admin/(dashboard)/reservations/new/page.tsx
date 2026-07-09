@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { AdminReservationForm } from "@/components/admin/admin-reservation-form";
 import { buttonVariants } from "@/components/ui/button";
+import { adminT } from "@/lib/admin-i18n";
 import { getActiveZones } from "@/lib/availability";
 import { getPitchMapSpotsAdmin } from "@/lib/pitch-map";
 import { cn } from "@/lib/utils";
@@ -19,9 +20,9 @@ export default async function NewReservationPage({
       <div className="flex items-center gap-4">
         <Link href="/admin/reservations" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
+          {adminT.common.back}
         </Link>
-        <h1 className="text-3xl font-bold">Nova reserva</h1>
+        <h1 className="text-3xl font-bold">{adminT.reservations.newPageTitle}</h1>
       </div>
       <AdminReservationForm
         zones={zones}

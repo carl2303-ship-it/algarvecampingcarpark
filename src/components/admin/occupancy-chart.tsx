@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { adminT } from "@/lib/admin-i18n";
 import type { OccupancyDay } from "@/lib/admin-dashboard";
 
 export function OccupancyChart({ data }: { data: OccupancyDay[] }) {
@@ -21,7 +22,9 @@ export function OccupancyChart({ data }: { data: OccupancyDay[] }) {
                       : "bg-emerald-500"
                 )}
                 style={{ height: `${Math.max(8, (day.percent / maxPercent) * 100)}%` }}
-                title={`${day.occupied}/${day.capacity} lugares`}
+                title={adminT.occupancyChart.tooltip
+                  .replace("{occupied}", String(day.occupied))
+                  .replace("{capacity}", String(day.capacity))}
               />
             </div>
             <span className="text-[10px] text-muted-foreground truncate w-full text-center">
@@ -31,8 +34,10 @@ export function OccupancyChart({ data }: { data: OccupancyDay[] }) {
         ))}
       </div>
       <p className="text-xs text-muted-foreground text-center">
-        Ocupação do parque (todas as zonas) — {data[0]?.occupied ?? 0} a {data[data.length - 1]?.occupied ?? 0}{" "}
-        lugares ocupados · capacidade {data[0]?.capacity ?? 0}
+        {adminT.occupancyChart.legend
+          .replace("{from}", String(data[0]?.occupied ?? 0))
+          .replace("{to}", String(data[data.length - 1]?.occupied ?? 0))
+          .replace("{capacity}", String(data[0]?.capacity ?? 0))}
       </p>
     </div>
   );

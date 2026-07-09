@@ -89,9 +89,11 @@ function SpotDetailDialog({
   const zoneLabel =
     zoneSlug === "premium-vista-mar"
       ? mapT.zone_premium
-      : zoneSlug === "sem-eletricidade"
-        ? mapT.zone_no_electric
-        : mapT.zone_electric;
+      : zoneSlug === "premium-sem-eletricidade"
+        ? mapT.zone_premium_no_electric
+        : zoneSlug === "sem-eletricidade"
+          ? mapT.zone_no_electric
+          : mapT.zone_electric;
 
   const bookHref = `${prefix}/book?pitch=${encodeURIComponent(spot.code)}`;
   const visualType = getSpotVisualType(spot);

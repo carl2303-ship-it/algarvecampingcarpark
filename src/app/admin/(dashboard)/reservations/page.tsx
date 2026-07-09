@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CheckInDialog } from "@/components/admin/check-in-dialog";
+import { adminT, formatAdminReservationStatus } from "@/lib/admin-i18n";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { releaseReservationPitch } from "@/lib/reservation-checkout";
 import { formatPrice } from "@/lib/pricing";
@@ -40,15 +41,15 @@ export default async function ReservationsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Reservas</h1>
+        <h1 className="text-3xl font-bold">{adminT.reservations.title}</h1>
         <div className="flex gap-2">
           <Link href="/admin/reservations/new" className={buttonVariants()}>
             <Plus className="mr-2 h-4 w-4" />
-            Nova reserva
+            {adminT.reservations.newReservation}
           </Link>
           <a href="/api/admin/export" className={buttonVariants({ variant: "outline" })}>
             <Download className="mr-2 h-4 w-4" />
-            Exportar CSV
+            {adminT.reservations.exportCsv}
           </a>
         </div>
       </div>
@@ -57,13 +58,13 @@ export default async function ReservationsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Zona</TableHead>
-              <TableHead>Datas</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Lugar</TableHead>
-              <TableHead>Ações</TableHead>
+              <TableHead>{adminT.reservations.client}</TableHead>
+              <TableHead>{adminT.reservations.zone}</TableHead>
+              <TableHead>{adminT.reservations.dates}</TableHead>
+              <TableHead>{adminT.reservations.total}</TableHead>
+              <TableHead>{adminT.reservations.status}</TableHead>
+              <TableHead>{adminT.reservations.pitch}</TableHead>
+              <TableHead>{adminT.reservations.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -82,7 +83,7 @@ export default async function ReservationsPage() {
                 <TableCell>{formatPrice(r.total_cents)}</TableCell>
                 <TableCell>
                   <Badge variant={statusColors[r.status] ?? "outline"}>
-                    {r.status}
+                    {formatAdminReservationStatus(r.status)}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -137,7 +138,7 @@ function CheckOutButton({
       }}
     >
       <Button size="sm" variant="outline" type="submit">
-        Check-out
+        {adminT.reservations.checkOut}
       </Button>
     </form>
   );

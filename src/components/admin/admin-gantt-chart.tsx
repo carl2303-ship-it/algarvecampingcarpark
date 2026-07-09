@@ -9,8 +9,8 @@ import {
   parseISO,
   startOfToday,
 } from "date-fns";
-import { pt } from "date-fns/locale";
 import { Loader2 } from "lucide-react";
+import { adminDateLocale, adminT } from "@/lib/admin-i18n";
 import { cn } from "@/lib/utils";
 import { formatPrice } from "@/lib/pricing";
 
@@ -123,7 +123,7 @@ function GanttBar({
         type="button"
         onPointerDown={startDrag}
         className="h-full w-3 shrink-0 cursor-ew-resize bg-black/20 hover:bg-black/40 rounded-r-md touch-none"
-        aria-label={`Prolongar estadia de ${reservation.guest_name}`}
+        aria-label={adminT.timeline.extendAria.replace("{name}", reservation.guest_name)}
       />
     </div>
   );
@@ -170,16 +170,16 @@ export function AdminGanttChart({
           body: JSON.stringify({ check_out: newCheckOut, send_payment_link: true }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Erro ao prolongar");
+        if (!res.ok) throw new Error(data.error ?? adminT.timeline.extendError);
 
         const extra =
           data.extension_cents > 0
-            ? ` Valor adicional: ${formatPrice(data.extension_cents)}. Link enviado por email.`
+            ? ` ${adminT.timeline.extraAmount.replace("{amount}", formatPrice(data.extension_cents))}`
             : "";
-        setMessage(`Estadia prolongada até ${newCheckOut}.${extra}`);
+        setMessage(`${adminT.timeline.extendedUntil.replace("{date}", newCheckOut)}${extra}`);
         router.refresh();
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Erro ao prolongar estadia");
+        setMessage(error instanceof Error ? error.message : adminT.timeline.extendStayError);
       } finally {
         setExtendingId(null);
       }
@@ -189,10 +189,7 @@ export function AdminGanttChart({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Arraste a ponta direita de uma barra para prolongar a estadia. O valor extra é calculado
-        automaticamente e um link Stripe é enviado ao hóspede.
-      </p>
+      <p className="text-sm text-muted-foreground">{adminT.timeline.instruction}</p>
 
       {message && (
         <div className="rounded-lg border bg-muted/50 px-4 py-3 text-sm">{message}</div>
@@ -200,14 +197,16 @@ export function AdminGanttChart({
 
       {extendingId && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> A prolongar estadia…
+          <Loader2 className="h-4 w-4 animate-spin" /> {adminT.timeline.extending}
         </div>
       )}
 
       <div className="overflow-x-auto rounded-xl border bg-background">
         <div className="min-w-[960px]">
           <div className="flex border-b bg-muted/50">
-            <div className="w-16 shrink-0 p-2 text-xs font-medium border-r">Lugar</div>
+            <div className="w-16 shrink-0 p-2 text-xs font-medium border-r">
+              {adminT.timeline.pitchColumn}
+            </div>
             <div className="flex flex-1">
               {dayColumns.map((day) => (
                 <div
@@ -215,9 +214,9 @@ export function AdminGanttChart({
                   className="flex-1 min-w-[36px] border-r p-1 text-center text-[10px] text-muted-foreground"
                 >
                   <div className="font-medium text-foreground">
-                    {format(day, "dd", { locale: pt })}
+                    {format(day, "dd", { locale: adminDateLocale })}
                   </div>
-                  <div>{format(day, "MMM", { locale: pt })}</div>
+                  <div>{format(day, "MMM", { locale: adminDateLocale })}</div>
                 </div>
               ))}
             </div>

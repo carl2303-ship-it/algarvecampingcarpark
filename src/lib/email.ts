@@ -42,8 +42,8 @@ export async function sendBookingConfirmation({
       <p>A sua reserva no <strong>${SITE_NAME}</strong> foi confirmada.</p>
       <ul>
         <li><strong>Zona:</strong> ${zoneName}</li>
-        <li><strong>Check-in:</strong> ${checkIn} (a partir das ${checkInTime.replace(":", "h")})</li>
-        <li><strong>Check-out:</strong> ${checkOut} (até às ${checkOutTime.replace(":", "h")})</li>
+        <li><strong>Check-in:</strong> ${checkIn} (a partir das ${checkInTime})</li>
+        <li><strong>Check-out:</strong> ${checkOut} (até às ${checkOutTime})</li>
         <li><strong>Total pago:</strong> ${formatPrice(totalCents)}</li>
         <li><strong>Referência:</strong> ${reservationId.slice(0, 8).toUpperCase()}</li>
       </ul>

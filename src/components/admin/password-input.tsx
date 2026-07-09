@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { adminT } from "@/lib/admin-i18n";
 
 export function PasswordInput({
   id,
@@ -43,7 +44,7 @@ export function PasswordInput({
         type="button"
         onClick={() => setVisible((v) => !v)}
         className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:text-foreground"
-        aria-label={visible ? "Ocultar password" : "Mostrar password"}
+        aria-label={visible ? adminT.passwordInput.hide : adminT.passwordInput.show}
       >
         {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>

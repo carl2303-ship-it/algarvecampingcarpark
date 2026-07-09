@@ -43,16 +43,11 @@ export const DEFAULT_PARK_SETTINGS: ParkSettings = {
 };
 
 export function formatTimeForLocale(time: string, locale: "pt" | "en" = "pt"): string {
-  if (locale === "pt") {
-    return time.replace(":", "h");
-  }
   return time;
 }
 
 export function formatReceptionHours(settings: ParkSettings, locale: "pt" | "en" = "pt"): string {
-  const open = formatTimeForLocale(settings.reception_open, locale);
-  const close = formatTimeForLocale(settings.reception_close, locale);
-  return `${open} – ${close}`;
+  return `${settings.reception_open} – ${settings.reception_close}`;
 }
 export const PENDING_PAYMENT_EXPIRY_MINUTES = 30;
 /** Set to true when Stripe and pitch inventory are ready for production bookings. */

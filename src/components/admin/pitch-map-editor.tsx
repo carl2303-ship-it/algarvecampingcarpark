@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { adminT } from "@/lib/admin-i18n";
 import { getSpotMarkerClass, getSpotZoneSlug, PARK_AERIAL_IMAGE, PARK_AERIAL_ASPECT_CLASS } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import { cn } from "@/lib/utils";
@@ -105,10 +106,10 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
     setUploadingPhoto(false);
     if (res.ok) {
       updateSpot(selected.code, { image_url: data.image_url });
-      setMessage(`Fotografia do lugar ${selected.code} atualizada.`);
+      setMessage(adminT.pitchMap.photoUpdated.replace("{code}", selected.code));
       setDirty(false);
     } else {
-      setMessage(data.error ?? "Erro ao carregar fotografia.");
+      setMessage(data.error ?? adminT.pitchMap.photoUploadError);
     }
   }
 
@@ -137,9 +138,9 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
     setSaving(false);
     if (res.ok) {
       setDirty(false);
-      setMessage("Mapa guardado com sucesso.");
+      setMessage(adminT.pitchMap.mapSaved);
     } else {
-      setMessage(data.error ?? "Erro ao guardar o mapa.");
+      setMessage(data.error ?? adminT.pitchMap.mapSaveError);
     }
   }
 
@@ -147,16 +148,14 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
     <div className="grid xl:grid-cols-[280px_minmax(0,1fr)] gap-6">
       <Card className="h-fit xl:sticky xl:top-6">
         <CardHeader>
-          <CardTitle className="text-lg">Lugares</CardTitle>
-          <CardDescription>
-            Selecione um lugar e arraste a pastilha ou clique no mapa para o posicionar.
-          </CardDescription>
+          <CardTitle className="text-lg">{adminT.pitchMap.pitches}</CardTitle>
+          <CardDescription>{adminT.pitchMap.pitchesDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Input
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Filtrar (ex: A10)"
+            placeholder={adminT.pitchMap.filterPlaceholder}
           />
 
           <div className="max-h-[420px] overflow-y-auto grid grid-cols-3 gap-2">
@@ -220,7 +219,7 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                     });
                   }}
                 />
-                Panorâmico
+                {adminT.pitchMap.panoramic}
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -234,11 +233,11 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                     });
                   }}
                 />
-                Com eletricidade
+                {adminT.pitchMap.withElectricity}
               </label>
 
               <div>
-                <Label className="text-xs">Zona de reserva</Label>
+                <Label className="text-xs">{adminT.pitchMap.bookingZone}</Label>
                 <select
                   className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                   value={selected.zone_slug ?? getSpotZoneSlug(selected)}
@@ -246,20 +245,21 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                     updateSpot(selected.code, { zone_slug: event.target.value })
                   }
                 >
-                  <option value="com-eletricidade">Com eletricidade</option>
-                  <option value="sem-eletricidade">Sem eletricidade</option>
-                  <option value="premium-vista-mar">Premium vista mar</option>
+                  <option value="com-eletricidade">{adminT.pitchMap.zoneWithElectricity}</option>
+                  <option value="sem-eletricidade">{adminT.pitchMap.zoneWithoutElectricity}</option>
+                  <option value="premium-vista-mar">{adminT.pitchMap.zonePremium}</option>
+                  <option value="premium-sem-eletricidade">{adminT.pitchMap.zonePremiumNoElectric}</option>
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Largura (m)</Label>
+                  <Label className="text-xs">{adminT.pitchMap.width}</Label>
                   <Input
                     type="number"
                     min={0}
                     step={0.1}
-                    placeholder="ex: 8"
+                    placeholder={adminT.pitchMap.widthPlaceholder}
                     value={selected.width_m ?? ""}
                     onChange={(event) =>
                       updateSpot(selected.code, {
@@ -269,12 +269,12 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Comprimento (m)</Label>
+                  <Label className="text-xs">{adminT.pitchMap.length}</Label>
                   <Input
                     type="number"
                     min={0}
                     step={0.1}
-                    placeholder="ex: 6"
+                    placeholder={adminT.pitchMap.lengthPlaceholder}
                     value={selected.length_m ?? ""}
                     onChange={(event) =>
                       updateSpot(selected.code, {
@@ -286,19 +286,19 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Fotografia do lugar</Label>
+                <Label className="text-xs">{adminT.pitchMap.pitchPhoto}</Label>
                 {selected.image_url ? (
                   <div className="relative aspect-[4/3] overflow-hidden rounded-lg border bg-muted">
                     <Image
                       src={selected.image_url}
-                      alt={`Lugar ${selected.code}`}
+                      alt={adminT.pitchMap.pitchAlt.replace("{code}", selected.code)}
                       fill
                       className="object-cover"
                       sizes="280px"
                     />
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">Sem fotografia carregada.</p>
+                  <p className="text-xs text-muted-foreground">{adminT.pitchMap.noPhoto}</p>
                 )}
                 <label
                   className={cn(
@@ -323,7 +323,7 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                   ) : (
                     <Upload className="h-4 w-4 mr-2" />
                   )}
-                  Carregar foto
+                  {adminT.pitchMap.uploadPhoto}
                 </label>
               </div>
             </div>
@@ -331,7 +331,7 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
 
           <Button onClick={handleSave} disabled={saving || !dirty} className="w-full">
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Guardar mapa
+            {adminT.pitchMap.saveMap}
           </Button>
           {message && <p className="text-sm text-muted-foreground">{message}</p>}
         </CardContent>
@@ -341,12 +341,9 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            Posicionar pastilhas
+            {adminT.pitchMap.positionMarkers}
           </CardTitle>
-          <CardDescription>
-            Arraste cada pastilha para o lugar certo na foto aérea. As alterações só ficam visíveis no site
-            depois de guardar.
-          </CardDescription>
+          <CardDescription>{adminT.pitchMap.positionDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <div
@@ -359,7 +356,7 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
           >
             <Image
               src={PARK_AERIAL_IMAGE}
-              alt="Vista aérea do parque"
+              alt={adminT.pitchMap.aerialAlt}
               fill
               className="object-contain pointer-events-none"
               sizes="(max-width: 1280px) 100vw, 1152px"

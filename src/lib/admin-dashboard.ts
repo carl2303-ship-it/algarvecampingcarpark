@@ -1,5 +1,5 @@
 import { addDays, format, startOfToday } from "date-fns";
-import { pt } from "date-fns/locale";
+import { adminDateLocale } from "@/lib/admin-i18n";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type OccupancyDay = {
@@ -100,7 +100,7 @@ export async function getOccupancySeries(days = 14): Promise<OccupancyDay[]> {
 
     return {
       date: dayStr,
-      label: format(day, "dd MMM", { locale: pt }),
+      label: format(day, "dd MMM", { locale: adminDateLocale }),
       occupied,
       capacity: totalCapacity,
       percent,

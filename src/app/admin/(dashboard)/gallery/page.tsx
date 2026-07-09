@@ -1,4 +1,5 @@
 import { GalleryManager } from "@/components/admin/gallery-manager";
+import { adminT } from "@/lib/admin-i18n";
 import { getGalleryImagesAdmin } from "@/lib/gallery";
 
 export default async function GalleryAdminPage() {
@@ -7,10 +8,8 @@ export default async function GalleryAdminPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Galeria</h1>
-        <p className="text-muted-foreground mt-1">
-          Gerir fotos do carrossel na página Sobre — adicionar, remover, ordenar e editar títulos.
-        </p>
+        <h1 className="text-3xl font-bold">{adminT.gallery.pageTitle}</h1>
+        <p className="text-muted-foreground mt-1">{adminT.gallery.pageDescription}</p>
       </div>
       <GalleryManager initialImages={images} />
     </div>

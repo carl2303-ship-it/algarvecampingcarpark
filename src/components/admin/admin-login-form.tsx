@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordInput } from "@/components/admin/password-input";
 import { SiteLogo } from "@/components/brand/site-logo";
+import { adminT } from "@/lib/admin-i18n";
 
 export function AdminLoginForm({
   initialError,
@@ -25,16 +26,16 @@ export function AdminLoginForm({
 
   useEffect(() => {
     if (initialError === "unauthorized") {
-      setError("Acesso não autorizado. A conta precisa da role admin no Supabase.");
+      setError(adminT.login.unauthorized);
     }
     if (initialError === "auth") {
-      setError("Link de autenticação inválido ou expirado. Tente novamente.");
+      setError(adminT.login.invalidLink);
     }
   }, [initialError]);
 
   useEffect(() => {
     if (resetSuccess) {
-      setSuccess("Password atualizada com sucesso. Já pode entrar.");
+      setSuccess(adminT.login.resetSuccess);
     }
   }, [resetSuccess]);
 
@@ -56,11 +57,9 @@ export function AdminLoginForm({
 
       if (!res.ok) {
         if (data.error === "config") {
-          setError(
-            "O site em produção não está ligado ao Supabase. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no Netlify e faça redeploy."
-          );
+          setError(adminT.login.supabaseNotConfigured);
         } else {
-          setError(data.message ?? "Não foi possível entrar.");
+          setError(data.message ?? adminT.login.signInFailed);
         }
         setLoading(false);
         return;
@@ -68,7 +67,7 @@ export function AdminLoginForm({
 
       window.location.assign("/admin");
     } catch {
-      setError("Erro de ligação. Tente novamente.");
+      setError(adminT.common.connectionError);
       setLoading(false);
     }
   }
@@ -77,8 +76,8 @@ export function AdminLoginForm({
     <Card className="w-full max-w-md">
       <CardHeader className="items-center text-center">
         <SiteLogo size="xl" className="mb-2" />
-        <CardTitle>Administração</CardTitle>
-        <CardDescription>Algarve Camping Car Park</CardDescription>
+        <CardTitle>{adminT.login.title}</CardTitle>
+        <CardDescription>{adminT.login.subtitle}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -93,7 +92,7 @@ export function AdminLoginForm({
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{adminT.common.email}</Label>
             <Input
               id="email"
               type="email"
@@ -105,12 +104,12 @@ export function AdminLoginForm({
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{adminT.common.password}</Label>
               <Link
                 href="/admin/forgot-password"
                 className="text-xs text-primary hover:underline"
               >
-                Esqueci a password
+                {adminT.login.forgotPassword}
               </Link>
             </div>
             <PasswordInput
@@ -123,7 +122,7 @@ export function AdminLoginForm({
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Entrar
+            {adminT.login.signIn}
           </Button>
         </form>
       </CardContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SiteLogo } from "@/components/brand/site-logo";
+import { adminT } from "@/lib/admin-i18n";
 
 export function AdminForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -30,15 +31,15 @@ export function AdminForgotPasswordForm() {
       const data = (await res.json()) as { message?: string; error?: string };
 
       if (!res.ok) {
-        setError(data.message ?? "Não foi possível enviar o email.");
+        setError(data.message ?? adminT.forgotPassword.sendFailed);
         setLoading(false);
         return;
       }
 
-      setMessage(data.message ?? "Verifique o seu email.");
+      setMessage(data.message ?? adminT.forgotPassword.checkEmail);
       setLoading(false);
     } catch {
-      setError("Erro de ligação. Tente novamente.");
+      setError(adminT.common.connectionError);
       setLoading(false);
     }
   }
@@ -47,10 +48,8 @@ export function AdminForgotPasswordForm() {
     <Card className="w-full max-w-md">
       <CardHeader className="items-center text-center">
         <SiteLogo size="xl" className="mb-2" />
-        <CardTitle>Recuperar password</CardTitle>
-        <CardDescription>
-          Enviaremos um link para redefinir a password da conta admin.
-        </CardDescription>
+        <CardTitle>{adminT.forgotPassword.title}</CardTitle>
+        <CardDescription>{adminT.forgotPassword.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -63,7 +62,7 @@ export function AdminForgotPasswordForm() {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email admin</Label>
+            <Label htmlFor="email">{adminT.forgotPassword.adminEmail}</Label>
             <Input
               id="email"
               type="email"
@@ -75,11 +74,11 @@ export function AdminForgotPasswordForm() {
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Enviar link de recuperação
+            {adminT.forgotPassword.sendLink}
           </Button>
           <Link href="/admin/login" className={buttonVariants({ variant: "ghost", className: "w-full" })}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar ao login
+            {adminT.forgotPassword.backToLogin}
           </Link>
         </form>
       </CardContent>

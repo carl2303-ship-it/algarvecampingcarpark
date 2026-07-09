@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { adminT } from "@/lib/admin-i18n";
 import { formatPrice } from "@/lib/pricing";
 import { getServiceVisual, ICON_OPTIONS } from "@/lib/pricing-icons";
 import type { Zone, ZoneRate, ServiceItem } from "@/types/database";
@@ -29,10 +30,10 @@ import type { Zone, ZoneRate, ServiceItem } from "@/types/database";
 type RateSeason = ZoneRate["season"];
 
 const SEASON_OPTIONS: { value: RateSeason; label: string }[] = [
-  { value: "august", label: "🌞 Agosto" },
-  { value: "summer", label: "☀️ Verão" },
-  { value: "low", label: "🌿 Época baixa" },
-  { value: "winter", label: "🌊 Inverno" },
+  { value: "august", label: adminT.pricing.seasonAugust },
+  { value: "summer", label: adminT.pricing.seasonSummer },
+  { value: "low", label: adminT.pricing.seasonLow },
+  { value: "winter", label: adminT.pricing.seasonWinter },
 ];
 
 function seasonLabel(season: RateSeason) {
@@ -131,7 +132,7 @@ export function PricingManager({
   }
 
   async function handleDeleteRate(id: string) {
-    if (!confirm("Eliminar esta tarifa?")) return;
+    if (!confirm(adminT.pricing.deleteRateConfirm)) return;
     setSaving(true);
     await fetch(`/api/admin/zone-rates/${id}`, { method: "DELETE" });
     setSaving(false);
@@ -184,7 +185,7 @@ export function PricingManager({
   }
 
   async function handleDeleteService(id: string) {
-    if (!confirm("Eliminar este serviço?")) return;
+    if (!confirm(adminT.pricing.deleteServiceConfirm)) return;
     setSaving(true);
     await fetch(`/api/admin/service-items/${id}`, { method: "DELETE" });
     setSaving(false);
@@ -195,22 +196,20 @@ export function PricingManager({
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Tarifas sazonais</CardTitle>
-          <CardDescription>
-            Alterações aqui reflectem-se automaticamente no preçário público e nas reservas.
-          </CardDescription>
+          <CardTitle>{adminT.pricing.seasonalRates}</CardTitle>
+          <CardDescription>{adminT.pricing.seasonalDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Zona</TableHead>
-                <TableHead>Época</TableHead>
-                <TableHead>Início</TableHead>
-                <TableHead>Fim</TableHead>
-                <TableHead>Preço 2 p.</TableHead>
-                <TableHead>Preço 3-4 p.</TableHead>
-                <TableHead>Mín.</TableHead>
+                <TableHead>{adminT.pricing.zone}</TableHead>
+                <TableHead>{adminT.pricing.season}</TableHead>
+                <TableHead>{adminT.pricing.start}</TableHead>
+                <TableHead>{adminT.pricing.end}</TableHead>
+                <TableHead>{adminT.pricing.price2p}</TableHead>
+                <TableHead>{adminT.pricing.price34p}</TableHead>
+                <TableHead>{adminT.pricing.minNights}</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
@@ -221,7 +220,7 @@ export function PricingManager({
                     <TableCell colSpan={8}>
                       <div className="grid md:grid-cols-7 gap-3 items-end">
                         <div>
-                          <Label className="text-xs">Época</Label>
+                          <Label className="text-xs">{adminT.pricing.season}</Label>
                           <Select
                             value={editRate.season}
                             onValueChange={(v) =>
@@ -237,7 +236,7 @@ export function PricingManager({
                           </Select>
                         </div>
                         <div>
-                          <Label className="text-xs">Início</Label>
+                          <Label className="text-xs">{adminT.pricing.start}</Label>
                           <Input
                             type="date"
                             value={editRate.start_date ?? ""}
@@ -245,7 +244,7 @@ export function PricingManager({
                           />
                         </div>
                         <div>
-                          <Label className="text-xs">Fim</Label>
+                          <Label className="text-xs">{adminT.pricing.end}</Label>
                           <Input
                             type="date"
                             value={editRate.end_date ?? ""}
@@ -253,7 +252,7 @@ export function PricingManager({
                           />
                         </div>
                         <div>
-                          <Label className="text-xs">€ 2 pessoas</Label>
+                          <Label className="text-xs">{adminT.pricing.price2pLabel}</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -267,7 +266,7 @@ export function PricingManager({
                           />
                         </div>
                         <div>
-                          <Label className="text-xs">€ 3-4 pessoas</Label>
+                          <Label className="text-xs">{adminT.pricing.price34pLabel}</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -281,7 +280,7 @@ export function PricingManager({
                           />
                         </div>
                         <div>
-                          <Label className="text-xs">Mín. noites</Label>
+                          <Label className="text-xs">{adminT.pricing.minNightsLabel}</Label>
                           <Input
                             type="number"
                             value={editRate.min_nights ?? 1}
@@ -330,7 +329,7 @@ export function PricingManager({
 
           <form onSubmit={handleAddRate} className="grid md:grid-cols-6 gap-4 border-t pt-6">
             <div className="space-y-2">
-              <Label>Zona</Label>
+              <Label>{adminT.pricing.zone}</Label>
               <Select
                 value={newRate.zone_id}
                 onValueChange={(v) => setNewRate((r) => ({ ...r, zone_id: v ?? r.zone_id }))}
@@ -344,7 +343,7 @@ export function PricingManager({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Época</Label>
+              <Label>{adminT.pricing.season}</Label>
               <Select
                 value={newRate.season}
                 onValueChange={(v) =>
@@ -360,29 +359,29 @@ export function PricingManager({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Início</Label>
+              <Label>{adminT.pricing.start}</Label>
               <Input type="date" value={newRate.start_date} onChange={(e) => setNewRate((r) => ({ ...r, start_date: e.target.value }))} required />
             </div>
             <div className="space-y-2">
-              <Label>Fim</Label>
+              <Label>{adminT.pricing.end}</Label>
               <Input type="date" value={newRate.end_date} onChange={(e) => setNewRate((r) => ({ ...r, end_date: e.target.value }))} required />
             </div>
             <div className="space-y-2">
-              <Label>€ 2 pessoas</Label>
+              <Label>{adminT.pricing.price2pLabel}</Label>
               <Input type="number" step="0.01" value={newRate.price_euros} onChange={(e) => setNewRate((r) => ({ ...r, price_euros: e.target.value }))} required />
             </div>
             <div className="space-y-2">
-              <Label>€ 3-4 pessoas</Label>
+              <Label>{adminT.pricing.price34pLabel}</Label>
               <Input type="number" step="0.01" value={newRate.price_euros_3_4} onChange={(e) => setNewRate((r) => ({ ...r, price_euros_3_4: e.target.value }))} required />
             </div>
             <div className="space-y-2">
-              <Label>Mín. noites</Label>
+              <Label>{adminT.pricing.minNightsLabel}</Label>
               <Input type="number" value={newRate.min_nights} onChange={(e) => setNewRate((r) => ({ ...r, min_nights: e.target.value }))} required />
             </div>
             <div className="md:col-span-6">
               <Button type="submit" disabled={saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                Adicionar tarifa
+                {adminT.pricing.addRate}
               </Button>
             </div>
           </form>
@@ -391,8 +390,8 @@ export function PricingManager({
 
       <Card>
         <CardHeader>
-          <CardTitle>Serviços adicionais</CardTitle>
-          <CardDescription>Aparecem no separador &quot;Serviços&quot; do preçário público.</CardDescription>
+          <CardTitle>{adminT.pricing.extraServices}</CardTitle>
+          <CardDescription>{adminT.pricing.extraServicesDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4">
@@ -401,21 +400,21 @@ export function PricingManager({
               return editService.id === service.id ? (
                 <div key={service.id} className="grid md:grid-cols-4 gap-3 p-4 border rounded-lg">
                   <div>
-                    <Label className="text-xs">Nome PT</Label>
+                    <Label className="text-xs">{adminT.pricing.namePt}</Label>
                     <Input
                       value={editService.name ?? ""}
                       onChange={(e) => setEditService((s) => ({ ...s, name: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Nome EN</Label>
+                    <Label className="text-xs">{adminT.pricing.nameEn}</Label>
                     <Input
                       value={editService.name_en ?? ""}
                       onChange={(e) => setEditService((s) => ({ ...s, name_en: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Ícone</Label>
+                    <Label className="text-xs">{adminT.pricing.icon}</Label>
                     <Select
                       value={editService.icon}
                       onValueChange={(v) => setEditService((s) => ({ ...s, icon: v ?? s.icon }))}
@@ -431,7 +430,7 @@ export function PricingManager({
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-xs">Preço € (opcional)</Label>
+                    <Label className="text-xs">{adminT.pricing.priceOptional}</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -447,42 +446,42 @@ export function PricingManager({
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Etiqueta PT</Label>
+                    <Label className="text-xs">{adminT.pricing.labelPt}</Label>
                     <Input
                       value={editService.price_label_pt ?? ""}
                       onChange={(e) => setEditService((s) => ({ ...s, price_label_pt: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Etiqueta EN</Label>
+                    <Label className="text-xs">{adminT.pricing.labelEn}</Label>
                     <Input
                       value={editService.price_label_en ?? ""}
                       onChange={(e) => setEditService((s) => ({ ...s, price_label_en: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Descrição</Label>
+                    <Label className="text-xs">{adminT.pricing.description}</Label>
                     <Input
                       value={editService.description ?? ""}
                       onChange={(e) => setEditService((s) => ({ ...s, description: e.target.value }))}
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Activo</Label>
+                    <Label className="text-xs">{adminT.pricing.active}</Label>
                     <Select
                       value={editService.active ? "true" : "false"}
                       onValueChange={(v) => setEditService((s) => ({ ...s, active: v === "true" }))}
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="true">Sim</SelectItem>
-                        <SelectItem value="false">Não</SelectItem>
+                        <SelectItem value="true">{adminT.common.yes}</SelectItem>
+                        <SelectItem value="false">{adminT.common.no}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="md:col-span-4 flex gap-2">
-                    <Button type="button" onClick={handleUpdateService} disabled={saving}>Guardar</Button>
-                    <Button type="button" variant="ghost" onClick={() => setEditService({})}>Cancelar</Button>
+                    <Button type="button" onClick={handleUpdateService} disabled={saving}>{adminT.common.save}</Button>
+                    <Button type="button" variant="ghost" onClick={() => setEditService({})}>{adminT.common.cancel}</Button>
                   </div>
                 </div>
               ) : (
@@ -496,7 +495,7 @@ export function PricingManager({
                       <p className="font-medium">{service.name}</p>
                       <p className="text-sm text-muted-foreground">
                         {service.price_label_pt ?? (service.price_cents != null ? formatPrice(service.price_cents) : "—")}
-                        {!service.active && " · Inactivo"}
+                        {!service.active && ` ${adminT.pricing.inactiveSuffix}`}
                       </p>
                     </div>
                   </div>
@@ -515,15 +514,15 @@ export function PricingManager({
 
           <form onSubmit={handleAddService} className="grid md:grid-cols-4 gap-4 border-t pt-6">
             <div className="space-y-2">
-              <Label>Nome PT</Label>
+              <Label>{adminT.pricing.namePt}</Label>
               <Input value={newService.name} onChange={(e) => setNewService((s) => ({ ...s, name: e.target.value }))} required />
             </div>
             <div className="space-y-2">
-              <Label>Nome EN</Label>
+              <Label>{adminT.pricing.nameEn}</Label>
               <Input value={newService.name_en} onChange={(e) => setNewService((s) => ({ ...s, name_en: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>Ícone</Label>
+              <Label>{adminT.pricing.icon}</Label>
               <Select value={newService.icon} onValueChange={(v) => setNewService((s) => ({ ...s, icon: v ?? s.icon }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -536,13 +535,13 @@ export function PricingManager({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Etiqueta PT</Label>
-              <Input value={newService.price_label_pt} onChange={(e) => setNewService((s) => ({ ...s, price_label_pt: e.target.value }))} placeholder="Incluído" />
+              <Label>{adminT.pricing.labelPt}</Label>
+              <Input value={newService.price_label_pt} onChange={(e) => setNewService((s) => ({ ...s, price_label_pt: e.target.value }))} placeholder={adminT.common.included} />
             </div>
             <div className="md:col-span-4">
               <Button type="submit" disabled={saving}>
                 <Plus className="h-4 w-4 mr-2" />
-                Adicionar serviço
+                {adminT.pricing.addService}
               </Button>
             </div>
           </form>

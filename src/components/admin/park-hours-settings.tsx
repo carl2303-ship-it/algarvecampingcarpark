@@ -7,7 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ParkSettings } from "@/lib/constants";
-import { formatReceptionHours, formatTimeForLocale } from "@/lib/constants";
+import {
+  adminT,
+  formatReceptionHours24h,
+  formatTime24h,
+} from "@/lib/admin-i18n";
 
 export function ParkHoursSettings({ initial }: { initial: ParkSettings }) {
   const [settings, setSettings] = useState(initial);
@@ -34,25 +38,23 @@ export function ParkHoursSettings({ initial }: { initial: ParkSettings }) {
 
     if (res.ok) {
       setSettings(data.settings);
-      setMessage("Horários guardados. A app foi atualizada.");
+      setMessage(adminT.hours.saved);
     } else {
-      setMessage(typeof data.error === "string" ? data.error : "Erro ao guardar horários.");
+      setMessage(typeof data.error === "string" ? data.error : adminT.hours.saveError);
     }
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Horários</CardTitle>
-        <CardDescription>
-          Receção, check-in e check-out — visíveis na reserva, termos, emails e mapa operacional.
-        </CardDescription>
+        <CardTitle>{adminT.hours.title}</CardTitle>
+        <CardDescription>{adminT.hours.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSave} className="space-y-6">
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="reception_open">Receção — abertura</Label>
+              <Label htmlFor="reception_open">{adminT.hours.receptionOpen}</Label>
               <Input
                 id="reception_open"
                 type="time"
@@ -62,7 +64,7 @@ export function ParkHoursSettings({ initial }: { initial: ParkSettings }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reception_close">Receção — encerramento</Label>
+              <Label htmlFor="reception_close">{adminT.hours.receptionClose}</Label>
               <Input
                 id="reception_close"
                 type="time"
@@ -72,7 +74,7 @@ export function ParkHoursSettings({ initial }: { initial: ParkSettings }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="check_in_time">Check-in (a partir de)</Label>
+              <Label htmlFor="check_in_time">{adminT.hours.checkInFrom}</Label>
               <Input
                 id="check_in_time"
                 type="time"
@@ -82,7 +84,7 @@ export function ParkHoursSettings({ initial }: { initial: ParkSettings }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="check_out_time">Check-out (até)</Label>
+              <Label htmlFor="check_out_time">{adminT.hours.checkOutUntil}</Label>
               <Input
                 id="check_out_time"
                 type="time"
@@ -95,25 +97,34 @@ export function ParkHoursSettings({ initial }: { initial: ParkSettings }) {
 
           <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground space-y-1">
             <p>
-              Receção: <strong className="text-foreground">{formatReceptionHours(settings)}</strong>
-            </p>
-            <p>
-              Check-in:{" "}
+              {adminT.hours.reception}{" "}
               <strong className="text-foreground">
-                a partir das {formatTimeForLocale(settings.check_in_time)}
+                {formatReceptionHours24h(settings.reception_open, settings.reception_close)}
               </strong>
             </p>
             <p>
-              Check-out:{" "}
+              {adminT.hours.checkIn}{" "}
               <strong className="text-foreground">
-                até às {formatTimeForLocale(settings.check_out_time)}
+                {adminT.hours.checkInFromTime.replace(
+                  "{time}",
+                  formatTime24h(settings.check_in_time)
+                )}
+              </strong>
+            </p>
+            <p>
+              {adminT.hours.checkOut}{" "}
+              <strong className="text-foreground">
+                {adminT.hours.checkOutUntilTime.replace(
+                  "{time}",
+                  formatTime24h(settings.check_out_time)
+                )}
               </strong>
             </p>
           </div>
 
           <Button type="submit" disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Guardar horários
+            {adminT.hours.save}
           </Button>
 
           {message && <p className="text-sm text-muted-foreground">{message}</p>}

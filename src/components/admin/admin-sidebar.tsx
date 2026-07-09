@@ -2,23 +2,23 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Calendar, BarChart3, Images, LayoutDashboard, LogOut, Map, MapPinned, MapPin, Plus, Settings, Tent } from "lucide-react";
+import { Calendar, BarChart3, Images, LayoutDashboard, LogOut, Map, MapPinned, MapPin, Settings, Tent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SiteLogo } from "@/components/brand/site-logo";
+import { adminT } from "@/lib/admin-i18n";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const nav = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/reservations", label: "Reservas", icon: Tent },
-  { href: "/admin/reservations/new", label: "Nova reserva", icon: Plus },
-  { href: "/admin/park-status", label: "Mapa operacional", icon: MapPin },
-  { href: "/admin/timeline", label: "Gantt", icon: BarChart3 },
-  { href: "/admin/calendar", label: "Calendário", icon: Calendar },
-  { href: "/admin/zones", label: "Zonas & Tarifas", icon: Map },
-  { href: "/admin/gallery", label: "Galeria", icon: Images },
-  { href: "/admin/pitch-map", label: "Mapa de lugares", icon: MapPinned },
-  { href: "/admin/settings", label: "Definições", icon: Settings },
+  { href: "/admin", label: adminT.nav.dashboard, icon: LayoutDashboard },
+  { href: "/admin/reservations", label: adminT.nav.reservations, icon: Tent },
+  { href: "/admin/park-status", label: adminT.nav.parkStatus, icon: MapPin },
+  { href: "/admin/timeline", label: adminT.nav.gantt, icon: BarChart3 },
+  { href: "/admin/calendar", label: adminT.nav.calendar, icon: Calendar },
+  { href: "/admin/zones", label: adminT.nav.zones, icon: Map },
+  { href: "/admin/gallery", label: adminT.nav.gallery, icon: Images },
+  { href: "/admin/pitch-map", label: adminT.nav.pitchMap, icon: MapPinned },
+  { href: "/admin/settings", label: adminT.nav.settings, icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -36,7 +36,7 @@ export function AdminSidebar() {
     <aside className="w-64 border-r bg-muted/30 min-h-screen p-4 flex flex-col">
       <Link href="/admin" className="flex items-center gap-3 mb-8 px-2">
         <SiteLogo size="sm" />
-        <span className="font-semibold text-sm leading-tight">Admin</span>
+        <span className="font-semibold text-sm leading-tight">{adminT.common.admin}</span>
       </Link>
       <nav className="space-y-1 flex-1">
         {nav.map((item) => {
@@ -64,7 +64,7 @@ export function AdminSidebar() {
       </nav>
       <Button variant="ghost" className="justify-start gap-3" onClick={logout}>
         <LogOut className="h-4 w-4" />
-        Sair
+        {adminT.common.logout}
       </Button>
     </aside>
   );

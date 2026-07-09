@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { adminT } from "@/lib/admin-i18n";
 import type { GalleryImageRecord } from "@/types/database";
 
 export function GalleryManager({ initialImages }: { initialImages: GalleryImageRecord[] }) {
@@ -93,7 +94,7 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Eliminar esta foto da galeria?")) return;
+    if (!confirm(adminT.gallery.deleteConfirm)) return;
     setSaving(true);
     await fetch(`/api/admin/gallery/${id}`, { method: "DELETE" });
     setSaving(false);
@@ -124,7 +125,7 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
       refresh();
     } else {
       const data = await res.json().catch(() => ({}));
-      setUploadError(data.error ?? "Erro ao carregar imagem");
+      setUploadError(data.error ?? adminT.gallery.uploadError);
     }
     setUploading(false);
   }
@@ -133,23 +134,21 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
     <div className="space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Adicionar foto</CardTitle>
-          <CardDescription>
-            Use JPG, PNG ou WebP até 5 MB. A imagem aparece na página Sobre.
-          </CardDescription>
+          <CardTitle>{adminT.gallery.addPhoto}</CardTitle>
+          <CardDescription>{adminT.gallery.addDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleUpload} className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2 md:col-span-2">
-              <Label>Imagem</Label>
+              <Label>{adminT.gallery.image}</Label>
               <Input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" required />
             </div>
             <div className="space-y-2">
-              <Label>Título PT</Label>
+              <Label>{adminT.gallery.titlePt}</Label>
               <Input value={titlePt} onChange={(e) => setTitlePt(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label>Título EN</Label>
+              <Label>{adminT.gallery.titleEn}</Label>
               <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} />
             </div>
             <div className="md:col-span-2">
@@ -164,7 +163,7 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
                 ) : (
                   <ImagePlus className="h-4 w-4 mr-2" />
                 )}
-                Carregar foto
+                {adminT.gallery.upload}
               </Button>
             </div>
           </form>
@@ -173,12 +172,14 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
 
       <Card>
         <CardHeader>
-          <CardTitle>Fotos da galeria ({images.length})</CardTitle>
-          <CardDescription>Altere títulos, ordem e visibilidade. A ordem reflecte-se no carrossel público.</CardDescription>
+          <CardTitle>
+            {adminT.gallery.photosTitle.replace("{count}", String(images.length))}
+          </CardTitle>
+          <CardDescription>{adminT.gallery.photosDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {images.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhuma foto na galeria.</p>
+            <p className="text-sm text-muted-foreground">{adminT.gallery.empty}</p>
           )}
           {images.map((image, index) => (
             <div
@@ -193,14 +194,14 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
                 {editingId === image.id ? (
                   <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs">Título PT</Label>
+                      <Label className="text-xs">{adminT.gallery.titlePt}</Label>
                       <Input
                         value={editForm.title_pt}
                         onChange={(e) => setEditForm((f) => ({ ...f, title_pt: e.target.value }))}
                       />
                     </div>
                     <div>
-                      <Label className="text-xs">Título EN</Label>
+                      <Label className="text-xs">{adminT.gallery.titleEn}</Label>
                       <Input
                         value={editForm.title_en}
                         onChange={(e) => setEditForm((f) => ({ ...f, title_en: e.target.value }))}
@@ -208,10 +209,10 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
                     </div>
                     <div className="sm:col-span-2 flex gap-2">
                       <Button type="button" size="sm" onClick={() => saveEdit(image.id)} disabled={saving}>
-                        <Check className="h-4 w-4 mr-1" /> Guardar
+                        <Check className="h-4 w-4 mr-1" /> {adminT.common.save}
                       </Button>
                       <Button type="button" size="sm" variant="ghost" onClick={() => setEditingId(null)}>
-                        <X className="h-4 w-4 mr-1" /> Cancelar
+                        <X className="h-4 w-4 mr-1" /> {adminT.common.cancel}
                       </Button>
                     </div>
                   </div>
@@ -219,7 +220,7 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
                   <>
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium">{image.title_pt}</p>
-                      {!image.active && <Badge variant="secondary">Oculta</Badge>}
+                      {!image.active && <Badge variant="secondary">{adminT.common.hidden}</Badge>}
                       <Badge variant="outline">#{index + 1}</Badge>
                     </div>
                     {image.title_en && (
@@ -229,17 +230,17 @@ export function GalleryManager({ initialImages }: { initialImages: GalleryImageR
                 )}
 
                 <div className="flex flex-wrap gap-1">
-                  <Button type="button" size="icon" variant="outline" disabled={index === 0 || saving} onClick={() => move(index, -1)} aria-label="Subir">
+                  <Button type="button" size="icon" variant="outline" disabled={index === 0 || saving} onClick={() => move(index, -1)} aria-label={adminT.common.moveUp}>
                     <ArrowUp className="h-4 w-4" />
                   </Button>
-                  <Button type="button" size="icon" variant="outline" disabled={index === images.length - 1 || saving} onClick={() => move(index, 1)} aria-label="Descer">
+                  <Button type="button" size="icon" variant="outline" disabled={index === images.length - 1 || saving} onClick={() => move(index, 1)} aria-label={adminT.common.moveDown}>
                     <ArrowDown className="h-4 w-4" />
                   </Button>
                   <Button type="button" size="icon" variant="ghost" onClick={() => startEdit(image)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={() => toggleActive(image)} disabled={saving}>
-                    {image.active ? "Ocultar" : "Publicar"}
+                    {image.active ? adminT.gallery.hide : adminT.gallery.publish}
                   </Button>
                   <Button type="button" size="icon" variant="ghost" onClick={() => handleDelete(image.id)} disabled={saving}>
                     <Trash2 className="h-4 w-4 text-destructive" />

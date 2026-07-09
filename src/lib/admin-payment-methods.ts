@@ -1,10 +1,12 @@
+import { adminT } from "@/lib/admin-i18n";
+
 export const ADMIN_PAYMENT_METHODS = [
-  { value: "cash", label: "Dinheiro" },
-  { value: "transfer", label: "Transferência bancária" },
-  { value: "mb", label: "Multibanco" },
-  { value: "card", label: "Cartão" },
-  { value: "stripe", label: "Stripe" },
-  { value: "other", label: "Outro" },
+  { value: "cash", label: adminT.paymentMethods.cash },
+  { value: "transfer", label: adminT.paymentMethods.bank_transfer },
+  { value: "mb", label: adminT.paymentMethods.multibanco },
+  { value: "card", label: adminT.paymentMethods.card },
+  { value: "stripe", label: adminT.paymentMethods.stripe },
+  { value: "other", label: adminT.paymentMethods.other },
 ] as const;
 
 export type AdminPaymentMethod = (typeof ADMIN_PAYMENT_METHODS)[number]["value"];

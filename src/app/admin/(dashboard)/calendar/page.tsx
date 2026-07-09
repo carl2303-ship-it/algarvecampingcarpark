@@ -1,7 +1,7 @@
 import { format, addDays, startOfToday } from "date-fns";
-import { pt } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { adminDateLocale, adminT } from "@/lib/admin-i18n";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function CalendarPage() {
@@ -40,8 +40,8 @@ export default async function CalendarPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Calendário de Ocupação</h1>
-      <p className="text-muted-foreground">Próximos 14 dias por zona</p>
+      <h1 className="text-3xl font-bold">{adminT.calendar.title}</h1>
+      <p className="text-muted-foreground">{adminT.calendar.subtitle}</p>
 
       <div className="space-y-6">
         {zones?.map((zone) => (
@@ -49,7 +49,9 @@ export default async function CalendarPage() {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 <span>{zone.name}</span>
-                <Badge variant="outline">Cap. {zone.capacity}</Badge>
+                <Badge variant="outline">
+                  {adminT.common.capacity} {zone.capacity}
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -71,10 +73,10 @@ export default async function CalendarPage() {
                       }}
                     >
                       <p className="font-medium">
-                        {format(day, "dd", { locale: pt })}
+                        {format(day, "dd", { locale: adminDateLocale })}
                       </p>
                       <p className="text-muted-foreground">
-                        {format(day, "MMM", { locale: pt })}
+                        {format(day, "MMM", { locale: adminDateLocale })}
                       </p>
                       <p className="font-bold mt-1">
                         {count}/{zone.capacity}

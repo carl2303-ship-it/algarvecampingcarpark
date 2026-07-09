@@ -5,5 +5,10 @@ export default function AdminRootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}<Toaster /></>;
+  return (
+    <div lang="fr">
+      {children}
+      <Toaster />
+    </div>
+  );
 }

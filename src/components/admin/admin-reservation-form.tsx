@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ADMIN_PAYMENT_METHODS } from "@/lib/admin-payment-methods";
+import { adminT } from "@/lib/admin-i18n";
 import { getSpotZoneSlug } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import type { Zone } from "@/types/database";
@@ -84,7 +85,7 @@ export function AdminReservationForm({
           setTotalCents(data.pricing.totalCents);
         } else {
           setTotalCents(null);
-          setError(data.error ?? "Não foi possível calcular o preço");
+          setError(data.error ?? adminT.reservationForm.quoteError);
         }
       })
       .catch(() => {})
@@ -98,23 +99,23 @@ export function AdminReservationForm({
     setError(null);
 
     if (!zoneId) {
-      setError("Zona inválida para o lugar selecionado.");
+      setError(adminT.reservationForm.invalidZone);
       return;
     }
     if (!checkIn || !checkOut || checkOut <= checkIn) {
-      setError("Datas inválidas.");
+      setError(adminT.reservationForm.invalidDates);
       return;
     }
     if (totalCents == null) {
-      setError("Aguarde o cálculo do preço ou verifique as datas.");
+      setError(adminT.reservationForm.waitForQuote);
       return;
     }
     if (isFullyPaid && !paymentMethod) {
-      setError("Selecione o método de pagamento.");
+      setError(adminT.reservationForm.selectPaymentMethod);
       return;
     }
     if (!isFullyPaid && paidCents > 0 && !partialPaymentMethod) {
-      setError("Selecione o método do pagamento parcial.");
+      setError(adminT.reservationForm.selectPartialMethod);
       return;
     }
 
@@ -146,7 +147,7 @@ export function AdminReservationForm({
     setSubmitting(false);
 
     if (!res.ok) {
-      setError(typeof data.error === "string" ? data.error : "Erro ao criar reserva");
+      setError(typeof data.error === "string" ? data.error : adminT.reservationForm.createError);
       return;
     }
 
@@ -164,12 +165,12 @@ export function AdminReservationForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Estadia</CardTitle>
-          <CardDescription>O admin pode reservar qualquer lugar em qualquer período.</CardDescription>
+          <CardTitle>{adminT.reservationForm.stay}</CardTitle>
+          <CardDescription>{adminT.reservationForm.stayDescription}</CardDescription>
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <Label htmlFor="pitch">Número do lugar</Label>
+            <Label htmlFor="pitch">{adminT.reservationForm.pitchNumber}</Label>
             <select
               id="pitch"
               className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
@@ -180,20 +181,23 @@ export function AdminReservationForm({
               {sortedSpots.map((spot) => (
                 <option key={spot.code} value={spot.code}>
                   {spot.code}
-                  {spot.panoramic ? " · panorâmico" : ""}
-                  {spot.electric ? "" : " · sem eletricidade"}
+                  {spot.panoramic ? ` ${adminT.reservationForm.panoramic}` : ""}
+                  {spot.electric ? "" : ` ${adminT.reservationForm.noElectricity}`}
                 </option>
               ))}
             </select>
             {zoneSlug && (
               <p className="text-xs text-muted-foreground mt-1">
-                Zona: {zones.find((zone) => zone.slug === zoneSlug)?.name ?? zoneSlug}
+                {adminT.reservationForm.zoneLabel.replace(
+                  "{name}",
+                  zones.find((zone) => zone.slug === zoneSlug)?.name ?? zoneSlug
+                )}
               </p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="check_in">Data de chegada</Label>
+            <Label htmlFor="check_in">{adminT.reservationForm.arrivalDate}</Label>
             <Input
               id="check_in"
               type="date"
@@ -204,7 +208,7 @@ export function AdminReservationForm({
             />
           </div>
           <div>
-            <Label htmlFor="check_out">Data de partida</Label>
+            <Label htmlFor="check_out">{adminT.reservationForm.departureDate}</Label>
             <Input
               id="check_out"
               type="date"
@@ -215,7 +219,7 @@ export function AdminReservationForm({
             />
           </div>
           <div>
-            <Label htmlFor="guests">Número de pessoas</Label>
+            <Label htmlFor="guests">{adminT.reservationForm.numGuests}</Label>
             <Input
               id="guests"
               type="number"
@@ -228,7 +232,7 @@ export function AdminReservationForm({
           </div>
           <div className="flex items-end">
             <div className="rounded-lg border bg-muted/40 px-4 py-3 w-full">
-              <p className="text-xs text-muted-foreground">Total estimado</p>
+              <p className="text-xs text-muted-foreground">{adminT.reservationForm.estimatedTotal}</p>
               <p className="text-xl font-bold flex items-center gap-2">
                 {loadingQuote && <Loader2 className="h-4 w-4 animate-spin" />}
                 {totalCents != null ? formatPrice(totalCents) : "—"}
@@ -240,11 +244,11 @@ export function AdminReservationForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Dados do cliente</CardTitle>
+          <CardTitle>{adminT.reservationForm.clientData}</CardTitle>
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <Label htmlFor="guest_name">Nome</Label>
+            <Label htmlFor="guest_name">{adminT.reservationForm.name}</Label>
             <Input
               id="guest_name"
               value={guestName}
@@ -254,7 +258,7 @@ export function AdminReservationForm({
             />
           </div>
           <div>
-            <Label htmlFor="guest_email">Email</Label>
+            <Label htmlFor="guest_email">{adminT.common.email}</Label>
             <Input
               id="guest_email"
               type="email"
@@ -265,7 +269,7 @@ export function AdminReservationForm({
             />
           </div>
           <div>
-            <Label htmlFor="guest_phone">Telefone</Label>
+            <Label htmlFor="guest_phone">{adminT.common.phone}</Label>
             <Input
               id="guest_phone"
               value={guestPhone}
@@ -275,7 +279,7 @@ export function AdminReservationForm({
             />
           </div>
           <div>
-            <Label htmlFor="vehicle_plate">Matrícula</Label>
+            <Label htmlFor="vehicle_plate">{adminT.common.plate}</Label>
             <Input
               id="vehicle_plate"
               value={vehiclePlate}
@@ -284,18 +288,18 @@ export function AdminReservationForm({
             />
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="operational_notes">Notas operacionais</Label>
+            <Label htmlFor="operational_notes">{adminT.reservationForm.operationalNotes}</Label>
             <Textarea
               id="operational_notes"
               value={operationalNotes}
               onChange={(event) => setOperationalNotes(event.target.value)}
-              placeholder='Ex: "Deixou 13 dias de luz em crédito para quando voltar"'
+              placeholder={adminT.reservationForm.operationalNotesPlaceholder}
               rows={3}
               className="mt-1"
             />
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="notes">Notas internas</Label>
+            <Label htmlFor="notes">{adminT.reservationForm.internalNotes}</Label>
             <Textarea
               id="notes"
               value={notes}
@@ -309,7 +313,7 @@ export function AdminReservationForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Pagamento</CardTitle>
+          <CardTitle>{adminT.reservationForm.payment}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <label className="flex items-center gap-2 text-sm font-medium">
@@ -318,12 +322,12 @@ export function AdminReservationForm({
               checked={isFullyPaid}
               onChange={(event) => setIsFullyPaid(event.target.checked)}
             />
-            Pago integralmente
+            {adminT.reservationForm.fullyPaid}
           </label>
 
           {isFullyPaid ? (
             <div>
-              <Label htmlFor="payment_method">Método de pagamento</Label>
+              <Label htmlFor="payment_method">{adminT.reservationForm.paymentMethod}</Label>
               <select
                 id="payment_method"
                 className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
@@ -331,7 +335,7 @@ export function AdminReservationForm({
                 onChange={(event) => setPaymentMethod(event.target.value)}
                 required
               >
-                <option value="">Selecionar…</option>
+                <option value="">{adminT.common.select}</option>
                 {ADMIN_PAYMENT_METHODS.map((method) => (
                   <option key={method.value} value={method.value}>
                     {method.label}
@@ -342,7 +346,7 @@ export function AdminReservationForm({
           ) : (
             <>
               <div>
-                <Label htmlFor="partial_payment">Pagamento parcial (€)</Label>
+                <Label htmlFor="partial_payment">{adminT.reservationForm.partialPayment}</Label>
                 <Input
                   id="partial_payment"
                   type="number"
@@ -356,14 +360,14 @@ export function AdminReservationForm({
               </div>
               {paidCents > 0 && (
                 <div>
-                  <Label htmlFor="partial_payment_method">Método do pagamento parcial</Label>
+                  <Label htmlFor="partial_payment_method">{adminT.reservationForm.partialMethod}</Label>
                   <select
                     id="partial_payment_method"
                     className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                     value={partialPaymentMethod}
                     onChange={(event) => setPartialPaymentMethod(event.target.value)}
                   >
-                    <option value="">Selecionar…</option>
+                    <option value="">{adminT.common.select}</option>
                     {ADMIN_PAYMENT_METHODS.map((method) => (
                       <option key={method.value} value={method.value}>
                         {method.label}
@@ -373,14 +377,14 @@ export function AdminReservationForm({
                 </div>
               )}
               <div>
-                <Label htmlFor="balance_method">Método de pagamento (saldo)</Label>
+                <Label htmlFor="balance_method">{adminT.reservationForm.balanceMethod}</Label>
                 <select
                   id="balance_method"
                   className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value)}
                 >
-                  <option value="">A definir…</option>
+                  <option value="">{adminT.common.toDefine}</option>
                   {ADMIN_PAYMENT_METHODS.map((method) => (
                     <option key={method.value} value={method.value}>
                       {method.label}
@@ -393,15 +397,15 @@ export function AdminReservationForm({
 
           <div className="grid sm:grid-cols-3 gap-3 rounded-lg border bg-muted/30 p-4 text-sm">
             <div>
-              <p className="text-muted-foreground">Total</p>
+              <p className="text-muted-foreground">{adminT.common.total}</p>
               <p className="font-semibold">{totalCents != null ? formatPrice(totalCents) : "—"}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Pago</p>
+              <p className="text-muted-foreground">{adminT.common.paid}</p>
               <p className="font-semibold">{formatPrice(paidCents)}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Saldo a pagar</p>
+              <p className="text-muted-foreground">{adminT.common.balanceDue}</p>
               <p className="font-semibold text-primary">{formatPrice(balanceCents)}</p>
             </div>
           </div>
@@ -410,7 +414,7 @@ export function AdminReservationForm({
 
       <Button type="submit" size="lg" disabled={submitting}>
         {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-        Criar reserva
+        {adminT.reservationForm.create}
       </Button>
     </form>
   );

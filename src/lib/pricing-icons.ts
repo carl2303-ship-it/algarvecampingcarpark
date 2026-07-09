@@ -4,6 +4,11 @@ export const ZONE_ICONS: Record<string, { icon: LucideIcon; emoji: string; color
   "com-eletricidade": { icon: Zap, emoji: "⚡", color: "text-amber-600 bg-amber-50 ring-amber-200" },
   "sem-eletricidade": { icon: TreePine, emoji: "🏕️", color: "text-emerald-700 bg-emerald-50 ring-emerald-200" },
   "premium-vista-mar": { icon: Waves, emoji: "🌅", color: "text-sky-700 bg-sky-50 ring-sky-200" },
+  "premium-sem-eletricidade": {
+    icon: Waves,
+    emoji: "🌊",
+    color: "text-teal-700 bg-teal-50 ring-teal-200",
+  },
 };
 
 export const SERVICE_ICONS: Record<string, { icon: LucideIcon; emoji: string }> = {

@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { adminT } from "@/lib/admin-i18n";
 import type { StripeSettingsView } from "@/lib/stripe-settings";
 
 function SourceBadge({ source }: { source: StripeSettingsView["secret_key_source"] }) {
-  if (!source) return <Badge variant="outline">Em falta</Badge>;
+  if (!source) return <Badge variant="outline">{adminT.common.missing}</Badge>;
   return (
     <Badge variant={source === "database" ? "default" : "secondary"}>
-      {source === "database" ? "Na app" : "Netlify (fallback)"}
+      {source === "database" ? adminT.common.inApp : adminT.common.netlifyFallback}
     </Badge>
   );
 }
@@ -67,7 +68,7 @@ export function StripeSettingsForm({ initial }: { initial: StripeSettingsView })
 
     if (Object.keys(payload).length === 0) {
       setSaving(false);
-      setMessage("Preencha pelo menos um campo para atualizar.");
+      setMessage(adminT.stripe.fillOneField);
       return;
     }
 
@@ -84,9 +85,9 @@ export function StripeSettingsForm({ initial }: { initial: StripeSettingsView })
       setSecretKey("");
       setPublishableKey("");
       setWebhookSecret("");
-      setMessage("Credenciais Stripe guardadas na app.");
+      setMessage(adminT.stripe.saved);
     } else {
-      setMessage(typeof data.error === "string" ? data.error : "Erro ao guardar credenciais.");
+      setMessage(typeof data.error === "string" ? data.error : adminT.stripe.saveError);
     }
   }
 
@@ -95,33 +96,29 @@ export function StripeSettingsForm({ initial }: { initial: StripeSettingsView })
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CreditCard className="h-5 w-5" />
-          Stripe
+          {adminT.stripe.title}
         </CardTitle>
-        <CardDescription>
-          Configure as chaves aqui na app. Campos em branco mantêm o valor atual. Se ainda existirem
-          variáveis na Netlify, servem apenas como fallback quando não há valor guardado na base de
-          dados.
-        </CardDescription>
+        <CardDescription>{adminT.stripe.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
           <ConfiguredRow
-            label="Chave secreta (STRIPE_SECRET_KEY)"
-            hint="Pagamentos e links de extensão"
+            label={adminT.stripe.secretKey}
+            hint={adminT.stripe.secretHint}
             configured={view.secret_key_configured}
             preview={view.secret_key_preview}
             source={view.secret_key_source}
           />
           <ConfiguredRow
-            label="Chave pública (publishable)"
-            hint="Opcional no checkout atual"
+            label={adminT.stripe.publishableKey}
+            hint={adminT.stripe.publishableHint}
             configured={view.publishable_key_configured}
             preview={view.publishable_key_preview}
             source={view.publishable_key_source}
           />
           <ConfiguredRow
-            label="Webhook secret"
-            hint="Endpoint: /api/webhooks/stripe"
+            label={adminT.stripe.webhookSecret}
+            hint={adminT.stripe.webhookHint}
             configured={view.webhook_secret_configured}
             preview={view.webhook_secret_preview}
             source={view.webhook_secret_source}
@@ -130,34 +127,34 @@ export function StripeSettingsForm({ initial }: { initial: StripeSettingsView })
 
         <form onSubmit={handleSave} className="space-y-4 border-t pt-6">
           <div className="space-y-2">
-            <Label htmlFor="stripe_secret_key">Nova chave secreta</Label>
+            <Label htmlFor="stripe_secret_key">{adminT.stripe.newSecretKey}</Label>
             <Input
               id="stripe_secret_key"
               type="password"
               autoComplete="off"
-              placeholder={view.secret_key_configured ? "Deixar em branco para manter" : "sk_live_…"}
+              placeholder={view.secret_key_configured ? adminT.common.leaveBlankToKeep : "sk_live_…"}
               value={secretKey}
               onChange={(e) => setSecretKey(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="stripe_publishable_key">Nova chave pública</Label>
+            <Label htmlFor="stripe_publishable_key">{adminT.stripe.newPublishableKey}</Label>
             <Input
               id="stripe_publishable_key"
               type="password"
               autoComplete="off"
-              placeholder={view.publishable_key_configured ? "Deixar em branco para manter" : "pk_live_…"}
+              placeholder={view.publishable_key_configured ? adminT.common.leaveBlankToKeep : "pk_live_…"}
               value={publishableKey}
               onChange={(e) => setPublishableKey(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="stripe_webhook_secret">Novo webhook secret</Label>
+            <Label htmlFor="stripe_webhook_secret">{adminT.stripe.newWebhookSecret}</Label>
             <Input
               id="stripe_webhook_secret"
               type="password"
               autoComplete="off"
-              placeholder={view.webhook_secret_configured ? "Deixar em branco para manter" : "whsec_…"}
+              placeholder={view.webhook_secret_configured ? adminT.common.leaveBlankToKeep : "whsec_…"}
               value={webhookSecret}
               onChange={(e) => setWebhookSecret(e.target.value)}
             />
@@ -165,14 +162,14 @@ export function StripeSettingsForm({ initial }: { initial: StripeSettingsView })
 
           <Button type="submit" disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Guardar credenciais Stripe
+            {adminT.stripe.save}
           </Button>
 
           {message && <p className="text-sm text-muted-foreground">{message}</p>}
         </form>
 
         <p className="text-xs text-muted-foreground">
-          Obtenha as chaves em{" "}
+          {adminT.stripe.footer}{" "}
           <a
             href="https://dashboard.stripe.com/apikeys"
             target="_blank"
@@ -181,7 +178,7 @@ export function StripeSettingsForm({ initial }: { initial: StripeSettingsView })
           >
             dashboard.stripe.com/apikeys
           </a>
-          . O webhook deve apontar para{" "}
+          . {adminT.stripe.webhookNote}{" "}
           <code className="text-xs bg-muted px-1 rounded">/api/webhooks/stripe</code>.
         </p>
       </CardContent>

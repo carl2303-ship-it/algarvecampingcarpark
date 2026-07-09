@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PasswordInput } from "@/components/admin/password-input";
 import { SiteLogo } from "@/components/brand/site-logo";
+import { adminT } from "@/lib/admin-i18n";
 
 export function AdminResetPasswordForm() {
   const [password, setPassword] = useState("");
@@ -20,12 +21,12 @@ export function AdminResetPasswordForm() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError("As passwords não coincidem.");
+      setError(adminT.resetPassword.mismatch);
       return;
     }
 
     if (password.length < 8) {
-      setError("A password deve ter pelo menos 8 caracteres.");
+      setError(adminT.resetPassword.minLength);
       return;
     }
 
@@ -41,14 +42,14 @@ export function AdminResetPasswordForm() {
       const data = (await res.json()) as { message?: string };
 
       if (!res.ok) {
-        setError(data.message ?? "Não foi possível atualizar a password.");
+        setError(data.message ?? adminT.resetPassword.updateFailed);
         setLoading(false);
         return;
       }
 
       window.location.assign("/admin/login?reset=success");
     } catch {
-      setError("Erro de ligação. Tente novamente.");
+      setError(adminT.common.connectionError);
       setLoading(false);
     }
   }
@@ -57,8 +58,8 @@ export function AdminResetPasswordForm() {
     <Card className="w-full max-w-md">
       <CardHeader className="items-center text-center">
         <SiteLogo size="xl" className="mb-2" />
-        <CardTitle>Nova password</CardTitle>
-        <CardDescription>Defina uma nova password para a conta admin.</CardDescription>
+        <CardTitle>{adminT.resetPassword.title}</CardTitle>
+        <CardDescription>{adminT.resetPassword.description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -66,7 +67,7 @@ export function AdminResetPasswordForm() {
             <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{error}</div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="password">Nova password</Label>
+            <Label htmlFor="password">{adminT.resetPassword.newPassword}</Label>
             <PasswordInput
               id="password"
               value={password}
@@ -77,7 +78,7 @@ export function AdminResetPasswordForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmar password</Label>
+            <Label htmlFor="confirmPassword">{adminT.resetPassword.confirmPassword}</Label>
             <PasswordInput
               id="confirmPassword"
               value={confirmPassword}
@@ -89,10 +90,10 @@ export function AdminResetPasswordForm() {
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Guardar nova password
+            {adminT.resetPassword.save}
           </Button>
           <Link href="/admin/login" className={buttonVariants({ variant: "ghost", className: "w-full" })}>
-            Voltar ao login
+            {adminT.resetPassword.backToLogin}
           </Link>
         </form>
       </CardContent>

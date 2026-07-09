@@ -12,7 +12,7 @@ INSERT INTO zones (name, slug, capacity, description, description_en, amenities,
 (
   'Sem Eletricidade',
   'sem-eletricidade',
-  17,
+  12,
   'Lugares em ambiente natural, sem ligação elétrica.',
   'Natural setting pitches without electric hook-up.',
   '["water", "waste"]'::jsonb,
@@ -26,6 +26,15 @@ INSERT INTO zones (name, slug, capacity, description, description_en, amenities,
   'Premium sea-view pitches with electricity.',
   '["electricity", "water", "waste", "sea_view"]'::jsonb,
   3
+),
+(
+  'Premium Sem Eletricidade',
+  'premium-sem-eletricidade',
+  5,
+  'Lugares premium com vista para o mar, sem ligação elétrica.',
+  'Premium sea-view pitches without electric hook-up.',
+  '["water", "waste", "sea_view"]'::jsonb,
+  4
 );
 
 -- Default rates (year-round placeholder - adjust seasonally)
@@ -46,7 +55,13 @@ SELECT id, '2025-01-01'::date, '2025-06-14'::date, 2500, 1 FROM zones WHERE slug
 UNION ALL
 SELECT id, '2025-06-15'::date, '2025-09-15'::date, 3800, 2 FROM zones WHERE slug = 'premium-vista-mar'
 UNION ALL
-SELECT id, '2025-09-16'::date, '2026-12-31'::date, 2500, 1 FROM zones WHERE slug = 'premium-vista-mar';
+SELECT id, '2025-09-16'::date, '2026-12-31'::date, 2500, 1 FROM zones WHERE slug = 'premium-vista-mar'
+UNION ALL
+SELECT id, '2025-01-01'::date, '2025-06-14'::date, 2500, 1 FROM zones WHERE slug = 'premium-sem-eletricidade'
+UNION ALL
+SELECT id, '2025-06-15'::date, '2025-09-15'::date, 3800, 2 FROM zones WHERE slug = 'premium-sem-eletricidade'
+UNION ALL
+SELECT id, '2025-09-16'::date, '2026-12-31'::date, 2500, 1 FROM zones WHERE slug = 'premium-sem-eletricidade';
 
 -- Generate pitches per zone
 INSERT INTO pitches (zone_id, code)

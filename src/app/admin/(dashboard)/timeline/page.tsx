@@ -1,5 +1,6 @@
 import { addDays, format, startOfToday } from "date-fns";
 import { AdminGanttChart } from "@/components/admin/admin-gantt-chart";
+import { adminT } from "@/lib/admin-i18n";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPitchMapSpots } from "@/lib/pitch-map";
 
@@ -25,11 +26,8 @@ export default async function TimelinePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Calendário Gantt</h1>
-        <p className="text-muted-foreground mt-1">
-          Arraste a ponta direita de cada barra para prolongar a estadia. O valor extra é calculado
-          automaticamente e enviado por email com link Stripe.
-        </p>
+        <h1 className="text-3xl font-bold">{adminT.timeline.title}</h1>
+        <p className="text-muted-foreground mt-1">{adminT.timeline.description}</p>
       </div>
 
       <AdminGanttChart

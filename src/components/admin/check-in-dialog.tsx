@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { adminT } from "@/lib/admin-i18n";
 import type { Pitch, Reservation } from "@/types/database";
 
 export function CheckInDialog({
@@ -47,7 +48,7 @@ export function CheckInDialog({
       setOpen(false);
       window.location.reload();
     } catch {
-      alert("Erro ao fazer check-in");
+      alert(adminT.reservations.checkInError);
     } finally {
       setLoading(false);
     }
@@ -56,28 +57,30 @@ export function CheckInDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className={buttonVariants({ size: "sm", variant: "outline" })}>
-        Check-in
+        {adminT.reservations.checkIn}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Check-in — {reservation.guest_name}</DialogTitle>
+          <DialogTitle>
+            {adminT.reservations.checkInTitle.replace("{name}", reservation.guest_name)}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <Select value={pitchId} onValueChange={(v) => setPitchId(v ?? "")}>
             <SelectTrigger>
-              <SelectValue placeholder="Selecionar lugar" />
+              <SelectValue placeholder={adminT.reservations.selectPitch} />
             </SelectTrigger>
             <SelectContent>
               {availablePitches.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
-                  Lugar {p.code}
+                  {adminT.reservations.pitchOption.replace("{code}", p.code)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Button onClick={handleCheckIn} disabled={!pitchId || loading} className="w-full">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirmar check-in
+            {adminT.reservations.confirmCheckIn}
           </Button>
         </div>
       </DialogContent>

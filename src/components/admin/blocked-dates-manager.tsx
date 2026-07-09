@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { adminT } from "@/lib/admin-i18n";
 
 interface BlockedDate {
   id: string;
@@ -79,12 +80,12 @@ export function BlockedDatesManager({ pitches }: { pitches: PitchOption[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bloquear datas</CardTitle>
+        <CardTitle>{adminT.blockedDates.title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <form onSubmit={handleAdd} className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2 md:col-span-2">
-            <Label>Lugar</Label>
+            <Label>{adminT.blockedDates.pitch}</Label>
             <select
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
               value={pitchCode}
@@ -99,15 +100,15 @@ export function BlockedDatesManager({ pitches }: { pitches: PitchOption[] }) {
             </select>
           </div>
           <div className="space-y-2">
-            <Label>Motivo</Label>
+            <Label>{adminT.blockedDates.reason}</Label>
             <Input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Manutenção, fecho..."
+              placeholder={adminT.blockedDates.reasonPlaceholder}
             />
           </div>
           <div className="space-y-2">
-            <Label>Início</Label>
+            <Label>{adminT.blockedDates.start}</Label>
             <Input
               type="date"
               value={startDate}
@@ -116,7 +117,7 @@ export function BlockedDatesManager({ pitches }: { pitches: PitchOption[] }) {
             />
           </div>
           <div className="space-y-2">
-            <Label>Fim</Label>
+            <Label>{adminT.blockedDates.end}</Label>
             <Input
               type="date"
               value={endDate}
@@ -127,15 +128,15 @@ export function BlockedDatesManager({ pitches }: { pitches: PitchOption[] }) {
           <div className="md:col-span-2">
             <Button type="submit" disabled={saving || !pitchCode}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              Adicionar bloqueio
+              {adminT.blockedDates.add}
             </Button>
           </div>
         </form>
 
         {loading ? (
-          <p className="text-muted-foreground">A carregar...</p>
+          <p className="text-muted-foreground">{adminT.blockedDates.loading}</p>
         ) : items.length === 0 ? (
-          <p className="text-muted-foreground">Sem bloqueios ativos</p>
+          <p className="text-muted-foreground">{adminT.blockedDates.empty}</p>
         ) : (
           <ul className="space-y-2">
             {items.map((item) => (
@@ -145,7 +146,10 @@ export function BlockedDatesManager({ pitches }: { pitches: PitchOption[] }) {
               >
                 <div>
                   <p className="font-medium">
-                    Lugar {item.pitch_code ?? "—"} · {item.start_date} → {item.end_date}
+                    {adminT.blockedDates.entry
+                      .replace("{code}", item.pitch_code ?? "—")
+                      .replace("{start}", item.start_date)
+                      .replace("{end}", item.end_date)}
                   </p>
                   {item.reason && <p className="text-muted-foreground">{item.reason}</p>}
                 </div>
@@ -155,7 +159,7 @@ export function BlockedDatesManager({ pitches }: { pitches: PitchOption[] }) {
                   size="icon"
                   disabled={deletingId === item.id}
                   onClick={() => handleDelete(item.id)}
-                  aria-label="Remover bloqueio"
+                  aria-label={adminT.common.removeBlock}
                 >
                   {deletingId === item.id ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
