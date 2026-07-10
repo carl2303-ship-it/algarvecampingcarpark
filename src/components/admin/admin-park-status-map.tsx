@@ -181,10 +181,10 @@ export function AdminParkStatusMap({
                   )}
                   {selected.reservation && (
                     <Link
-                      href="/admin/reservations"
-                      className={buttonVariants({ variant: "outline", className: "flex-1" })}
+                      href={`/admin/reservations/${selected.reservation.id}/edit`}
+                      className={buttonVariants({ className: "flex-1" })}
                     >
-                      {adminT.parkStatus.viewReservations}
+                      {adminT.parkStatus.viewReservation}
                     </Link>
                   )}
                 </div>

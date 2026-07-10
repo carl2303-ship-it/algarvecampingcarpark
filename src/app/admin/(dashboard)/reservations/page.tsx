@@ -1,30 +1,10 @@
 import Link from "next/link";
 import { Download, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { CheckInDialog } from "@/components/admin/check-in-dialog";
-import { adminT, formatAdminReservationStatus } from "@/lib/admin-i18n";
+import { AdminReservationsTable } from "@/components/admin/admin-reservations-table";
+import { buttonVariants } from "@/components/ui/button";
+import { adminT } from "@/lib/admin-i18n";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { releaseReservationPitch } from "@/lib/reservation-checkout";
-import { formatPrice } from "@/lib/pricing";
 import type { Pitch, Reservation } from "@/types/database";
-
-const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  pending_payment: "outline",
-  confirmed: "default",
-  checked_in: "secondary",
-  checked_out: "outline",
-  cancelled: "destructive",
-  expired: "destructive",
-};
 
 export default async function ReservationsPage() {
   const supabase = createAdminClient();
@@ -34,7 +14,7 @@ export default async function ReservationsPage() {
       .from("reservations")
       .select("*, zone:zones(name), pitch:pitches(code)")
       .order("check_in", { ascending: false })
-      .limit(100),
+      .limit(200),
     supabase.from("pitches").select("*"),
   ]);
 
@@ -54,92 +34,12 @@ export default async function ReservationsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{adminT.reservations.client}</TableHead>
-              <TableHead>{adminT.reservations.zone}</TableHead>
-              <TableHead>{adminT.reservations.dates}</TableHead>
-              <TableHead>{adminT.reservations.total}</TableHead>
-              <TableHead>{adminT.reservations.status}</TableHead>
-              <TableHead>{adminT.reservations.pitch}</TableHead>
-              <TableHead>{adminT.reservations.actions}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(reservations as Reservation[])?.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{r.guest_name}</p>
-                    <p className="text-xs text-muted-foreground">{r.guest_email}</p>
-                  </div>
-                </TableCell>
-                <TableCell>{(r.zone as { name: string } | null)?.name}</TableCell>
-                <TableCell className="text-sm">
-                  {r.check_in} → {r.check_out}
-                </TableCell>
-                <TableCell>{formatPrice(r.total_cents)}</TableCell>
-                <TableCell>
-                  <Badge variant={statusColors[r.status] ?? "outline"}>
-                    {formatAdminReservationStatus(r.status)}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {r.pitch_code ?? (r.pitch as { code: string } | null)?.code ?? "—"}
-                </TableCell>
-                <TableCell>
-                  {r.status === "confirmed" && (
-                    <CheckInDialog
-                      reservation={r}
-                      pitches={(pitches as Pitch[]) ?? []}
-                    />
-                  )}
-                  {r.status === "checked_in" && (
-                    <CheckOutButton
-                      reservationId={r.id}
-                      pitchId={r.pitch_id}
-                      pitchCode={r.pitch_code ?? null}
-                    />
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-}
+      <p className="text-sm text-muted-foreground -mt-2">{adminT.reservations.sortHint}</p>
 
-function CheckOutButton({
-  reservationId,
-  pitchId,
-  pitchCode,
-}: {
-  reservationId: string;
-  pitchId: string | null;
-  pitchCode: string | null;
-}) {
-  return (
-    <form
-      action={async () => {
-        "use server";
-        const supabase = createAdminClient();
-        await supabase
-          .from("reservations")
-          .update({
-            status: "checked_out",
-            checked_out_at: new Date().toISOString(),
-          })
-          .eq("id", reservationId);
-        await releaseReservationPitch({ pitch_id: pitchId, pitch_code: pitchCode });
-      }}
-    >
-      <Button size="sm" variant="outline" type="submit">
-        {adminT.reservations.checkOut}
-      </Button>
-    </form>
+      <AdminReservationsTable
+        reservations={(reservations as Reservation[]) ?? []}
+        pitches={(pitches as Pitch[]) ?? []}
+      />
+    </div>
   );
 }

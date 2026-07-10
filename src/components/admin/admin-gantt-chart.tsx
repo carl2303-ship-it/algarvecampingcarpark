@@ -1,130 +1,136 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import {
   addDays,
+  addWeeks,
   differenceInCalendarDays,
+  endOfWeek,
   format,
   parseISO,
   startOfToday,
+  startOfWeek,
 } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { GanttReservationDialog } from "@/components/admin/gantt-reservation-dialog";
 import { adminDateLocale, adminT } from "@/lib/admin-i18n";
+import type { GanttOccupancyReservation } from "@/lib/gantt-occupancy";
+import { getZoneVisual } from "@/lib/pricing-icons";
+import {
+  SEASON_BG,
+  SEASON_LABELS,
+  type RateSeason,
+} from "@/lib/season-calendar";
 import { cn } from "@/lib/utils";
-import { formatPrice } from "@/lib/pricing";
 
-export type GanttReservation = {
-  id: string;
-  pitch_code: string;
-  guest_name: string;
-  check_in: string;
-  check_out: string;
-  status: string;
-};
+export type GanttReservation = GanttOccupancyReservation;
 
 export type GanttPitch = {
   code: string;
+  zone_slug: string;
 };
+
+const WEEK_STARTS_ON = 1 as const;
 
 function GanttBar({
   reservation,
-  start,
-  days,
+  totalDays,
   startStr,
   endStr,
-  onExtend,
+  onSelect,
 }: {
   reservation: GanttReservation;
-  start: Date;
-  days: number;
+  totalDays: number;
   startStr: string;
   endStr: string;
-  onExtend: (id: string, newCheckOut: string) => Promise<void>;
+  onSelect: (reservation: GanttReservation) => void;
 }) {
-  const barRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState(false);
-  const [previewCheckOut, setPreviewCheckOut] = useState<string | null>(null);
-
-  if (reservation.check_out <= startStr || reservation.check_in >= endStr) {
-    return null;
-  }
+  const isVisible = !(reservation.check_out <= startStr || reservation.check_in >= endStr);
 
   const visibleStart = reservation.check_in < startStr ? startStr : reservation.check_in;
   const visibleEnd = reservation.check_out > endStr ? endStr : reservation.check_out;
 
-  const offset = Math.max(0, differenceInCalendarDays(parseISO(visibleStart), parseISO(startStr)));
-  const span = Math.max(
-    1,
-    differenceInCalendarDays(parseISO(visibleEnd), parseISO(visibleStart))
-  );
+  const offset = isVisible
+    ? Math.max(0, differenceInCalendarDays(parseISO(visibleStart), parseISO(startStr)))
+    : 0;
+  const span = isVisible
+    ? Math.max(1, differenceInCalendarDays(parseISO(visibleEnd), parseISO(visibleStart)))
+    : 1;
 
-  const previewSpan =
-    previewCheckOut && previewCheckOut > reservation.check_out
-      ? Math.max(
-          span,
-          differenceInCalendarDays(parseISO(previewCheckOut), parseISO(startStr)) - offset
-        )
-      : span;
-
-  const handlePointerMove = useCallback(
-    (event: PointerEvent) => {
-      const row = barRef.current?.parentElement;
-      if (!row) return;
-      const rect = row.getBoundingClientRect();
-      const relativeX = event.clientX - rect.left;
-      const dayIndex = Math.min(
-        days,
-        Math.max(1, Math.ceil((relativeX / rect.width) * days))
-      );
-      const newCheckOut = format(addDays(start, dayIndex), "yyyy-MM-dd");
-      if (newCheckOut > reservation.check_out) {
-        setPreviewCheckOut(newCheckOut);
-      }
-    },
-    [days, reservation.check_out, start]
-  );
-
-  const handlePointerUp = useCallback(async () => {
-    window.removeEventListener("pointermove", handlePointerMove);
-    window.removeEventListener("pointerup", handlePointerUp);
-    setDragging(false);
-
-    if (previewCheckOut && previewCheckOut > reservation.check_out) {
-      await onExtend(reservation.id, previewCheckOut);
-    }
-    setPreviewCheckOut(null);
-  }, [handlePointerMove, onExtend, previewCheckOut, reservation.check_out, reservation.id]);
-
-  const startDrag = (event: React.PointerEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setDragging(true);
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-  };
+  if (!isVisible) {
+    return null;
+  }
 
   return (
-    <div
-      ref={barRef}
+    <button
+      type="button"
+      onClick={() => onSelect(reservation)}
       className={cn(
-        "absolute top-1.5 h-7 rounded-md flex items-center text-[10px] font-medium text-white truncate shadow-sm z-10 group",
-        reservation.status === "checked_in" ? "bg-red-500" : "bg-primary",
-        dragging && "ring-2 ring-white/80"
+        "absolute top-1.5 z-10 flex h-7 cursor-pointer items-center truncate rounded-md px-2 text-[10px] font-medium text-white shadow-sm transition-opacity hover:opacity-90",
+        reservation.status === "checked_in" ? "bg-red-500" : "bg-primary"
       )}
       style={{
-        left: `${(offset / days) * 100}%`,
-        width: `${(previewSpan / days) * 100}%`,
+        left: `${(offset / totalDays) * 100}%`,
+        width: `${(span / totalDays) * 100}%`,
       }}
-      title={`${reservation.guest_name} · ${reservation.check_in} → ${previewCheckOut ?? reservation.check_out}`}
+      title={`${reservation.guest_name} · ${reservation.check_in} → ${reservation.check_out}`}
     >
-      <span className="truncate px-2 flex-1">{reservation.guest_name}</span>
-      <button
-        type="button"
-        onPointerDown={startDrag}
-        className="h-full w-3 shrink-0 cursor-ew-resize bg-black/20 hover:bg-black/40 rounded-r-md touch-none"
-        aria-label={adminT.timeline.extendAria.replace("{name}", reservation.guest_name)}
-      />
+      <span className="truncate">{reservation.guest_name}</span>
+    </button>
+  );
+}
+
+function SeasonLegend() {
+  const seasons: RateSeason[] = ["august", "summer", "low", "winter"];
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">{adminT.timeline.seasonLegend}</span>
+      {seasons.map((season) => (
+        <span key={season} className="inline-flex items-center gap-1.5">
+          <span
+            className="h-3 w-5 rounded border border-black/5"
+            style={{ backgroundColor: SEASON_BG[season] }}
+          />
+          {SEASON_LABELS[season]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function SeasonDayBackground({
+  weekColumns,
+  seasonsByDay,
+  rangeStart,
+}: {
+  weekColumns: Date[];
+  seasonsByDay: (RateSeason | null)[];
+  rangeStart: Date;
+}) {
+  return (
+    <div className="absolute inset-0 flex">
+      {weekColumns.map((week, weekIndex) => (
+        <div key={week.toISOString()} className="flex min-w-[72px] flex-1">
+          {Array.from({ length: 7 }, (_, dayOffset) => {
+            const dayIndex = weekIndex * 7 + dayOffset;
+            const season = seasonsByDay[dayIndex] ?? null;
+            return (
+              <div
+                key={dayOffset}
+                className="flex-1 border-r border-black/[0.03] last:border-r-0"
+                style={{
+                  backgroundColor: season ? SEASON_BG[season] : undefined,
+                }}
+                title={
+                  season
+                    ? `${format(addDays(rangeStart, dayIndex), "dd/MM")} · ${SEASON_LABELS[season]}`
+                    : format(addDays(rangeStart, dayIndex), "dd/MM")
+                }
+              />
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -132,20 +138,26 @@ function GanttBar({
 export function AdminGanttChart({
   pitches,
   reservations,
-  days = 21,
+  seasonsByDay,
+  weeks = 12,
 }: {
   pitches: GanttPitch[];
   reservations: GanttReservation[];
-  days?: number;
+  seasonsByDay: (RateSeason | null)[];
+  weeks?: number;
 }) {
-  const router = useRouter();
-  const start = useMemo(() => startOfToday(), []);
-  const [extendingId, setExtendingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<GanttReservation | null>(null);
 
-  const dayColumns = useMemo(
-    () => Array.from({ length: days }, (_, index) => addDays(start, index)),
-    [start, days]
+  const rangeStart = useMemo(
+    () => startOfWeek(startOfToday(), { weekStartsOn: WEEK_STARTS_ON }),
+    []
+  );
+
+  const totalDays = weeks * 7;
+
+  const weekColumns = useMemo(
+    () => Array.from({ length: weeks }, (_, index) => addWeeks(rangeStart, index)),
+    [rangeStart, weeks]
   );
 
   const sortedPitches = useMemo(
@@ -156,86 +168,64 @@ export function AdminGanttChart({
     [pitches]
   );
 
-  const startStr = format(start, "yyyy-MM-dd");
-  const endStr = format(addDays(start, days), "yyyy-MM-dd");
-
-  const handleExtend = useCallback(
-    async (id: string, newCheckOut: string) => {
-      setExtendingId(id);
-      setMessage(null);
-      try {
-        const res = await fetch(`/api/admin/reservations/${id}/extend`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ check_out: newCheckOut, send_payment_link: true }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? adminT.timeline.extendError);
-
-        const extra =
-          data.extension_cents > 0
-            ? ` ${adminT.timeline.extraAmount.replace("{amount}", formatPrice(data.extension_cents))}`
-            : "";
-        setMessage(`${adminT.timeline.extendedUntil.replace("{date}", newCheckOut)}${extra}`);
-        router.refresh();
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : adminT.timeline.extendStayError);
-      } finally {
-        setExtendingId(null);
-      }
-    },
-    [router]
-  );
+  const startStr = format(rangeStart, "yyyy-MM-dd");
+  const endStr = format(addDays(rangeStart, totalDays), "yyyy-MM-dd");
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">{adminT.timeline.instruction}</p>
+      <SeasonLegend />
 
-      {message && (
-        <div className="rounded-lg border bg-muted/50 px-4 py-3 text-sm">{message}</div>
-      )}
-
-      {extendingId && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> {adminT.timeline.extending}
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-xl border bg-background">
-        <div className="min-w-[960px]">
+      <div className="overflow-x-auto rounded-xl border bg-background -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="min-w-[720px]">
           <div className="flex border-b bg-muted/50">
-            <div className="w-16 shrink-0 p-2 text-xs font-medium border-r">
+            <div className="w-14 shrink-0 border-r p-2 text-xs font-medium sm:w-16">
               {adminT.timeline.pitchColumn}
             </div>
             <div className="flex flex-1">
-              {dayColumns.map((day) => (
-                <div
-                  key={day.toISOString()}
-                  className="flex-1 min-w-[36px] border-r p-1 text-center text-[10px] text-muted-foreground"
-                >
-                  <div className="font-medium text-foreground">
-                    {format(day, "dd", { locale: adminDateLocale })}
+              {weekColumns.map((week) => {
+                const weekEnd = endOfWeek(week, { weekStartsOn: WEEK_STARTS_ON });
+                return (
+                  <div
+                    key={week.toISOString()}
+                    className="min-w-[72px] flex-1 border-r p-1.5 text-center text-[10px] text-muted-foreground"
+                  >
+                    <div className="text-[11px] font-medium text-foreground">
+                      {format(week, "d", { locale: adminDateLocale })} –{" "}
+                      {format(weekEnd, "d MMM", { locale: adminDateLocale })}
+                    </div>
                   </div>
-                  <div>{format(day, "MMM", { locale: adminDateLocale })}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           {sortedPitches.map((pitch) => {
             const pitchReservations = reservations.filter((r) => r.pitch_code === pitch.code);
+            const zoneVisual = getZoneVisual(pitch.zone_slug);
 
             return (
-              <div key={pitch.code} className="flex border-b min-h-[40px]">
-                <div className="w-16 shrink-0 p-2 text-xs font-semibold border-r flex items-center">
-                  {pitch.code}
+              <div key={pitch.code} className="flex min-h-[40px] border-b">
+                <div className="flex w-14 shrink-0 items-center border-r p-1.5 sm:w-16">
+                  <span
+                    className={cn(
+                      "inline-flex min-w-0 items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset",
+                      zoneVisual.color
+                    )}
+                  >
+                    {pitch.code}
+                  </span>
                 </div>
-                <div className="relative flex-1">
-                  <div className="absolute inset-0 flex">
-                    {dayColumns.map((day) => (
+                <div className="relative min-h-[40px] flex-1">
+                  <SeasonDayBackground
+                    weekColumns={weekColumns}
+                    seasonsByDay={seasonsByDay}
+                    rangeStart={rangeStart}
+                  />
+                  <div className="pointer-events-none absolute inset-0 flex">
+                    {weekColumns.map((week) => (
                       <div
-                        key={day.toISOString()}
-                        className="flex-1 min-w-[36px] border-r border-muted/50"
+                        key={week.toISOString()}
+                        className="min-w-[72px] flex-1 border-r border-muted/40"
                       />
                     ))}
                   </div>
@@ -244,11 +234,10 @@ export function AdminGanttChart({
                     <GanttBar
                       key={reservation.id}
                       reservation={reservation}
-                      start={start}
-                      days={days}
+                      totalDays={totalDays}
                       startStr={startStr}
                       endStr={endStr}
-                      onExtend={handleExtend}
+                      onSelect={setSelectedReservation}
                     />
                   ))}
                 </div>
@@ -257,6 +246,12 @@ export function AdminGanttChart({
           })}
         </div>
       </div>
+
+      <GanttReservationDialog
+        reservation={selectedReservation}
+        open={selectedReservation !== null}
+        onOpenChange={(open) => !open && setSelectedReservation(null)}
+      />
     </div>
   );
 }

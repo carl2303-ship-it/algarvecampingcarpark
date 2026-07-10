@@ -20,11 +20,36 @@ type Props = {
   spots: PitchMapSpotRecord[];
 };
 
+export type AdminReservationInitial = {
+  id: string;
+  pitch_code: string | null;
+  check_in: string;
+  check_out: string;
+  guest_name: string;
+  guest_email: string;
+  guest_phone: string;
+  vehicle_plate: string | null;
+  num_guests: number;
+  notes: string | null;
+  operational_notes: string | null;
+  total_cents: number;
+  paid_cents?: number;
+  partial_payment_cents?: number;
+  partial_payment_method?: string | null;
+  payment_method?: string | null;
+};
+
 export function AdminReservationForm({
   zones,
   spots,
   initialPitchCode,
-}: Props & { initialPitchCode?: string }) {
+  mode = "create",
+  initialReservation,
+}: Props & {
+  initialPitchCode?: string;
+  mode?: "create" | "edit";
+  initialReservation?: AdminReservationInitial;
+}) {
   const router = useRouter();
   const sortedSpots = useMemo(
     () =>
@@ -34,25 +59,44 @@ export function AdminReservationForm({
     [spots]
   );
 
-  const [pitchCode, setPitchCode] = useState(
-    initialPitchCode && spots.some((s) => s.code === initialPitchCode)
-      ? initialPitchCode
-      : sortedSpots[0]?.code ?? ""
+  const isEdit = mode === "edit" && initialReservation;
+
+  const [pitchCode, setPitchCode] = useState(() => {
+    if (initialReservation?.pitch_code && spots.some((s) => s.code === initialReservation.pitch_code)) {
+      return initialReservation.pitch_code;
+    }
+    if (initialPitchCode && spots.some((s) => s.code === initialPitchCode)) {
+      return initialPitchCode;
+    }
+    return sortedSpots[0]?.code ?? "";
+  });
+  const [checkIn, setCheckIn] = useState(initialReservation?.check_in ?? "");
+  const [checkOut, setCheckOut] = useState(initialReservation?.check_out ?? "");
+  const [guestName, setGuestName] = useState(initialReservation?.guest_name ?? "");
+  const [guestEmail, setGuestEmail] = useState(initialReservation?.guest_email ?? "");
+  const [guestPhone, setGuestPhone] = useState(initialReservation?.guest_phone ?? "");
+  const [vehiclePlate, setVehiclePlate] = useState(initialReservation?.vehicle_plate ?? "");
+  const [numGuests, setNumGuests] = useState(initialReservation?.num_guests ?? 2);
+  const [notes, setNotes] = useState(initialReservation?.notes ?? "");
+  const [operationalNotes, setOperationalNotes] = useState(initialReservation?.operational_notes ?? "");
+  const [totalCents, setTotalCents] = useState<number | null>(
+    initialReservation?.total_cents ?? null
   );
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [guestName, setGuestName] = useState("");
-  const [guestEmail, setGuestEmail] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
-  const [vehiclePlate, setVehiclePlate] = useState("");
-  const [numGuests, setNumGuests] = useState(2);
-  const [notes, setNotes] = useState("");
-  const [operationalNotes, setOperationalNotes] = useState("");
-  const [totalCents, setTotalCents] = useState<number | null>(null);
-  const [isFullyPaid, setIsFullyPaid] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [partialPaymentCents, setPartialPaymentCents] = useState("");
-  const [partialPaymentMethod, setPartialPaymentMethod] = useState("");
+  const [isFullyPaid, setIsFullyPaid] = useState(() => {
+    if (!initialReservation) return false;
+    const paid = initialReservation.paid_cents ?? 0;
+    return paid >= initialReservation.total_cents && initialReservation.total_cents > 0;
+  });
+  const [paymentMethod, setPaymentMethod] = useState(initialReservation?.payment_method ?? "");
+  const [partialPaymentCents, setPartialPaymentCents] = useState(() => {
+    if (!initialReservation) return "";
+    const paid = initialReservation.paid_cents ?? 0;
+    if (paid >= initialReservation.total_cents) return "";
+    return String((initialReservation.partial_payment_cents ?? paid) / 100);
+  });
+  const [partialPaymentMethod, setPartialPaymentMethod] = useState(
+    initialReservation?.partial_payment_method ?? ""
+  );
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,34 +164,45 @@ export function AdminReservationForm({
     }
 
     setSubmitting(true);
-    const res = await fetch("/api/admin/reservations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        zone_id: zoneId,
-        pitch_code: pitchCode,
-        check_in: checkIn,
-        check_out: checkOut,
-        guest_name: guestName,
-        guest_email: guestEmail,
-        guest_phone: guestPhone,
-        vehicle_plate: vehiclePlate || undefined,
-        num_guests: numGuests,
-        notes: notes || undefined,
-        operational_notes: operationalNotes || undefined,
-        total_cents: totalCents,
-        is_fully_paid: isFullyPaid,
-        payment_method: paymentMethod || null,
-        partial_payment_cents: isFullyPaid ? 0 : paidCents,
-        partial_payment_method: partialPaymentMethod || null,
-      }),
-    });
+    const payload = {
+      zone_id: zoneId,
+      pitch_code: pitchCode,
+      check_in: checkIn,
+      check_out: checkOut,
+      guest_name: guestName,
+      guest_email: guestEmail,
+      guest_phone: guestPhone,
+      vehicle_plate: vehiclePlate || undefined,
+      num_guests: numGuests,
+      notes: notes || undefined,
+      operational_notes: operationalNotes || undefined,
+      total_cents: totalCents,
+      is_fully_paid: isFullyPaid,
+      payment_method: paymentMethod || null,
+      partial_payment_cents: isFullyPaid ? 0 : paidCents,
+      partial_payment_method: partialPaymentMethod || null,
+    };
+
+    const res = await fetch(
+      isEdit ? `/api/admin/reservations/${initialReservation.id}` : "/api/admin/reservations",
+      {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
 
     const data = await res.json().catch(() => ({}));
     setSubmitting(false);
 
     if (!res.ok) {
-      setError(typeof data.error === "string" ? data.error : adminT.reservationForm.createError);
+      setError(
+        typeof data.error === "string"
+          ? data.error
+          : isEdit
+            ? adminT.reservationForm.updateError
+            : adminT.reservationForm.createError
+      );
       return;
     }
 
@@ -166,7 +221,9 @@ export function AdminReservationForm({
       <Card>
         <CardHeader>
           <CardTitle>{adminT.reservationForm.stay}</CardTitle>
-          <CardDescription>{adminT.reservationForm.stayDescription}</CardDescription>
+          <CardDescription>
+            {isEdit ? adminT.reservationForm.editDescription : adminT.reservationForm.stayDescription}
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
@@ -414,7 +471,7 @@ export function AdminReservationForm({
 
       <Button type="submit" size="lg" disabled={submitting}>
         {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-        {adminT.reservationForm.create}
+        {isEdit ? adminT.reservationForm.saveChanges : adminT.reservationForm.create}
       </Button>
     </form>
   );
