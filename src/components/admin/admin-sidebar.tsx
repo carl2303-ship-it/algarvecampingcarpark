@@ -35,7 +35,13 @@ const nav = [
 
 function isNavActive(pathname: string, href: string) {
   if (href === "/admin") return pathname === "/admin";
-  if (href === "/admin/reservations") return pathname === "/admin/reservations";
+  if (href === "/admin/reservations") {
+    return (
+      pathname === "/admin/reservations" ||
+      (pathname.startsWith("/admin/reservations/") &&
+        !pathname.startsWith("/admin/reservations/completed"))
+    );
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

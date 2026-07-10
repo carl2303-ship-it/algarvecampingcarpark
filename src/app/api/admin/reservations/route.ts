@@ -7,6 +7,7 @@ import { calculateTotalPrice } from "@/lib/pricing";
 import { ADMIN_PAYMENT_METHODS } from "@/lib/admin-payment-methods";
 import {
   syncReservationPaymentState,
+  normalizeVehiclePlate,
   upsertGuestForReservation,
 } from "@/lib/admin-reservation-payments";
 
@@ -25,7 +26,7 @@ const createSchema = z.object({
   guest_email: z.string().email(),
   guest_phone: z.string().min(1),
   guest_country: z.string().max(80).optional(),
-  vehicle_plate: z.string().optional(),
+  vehicle_plate: z.string().min(1, "Matricule requis"),
   num_guests: z.number().int().min(1).max(10).default(2),
   operational_notes: z.string().optional(),
   notes: z.string().optional(),
@@ -53,6 +54,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const plate = normalizeVehiclePlate(body.vehicle_plate);
+
     const { data: reservation, error } = await supabase
       .from("reservations")
       .insert({
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
         guest_name: body.guest_name,
         guest_email: body.guest_email,
         guest_phone: body.guest_phone,
-        vehicle_plate: body.vehicle_plate || null,
+        vehicle_plate: plate,
         num_guests: body.num_guests,
         notes: body.notes || null,
         operational_notes: body.operational_notes || null,
@@ -103,7 +106,7 @@ export async function POST(request: Request) {
       name: body.guest_name,
       email: body.guest_email,
       phone: body.guest_phone,
-      vehicle_plate: body.vehicle_plate,
+      vehicle_plate: plate,
       country: body.guest_country,
     });
 

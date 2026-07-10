@@ -3,6 +3,7 @@ import { Download, Plus } from "lucide-react";
 import { AdminReservationsTable } from "@/components/admin/admin-reservations-table";
 import { buttonVariants } from "@/components/ui/button";
 import { adminT } from "@/lib/admin-i18n";
+import { ACTIVE_RESERVATION_STATUSES } from "@/lib/admin-reservation-status";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Pitch, Reservation } from "@/types/database";
 
@@ -13,6 +14,7 @@ export default async function ReservationsPage() {
     supabase
       .from("reservations")
       .select("*, zone:zones(name), pitch:pitches(code)")
+      .in("status", [...ACTIVE_RESERVATION_STATUSES])
       .order("check_in", { ascending: false })
       .limit(200),
     supabase.from("pitches").select("*"),
@@ -21,7 +23,7 @@ export default async function ReservationsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">{adminT.reservations.title}</h1>
+        <h1 className="text-3xl font-bold">{adminT.reservations.titleActive}</h1>
         <div className="flex gap-2">
           <Link href="/admin/reservations/new" className={buttonVariants()}>
             <Plus className="mr-2 h-4 w-4" />
@@ -39,6 +41,7 @@ export default async function ReservationsPage() {
       <AdminReservationsTable
         reservations={(reservations as Reservation[]) ?? []}
         pitches={(pitches as Pitch[]) ?? []}
+        variant="active"
       />
     </div>
   );

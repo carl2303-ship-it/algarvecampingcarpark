@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Loader2, Mail, Plus } from "lucide-react";
+import { DeleteReservationButton } from "@/components/admin/delete-reservation-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { ADMIN_PAYMENT_METHODS, paymentMethodLabel } from "@/lib/admin-payment-methods";
 import { adminDateLocale, adminT } from "@/lib/admin-i18n";
+import { COMPLETED_RESERVATION_STATUSES } from "@/lib/admin-reservation-status";
 import { getSpotZoneSlug } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import type { Zone } from "@/types/database";
@@ -35,6 +37,10 @@ export type AdminReservationPayment = {
   payment_method: string | null;
   notes: string | null;
   created_at: string;
+  reservation_id: string;
+  check_in: string;
+  check_out: string;
+  pitch_code: string | null;
 };
 
 export type AdminReservationInitial = {
@@ -52,6 +58,7 @@ export type AdminReservationInitial = {
   operational_notes: string | null;
   total_cents: number;
   paid_cents?: number;
+  status?: string;
 };
 
 function eurosToCents(value: string): number {
@@ -119,6 +126,7 @@ export function AdminReservationForm({
   const [newPaymentEuros, setNewPaymentEuros] = useState("");
   const [newPaymentMethod, setNewPaymentMethod] = useState("");
   const [addingPayment, setAddingPayment] = useState(false);
+  const [loadingClientPayments, setLoadingClientPayments] = useState(false);
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -166,6 +174,40 @@ export function AdminReservationForm({
     }
   }, [followQuote, quotedCents]);
 
+  useEffect(() => {
+    const plate = vehiclePlate.trim();
+    if (!plate) {
+      setPayments([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      setLoadingClientPayments(true);
+      fetch(`/api/admin/client-payments?vehicle_plate=${encodeURIComponent(plate)}`, {
+        signal: controller.signal,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setPayments(data.payments ?? []);
+        })
+        .catch(() => {})
+        .finally(() => setLoadingClientPayments(false));
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [vehiclePlate]);
+
+  function formatStayLabel(payment: AdminReservationPayment): string {
+    const from = format(new Date(payment.check_in), "dd/MM/yyyy", { locale: adminDateLocale });
+    const to = format(new Date(payment.check_out), "dd/MM/yyyy", { locale: adminDateLocale });
+    const pitch = payment.pitch_code ?? "—";
+    return `${from} → ${to} · ${pitch}`;
+  }
+
   async function handleAddPayment() {
     if (!isEdit || !initialReservation?.id) return;
 
@@ -202,7 +244,9 @@ export function AdminReservationForm({
       return;
     }
 
-    const historyRes = await fetch(`/api/admin/reservations/${initialReservation.id}/payments`);
+    const historyRes = await fetch(
+      `/api/admin/client-payments?vehicle_plate=${encodeURIComponent(vehiclePlate.trim())}`
+    );
     const historyData = await historyRes.json().catch(() => ({ payments: [] }));
     setPayments(historyData.payments ?? []);
     setPaidCents(data.paid_cents ?? paidCents + amountCents);
@@ -224,6 +268,10 @@ export function AdminReservationForm({
     }
     if (totalCents <= 0) {
       setError(adminT.reservationForm.invalidTotal);
+      return;
+    }
+    if (!vehiclePlate.trim()) {
+      setError(adminT.reservationForm.plateRequired);
       return;
     }
 
@@ -248,7 +296,7 @@ export function AdminReservationForm({
       guest_email: guestEmail,
       guest_phone: guestPhone,
       guest_country: guestCountry || undefined,
-      vehicle_plate: vehiclePlate || undefined,
+      vehicle_plate: vehiclePlate.trim(),
       num_guests: numGuests,
       notes: notes || undefined,
       operational_notes: operationalNotes || undefined,
@@ -288,7 +336,12 @@ export function AdminReservationForm({
 
     if (isEdit) {
       setPaidCents(data.paid_cents ?? paidCents);
-      router.push("/admin/reservations");
+      const isCompletedReservation =
+        initialReservation?.status &&
+        COMPLETED_RESERVATION_STATUSES.includes(
+          initialReservation.status as (typeof COMPLETED_RESERVATION_STATUSES)[number]
+        );
+      router.push(isCompletedReservation ? "/admin/reservations/completed" : "/admin/reservations");
     } else if (data.reservation_id) {
       router.push(`/admin/reservations/${data.reservation_id}/edit`);
     } else {
@@ -483,11 +536,12 @@ export function AdminReservationForm({
             />
           </div>
           <div>
-            <Label htmlFor="vehicle_plate">{adminT.common.plate}</Label>
+            <Label htmlFor="vehicle_plate">{adminT.common.plateClientId}</Label>
             <Input
               id="vehicle_plate"
               value={vehiclePlate}
-              onChange={(event) => setVehiclePlate(event.target.value)}
+              onChange={(event) => setVehiclePlate(event.target.value.toUpperCase())}
+              required
               className="mt-1"
             />
           </div>
@@ -525,28 +579,50 @@ export function AdminReservationForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isEdit ? (
+          {vehiclePlate.trim() ? (
             <>
-              {payments.length === 0 ? (
+              {loadingClientPayments && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {adminT.common.loading}
+                </div>
+              )}
+              {payments.length === 0 && !loadingClientPayments ? (
                 <p className="text-sm text-muted-foreground">{adminT.reservationForm.noPayments}</p>
-              ) : (
-                <div className="rounded-lg border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{adminT.reservationForm.paymentDate}</TableHead>
-                        <TableHead>{adminT.reservationForm.paymentAmount}</TableHead>
-                        <TableHead>{adminT.reservationForm.paymentMethod}</TableHead>
-                        <TableHead>{adminT.reservationForm.paymentNotes}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {payments.map((payment) => (
-                        <TableRow key={payment.id}>
+              ) : payments.length > 0 ? (
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{adminT.reservationForm.paymentDate}</TableHead>
+                      <TableHead>{adminT.reservationForm.paymentStay}</TableHead>
+                      <TableHead>{adminT.reservationForm.paymentAmount}</TableHead>
+                      <TableHead>{adminT.reservationForm.paymentMethod}</TableHead>
+                      <TableHead>{adminT.reservationForm.paymentNotes}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.map((payment) => {
+                      const isCurrentReservation =
+                        isEdit && payment.reservation_id === initialReservation?.id;
+
+                      return (
+                        <TableRow
+                          key={payment.id}
+                          className={isCurrentReservation ? "bg-primary/5" : undefined}
+                        >
                           <TableCell className="whitespace-nowrap text-sm">
                             {format(new Date(payment.created_at), "dd MMM yyyy HH:mm", {
                               locale: adminDateLocale,
                             })}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div>{formatStayLabel(payment)}</div>
+                            {isCurrentReservation && (
+                              <span className="text-xs font-medium text-primary">
+                                {adminT.reservationForm.currentReservationPayment}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="font-medium">
                             {formatPrice(payment.amount_cents)}
@@ -556,58 +632,63 @@ export function AdminReservationForm({
                             {payment.notes ?? "—"}
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-
-              <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                <div>
-                  <Label htmlFor="new_payment">{adminT.reservationForm.addPaymentAmount}</Label>
-                  <Input
-                    id="new_payment"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    max={balanceCents / 100}
-                    value={newPaymentEuros}
-                    onChange={(event) => setNewPaymentEuros(event.target.value)}
-                    placeholder="0,00"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="new_payment_method">{adminT.reservationForm.paymentMethod}</Label>
-                  <select
-                    id="new_payment_method"
-                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                    value={newPaymentMethod}
-                    onChange={(event) => setNewPaymentMethod(event.target.value)}
-                  >
-                    <option value="">{adminT.common.select}</option>
-                    {ADMIN_PAYMENT_METHODS.map((method) => (
-                      <option key={method.value} value={method.value}>
-                        {method.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={addingPayment || submitting}
-                  onClick={handleAddPayment}
-                >
-                  {addingPayment ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="mr-2 h-4 w-4" />
-                  )}
-                  {adminT.reservationForm.addPayment}
-                </Button>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
+              ) : null}
             </>
+          ) : (
+            <p className="text-sm text-muted-foreground">{adminT.reservationForm.plateRequired}</p>
+          )}
+
+          {isEdit ? (
+            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <div>
+                <Label htmlFor="new_payment">{adminT.reservationForm.addPaymentAmount}</Label>
+                <Input
+                  id="new_payment"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  max={balanceCents / 100}
+                  value={newPaymentEuros}
+                  onChange={(event) => setNewPaymentEuros(event.target.value)}
+                  placeholder="0,00"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new_payment_method">{adminT.reservationForm.paymentMethod}</Label>
+                <select
+                  id="new_payment_method"
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                  value={newPaymentMethod}
+                  onChange={(event) => setNewPaymentMethod(event.target.value)}
+                >
+                  <option value="">{adminT.common.select}</option>
+                  {ADMIN_PAYMENT_METHODS.map((method) => (
+                    <option key={method.value} value={method.value}>
+                      {method.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={addingPayment || submitting}
+                onClick={handleAddPayment}
+              >
+                {addingPayment ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" />
+                )}
+                {adminT.reservationForm.addPayment}
+              </Button>
+            </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -680,6 +761,23 @@ export function AdminReservationForm({
             )}
             {adminT.reservationForm.sendConfirmation}
           </Button>
+        )}
+
+        {isEdit && initialReservation && (
+          <DeleteReservationButton
+            reservationId={initialReservation.id}
+            guestName={guestName || initialReservation.guest_name}
+            redirectTo={
+              initialReservation.status &&
+              COMPLETED_RESERVATION_STATUSES.includes(
+                initialReservation.status as (typeof COMPLETED_RESERVATION_STATUSES)[number]
+              )
+                ? "/admin/reservations/completed"
+                : "/admin/reservations"
+            }
+            size="lg"
+            variant="outline"
+          />
         )}
       </div>
 

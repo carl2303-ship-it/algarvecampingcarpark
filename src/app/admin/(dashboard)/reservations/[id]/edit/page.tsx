@@ -9,6 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { adminT } from "@/lib/admin-i18n";
 import { getActiveZones } from "@/lib/availability";
 import { getPitchMapSpotsAdmin } from "@/lib/pitch-map";
+import { getClientPaymentHistory } from "@/lib/admin-reservation-payments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cn } from "@/lib/utils";
 
@@ -20,16 +21,10 @@ export default async function EditReservationPage({
   const { id } = await params;
   const supabase = createAdminClient();
 
-  const [{ data: reservation }, zones, spots, { data: payments }] = await Promise.all([
+  const [{ data: reservation }, zones, spots] = await Promise.all([
     supabase.from("reservations").select("*").eq("id", id).maybeSingle(),
     getActiveZones(),
     getPitchMapSpotsAdmin(),
-    supabase
-      .from("payments")
-      .select("id, amount_cents, payment_method, notes, created_at")
-      .eq("reservation_id", id)
-      .eq("status", "succeeded")
-      .order("created_at", { ascending: true }),
   ]);
 
   if (!reservation) {
@@ -40,15 +35,14 @@ export default async function EditReservationPage({
     notFound();
   }
 
-  let guestCountry: string | null = null;
-  if (reservation.guest_id) {
-    const { data: guest } = await supabase
-      .from("guests")
-      .select("country")
-      .eq("id", reservation.guest_id)
-      .maybeSingle();
-    guestCountry = guest?.country ?? null;
-  }
+  const [guestResult, clientPayments] = await Promise.all([
+    reservation.guest_id
+      ? supabase.from("guests").select("country").eq("id", reservation.guest_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    reservation.vehicle_plate
+      ? getClientPaymentHistory(supabase, reservation.vehicle_plate)
+      : Promise.resolve([]),
+  ]);
 
   const initial: AdminReservationInitial = {
     id: reservation.id,
@@ -58,13 +52,14 @@ export default async function EditReservationPage({
     guest_name: reservation.guest_name,
     guest_email: reservation.guest_email,
     guest_phone: reservation.guest_phone,
-    guest_country: guestCountry,
+    guest_country: guestResult.data?.country ?? null,
     vehicle_plate: reservation.vehicle_plate,
     num_guests: reservation.num_guests,
     notes: reservation.notes,
     operational_notes: reservation.operational_notes ?? null,
     total_cents: reservation.total_cents,
     paid_cents: reservation.paid_cents,
+    status: reservation.status,
   };
 
   return (
@@ -82,7 +77,7 @@ export default async function EditReservationPage({
       <AdminReservationForm
         mode="edit"
         initialReservation={initial}
-        initialPayments={payments ?? []}
+        initialPayments={clientPayments}
         zones={zones}
         spots={spots}
         initialPitchCode={reservation.pitch_code ?? undefined}

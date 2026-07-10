@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { CheckInDialog } from "@/components/admin/check-in-dialog";
 import { CheckOutButton } from "@/components/admin/check-out-button";
+import { DeleteReservationButton } from "@/components/admin/delete-reservation-button";
 import { adminT, formatAdminReservationStatus } from "@/lib/admin-i18n";
 import { formatPrice } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
@@ -130,9 +131,11 @@ function SortableHead({
 export function AdminReservationsTable({
   reservations,
   pitches,
+  variant = "active",
 }: {
   reservations: ReservationRow[];
   pitches: Pitch[];
+  variant?: "active" | "completed";
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("check_in");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -206,7 +209,9 @@ export function AdminReservationsTable({
           {sorted.length === 0 ? (
             <TableRow>
               <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
-                {adminT.reservations.empty}
+                {variant === "completed"
+                  ? adminT.reservations.emptyCompleted
+                  : adminT.reservations.emptyActive}
               </TableCell>
             </TableRow>
           ) : (
@@ -230,7 +235,28 @@ export function AdminReservationsTable({
                 <TableCell>{getPitchCode(r) || "—"}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
-                    {!["cancelled", "expired"].includes(r.status) && (
+                    {variant === "active" && (
+                      <>
+                        <Link
+                          href={`/admin/reservations/${r.id}/edit`}
+                          className={buttonVariants({ size: "sm", variant: "outline" })}
+                        >
+                          <Pencil className="h-3.5 w-3.5 mr-1" />
+                          {adminT.reservations.edit}
+                        </Link>
+                        {r.status === "confirmed" && (
+                          <CheckInDialog reservation={r} pitches={pitches} />
+                        )}
+                        {r.status === "checked_in" && (
+                          <CheckOutButton
+                            reservationId={r.id}
+                            pitchId={r.pitch_id}
+                            pitchCode={r.pitch_code ?? null}
+                          />
+                        )}
+                      </>
+                    )}
+                    {variant === "completed" && r.status === "checked_out" && (
                       <Link
                         href={`/admin/reservations/${r.id}/edit`}
                         className={buttonVariants({ size: "sm", variant: "outline" })}
@@ -239,16 +265,7 @@ export function AdminReservationsTable({
                         {adminT.reservations.edit}
                       </Link>
                     )}
-                    {r.status === "confirmed" && (
-                      <CheckInDialog reservation={r} pitches={pitches} />
-                    )}
-                    {r.status === "checked_in" && (
-                      <CheckOutButton
-                        reservationId={r.id}
-                        pitchId={r.pitch_id}
-                        pitchCode={r.pitch_code ?? null}
-                      />
-                    )}
+                    <DeleteReservationButton reservationId={r.id} guestName={r.guest_name} />
                   </div>
                 </TableCell>
               </TableRow>

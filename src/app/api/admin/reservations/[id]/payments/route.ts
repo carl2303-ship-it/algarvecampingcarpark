@@ -17,29 +17,6 @@ const addPaymentSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const user = await getAdminUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { id } = await params;
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("payments")
-    .select("id, amount_cents, currency, status, payment_method, notes, created_at")
-    .eq("reservation_id", id)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ payments: data ?? [] });
-}
-
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

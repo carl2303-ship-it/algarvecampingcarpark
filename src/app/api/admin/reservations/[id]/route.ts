@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { releaseReservationPitch } from "@/lib/reservation-checkout";
 import {
   syncReservationPaymentState,
+  normalizeVehiclePlate,
   upsertGuestForReservation,
 } from "@/lib/admin-reservation-payments";
 
@@ -19,7 +20,7 @@ const updateSchema = z.object({
   guest_email: z.string().email(),
   guest_phone: z.string().min(1),
   guest_country: z.string().max(80).optional(),
-  vehicle_plate: z.string().optional(),
+  vehicle_plate: z.string().min(1, "Matricule requis"),
   num_guests: z.number().int().min(1).max(10).default(2),
   operational_notes: z.string().optional(),
   notes: z.string().optional(),
@@ -61,6 +62,7 @@ export async function PATCH(
     }
 
     const pitch_code = body.pitch_code.toUpperCase();
+    const plate = normalizeVehiclePlate(body.vehicle_plate);
     const oldPitchCode = existing.pitch_code as string | null;
     const pitchChanged = oldPitchCode !== pitch_code;
 
@@ -74,7 +76,7 @@ export async function PATCH(
         guest_name: body.guest_name,
         guest_email: body.guest_email,
         guest_phone: body.guest_phone,
-        vehicle_plate: body.vehicle_plate || null,
+        vehicle_plate: plate,
         num_guests: body.num_guests,
         notes: body.notes || null,
         operational_notes: body.operational_notes || null,
@@ -113,7 +115,7 @@ export async function PATCH(
       name: body.guest_name,
       email: body.guest_email,
       phone: body.guest_phone,
-      vehicle_plate: body.vehicle_plate,
+      vehicle_plate: plate,
       country: body.guest_country,
     });
 
@@ -142,4 +144,41 @@ export async function PATCH(
     const message = error instanceof Error ? error.message : "Erreur lors de la mise à jour";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const supabase = createAdminClient();
+
+  const { data: reservation, error: fetchError } = await supabase
+    .from("reservations")
+    .select("id, status, pitch_id, pitch_code")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !reservation) {
+    return NextResponse.json({ error: "Réservation introuvable" }, { status: 404 });
+  }
+
+  if (reservation.status === "checked_in") {
+    await releaseReservationPitch({
+      pitch_id: reservation.pitch_id,
+      pitch_code: reservation.pitch_code,
+    });
+  }
+
+  const { error: deleteError } = await supabase.from("reservations").delete().eq("id", id);
+
+  if (deleteError) {
+    console.error("Admin reservation delete error:", deleteError);
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }
