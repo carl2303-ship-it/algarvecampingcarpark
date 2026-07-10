@@ -206,6 +206,9 @@ export const adminT = {
     selectPartialMethod: "Sélectionnez le mode du paiement partiel.",
     createError: "Erreur lors de la création de la réservation",
     updateError: "Erreur lors de la mise à jour de la réservation",
+    sendConfirmation: "Envoyer l'e-mail de confirmation",
+    sendConfirmationSuccess: "E-mail de confirmation envoyé à {email}.",
+    sendConfirmationError: "Erreur lors de l'envoi de l'e-mail de confirmation.",
   },
   paymentMethods: {
     cash: "Espèces",
@@ -360,6 +363,17 @@ export const adminT = {
     save: "Enregistrer les horaires",
     saved: "Horaires enregistrés. L'application a été mise à jour.",
     saveError: "Erreur lors de l'enregistrement des horaires.",
+  },
+  gateAccess: {
+    title: "Code d'accès barrière",
+    description:
+      "Code envoyé par e-mail au client lorsque la réservation en ligne est confirmée et payée via Stripe.",
+    codeLabel: "Code barrière",
+    codePlaceholder: "Ex. : 1234",
+    hint: "Laissez vide pour ne pas inclure de code dans l'e-mail de confirmation.",
+    save: "Enregistrer le code",
+    saved: "Code d'accès enregistré.",
+    saveError: "Erreur lors de l'enregistrement du code.",
   },
   blockedDates: {
     title: "Bloquer des dates",

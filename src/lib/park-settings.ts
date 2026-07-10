@@ -9,6 +9,7 @@ function normalizeSettings(row: Partial<ParkSettings> | null): ParkSettings {
     reception_close: row?.reception_close ?? DEFAULT_PARK_SETTINGS.reception_close,
     check_in_time: row?.check_in_time ?? DEFAULT_PARK_SETTINGS.check_in_time,
     check_out_time: row?.check_out_time ?? DEFAULT_PARK_SETTINGS.check_out_time,
+    gate_access_code: row?.gate_access_code?.trim() || null,
   };
 }
 
@@ -21,7 +22,7 @@ export async function getParkSettings(): Promise<ParkSettings> {
     const supabase = createPublicServerClient();
     const { data, error } = await supabase
       .from("park_settings")
-      .select("reception_open, reception_close, check_in_time, check_out_time")
+      .select("reception_open, reception_close, check_in_time, check_out_time, gate_access_code")
       .eq("id", true)
       .maybeSingle();
 

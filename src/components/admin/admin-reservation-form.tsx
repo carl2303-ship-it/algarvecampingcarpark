@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -99,6 +99,8 @@ export function AdminReservationForm({
   );
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selectedSpot = sortedSpots.find((spot) => spot.code === pitchCode);
@@ -206,8 +208,38 @@ export function AdminReservationForm({
       return;
     }
 
-    router.push("/admin/reservations");
+    if (isEdit) {
+      router.push("/admin/reservations");
+    } else if (data.reservation_id) {
+      router.push(`/admin/reservations/${data.reservation_id}/edit`);
+    } else {
+      router.push("/admin/reservations");
+    }
     router.refresh();
+  }
+
+  async function handleSendConfirmation() {
+    if (!isEdit || !initialReservation?.id) return;
+
+    setSendingEmail(true);
+    setEmailMessage(null);
+    setError(null);
+
+    const res = await fetch(
+      `/api/admin/reservations/${initialReservation.id}/send-confirmation`,
+      { method: "POST" }
+    );
+    const data = await res.json().catch(() => ({}));
+    setSendingEmail(false);
+
+    if (!res.ok) {
+      setError(typeof data.error === "string" ? data.error : adminT.reservationForm.sendConfirmationError);
+      return;
+    }
+
+    setEmailMessage(
+      adminT.reservationForm.sendConfirmationSuccess.replace("{email}", data.sent_to ?? guestEmail)
+    );
   }
 
   return (
@@ -469,10 +501,33 @@ export function AdminReservationForm({
         </CardContent>
       </Card>
 
-      <Button type="submit" size="lg" disabled={submitting}>
-        {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-        {isEdit ? adminT.reservationForm.saveChanges : adminT.reservationForm.create}
-      </Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Button type="submit" size="lg" disabled={submitting || sendingEmail}>
+          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isEdit ? adminT.reservationForm.saveChanges : adminT.reservationForm.create}
+        </Button>
+
+        {isEdit && (
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            disabled={submitting || sendingEmail}
+            onClick={handleSendConfirmation}
+          >
+            {sendingEmail ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="mr-2 h-4 w-4" />
+            )}
+            {adminT.reservationForm.sendConfirmation}
+          </Button>
+        )}
+      </div>
+
+      {emailMessage && (
+        <p className="text-sm text-muted-foreground">{emailMessage}</p>
+      )}
     </form>
   );
 }

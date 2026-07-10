@@ -1,4 +1,5 @@
 import { ParkHoursSettings } from "@/components/admin/park-hours-settings";
+import { ParkGateAccessSettings } from "@/components/admin/park-gate-access-settings";
 import { StripeSettingsForm } from "@/components/admin/stripe-settings-form";
 import { BlockedDatesManager } from "@/components/admin/blocked-dates-manager";
 import { adminT } from "@/lib/admin-i18n";
@@ -18,6 +19,8 @@ export default async function SettingsPage() {
       <h1 className="text-3xl font-bold">{adminT.settings.title}</h1>
 
       <ParkHoursSettings initial={parkSettings} />
+
+      <ParkGateAccessSettings initial={parkSettings} />
 
       <BlockedDatesManager pitches={pitches.map((pitch) => ({ code: pitch.code }))} />
 

@@ -16,6 +16,7 @@ export async function sendBookingConfirmation({
   checkOutTime,
   totalCents,
   reservationId,
+  gateAccessCode,
 }: {
   guestEmail: string;
   guestName: string;
@@ -26,11 +27,21 @@ export async function sendBookingConfirmation({
   checkOutTime: string;
   totalCents: number;
   reservationId: string;
+  gateAccessCode?: string | null;
 }) {
   if (!resend) {
     console.log("[email] Resend not configured — skipping confirmation email");
     return;
   }
+
+  const gateBlock = gateAccessCode
+    ? `
+      <div style="margin:24px 0;padding:16px 20px;background:#ecfdf5;border:2px solid #0f766e;border-radius:12px;">
+        <p style="margin:0 0 8px;font-size:14px;color:#115e59;">Código para abrir a barreira do parque:</p>
+        <p style="margin:0;font-size:28px;font-weight:bold;letter-spacing:4px;color:#0f766e;">${gateAccessCode}</p>
+      </div>
+    `
+    : "";
 
   await resend.emails.send({
     from: process.env.EMAIL_FROM ?? CONTACT_EMAIL,
@@ -47,6 +58,7 @@ export async function sendBookingConfirmation({
         <li><strong>Total pago:</strong> ${formatPrice(totalCents)}</li>
         <li><strong>Referência:</strong> ${reservationId.slice(0, 8).toUpperCase()}</li>
       </ul>
+      ${gateBlock}
       <p>O lugar específico será atribuído na chegada. Apresente esta confirmação na receção.</p>
       <p>Questões? Contacte-nos: ${CONTACT_EMAIL}</p>
     `,

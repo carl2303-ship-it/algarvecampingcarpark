@@ -136,6 +136,7 @@ export async function POST(request: Request) {
           checkOutTime: parkSettings.check_out_time,
           totalCents: reservation.total_cents,
           reservationId: reservation.id,
+          gateAccessCode: parkSettings.gate_access_code,
         });
 
         await sendPaymentReceipt({

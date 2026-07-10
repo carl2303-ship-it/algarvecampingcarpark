@@ -33,6 +33,7 @@ export type ParkSettings = {
   reception_close: string;
   check_in_time: string;
   check_out_time: string;
+  gate_access_code: string | null;
 };
 
 export const DEFAULT_PARK_SETTINGS: ParkSettings = {
@@ -40,6 +41,7 @@ export const DEFAULT_PARK_SETTINGS: ParkSettings = {
   reception_close: "18:00",
   check_in_time: CHECK_IN_TIME,
   check_out_time: CHECK_OUT_TIME,
+  gate_access_code: null,
 };
 
 export function formatTimeForLocale(time: string, locale: "pt" | "en" = "pt"): string {
