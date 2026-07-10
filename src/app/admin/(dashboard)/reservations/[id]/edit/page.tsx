@@ -20,10 +20,16 @@ export default async function EditReservationPage({
   const { id } = await params;
   const supabase = createAdminClient();
 
-  const [{ data: reservation }, zones, spots] = await Promise.all([
+  const [{ data: reservation }, zones, spots, { data: payments }] = await Promise.all([
     supabase.from("reservations").select("*").eq("id", id).maybeSingle(),
     getActiveZones(),
     getPitchMapSpotsAdmin(),
+    supabase
+      .from("payments")
+      .select("id, amount_cents, payment_method, notes, created_at")
+      .eq("reservation_id", id)
+      .eq("status", "succeeded")
+      .order("created_at", { ascending: true }),
   ]);
 
   if (!reservation) {
@@ -34,6 +40,16 @@ export default async function EditReservationPage({
     notFound();
   }
 
+  let guestCountry: string | null = null;
+  if (reservation.guest_id) {
+    const { data: guest } = await supabase
+      .from("guests")
+      .select("country")
+      .eq("id", reservation.guest_id)
+      .maybeSingle();
+    guestCountry = guest?.country ?? null;
+  }
+
   const initial: AdminReservationInitial = {
     id: reservation.id,
     pitch_code: reservation.pitch_code ?? null,
@@ -42,15 +58,13 @@ export default async function EditReservationPage({
     guest_name: reservation.guest_name,
     guest_email: reservation.guest_email,
     guest_phone: reservation.guest_phone,
+    guest_country: guestCountry,
     vehicle_plate: reservation.vehicle_plate,
     num_guests: reservation.num_guests,
     notes: reservation.notes,
     operational_notes: reservation.operational_notes ?? null,
     total_cents: reservation.total_cents,
     paid_cents: reservation.paid_cents,
-    partial_payment_cents: reservation.partial_payment_cents,
-    partial_payment_method: reservation.partial_payment_method,
-    payment_method: reservation.payment_method,
   };
 
   return (
@@ -68,6 +82,7 @@ export default async function EditReservationPage({
       <AdminReservationForm
         mode="edit"
         initialReservation={initial}
+        initialPayments={payments ?? []}
         zones={zones}
         spots={spots}
         initialPitchCode={reservation.pitch_code ?? undefined}

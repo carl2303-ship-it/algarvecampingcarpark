@@ -2,16 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getZoneRates } from "@/lib/availability";
-import { calculateTotalPrice } from "@/lib/pricing";
-import { ADMIN_PAYMENT_METHODS } from "@/lib/admin-payment-methods";
 import { releaseReservationPitch } from "@/lib/reservation-checkout";
+import {
+  syncReservationPaymentState,
+  upsertGuestForReservation,
+} from "@/lib/admin-reservation-payments";
 
 export const dynamic = "force-dynamic";
-
-const paymentMethodSchema = z.enum(
-  ADMIN_PAYMENT_METHODS.map((method) => method.value) as [string, ...string[]]
-);
 
 const updateSchema = z.object({
   zone_id: z.string().uuid(),
@@ -21,30 +18,13 @@ const updateSchema = z.object({
   guest_name: z.string().min(1),
   guest_email: z.string().email(),
   guest_phone: z.string().min(1),
+  guest_country: z.string().max(80).optional(),
   vehicle_plate: z.string().optional(),
   num_guests: z.number().int().min(1).max(10).default(2),
   operational_notes: z.string().optional(),
   notes: z.string().optional(),
-  total_cents: z.number().int().min(0).optional(),
-  is_fully_paid: z.boolean().default(false),
-  payment_method: paymentMethodSchema.nullable().optional(),
-  partial_payment_cents: z.number().int().min(0).default(0),
-  partial_payment_method: paymentMethodSchema.nullable().optional(),
+  total_cents: z.number().int().min(0),
 });
-
-function resolvePaymentStatus(
-  paidCents: number,
-  totalCents: number,
-  paymentMethod: string | null,
-  stripePaymentIntentId: string | null
-) {
-  if (paidCents >= totalCents && totalCents > 0) {
-    if (paymentMethod === "stripe" || stripePaymentIntentId) return "paid_stripe";
-    return "paid_manual";
-  }
-  if (paidCents > 0) return "partial";
-  return "pending";
-}
 
 export async function PATCH(
   request: Request,
@@ -80,34 +60,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Dates invalides" }, { status: 400 });
     }
 
-    const rates = await getZoneRates(body.zone_id);
-    const pricing = calculateTotalPrice(
-      rates,
-      body.check_in,
-      body.check_out,
-      body.num_guests
-    );
-
-    const total_cents = body.total_cents ?? pricing.totalCents;
-    const paid_cents = body.is_fully_paid
-      ? total_cents
-      : Math.min(body.partial_payment_cents, total_cents);
-    const balance_cents = total_cents - paid_cents;
-
-    const payment_method = body.is_fully_paid
-      ? body.payment_method ?? null
-      : paid_cents > 0
-        ? body.partial_payment_method ?? body.payment_method ?? null
-        : body.payment_method ?? null;
-
     const pitch_code = body.pitch_code.toUpperCase();
     const oldPitchCode = existing.pitch_code as string | null;
     const pitchChanged = oldPitchCode !== pitch_code;
-
-    let status = existing.status as string;
-    if (status === "pending_payment" && paid_cents > 0) {
-      status = "confirmed";
-    }
 
     const { error: updateError } = await supabase
       .from("reservations")
@@ -116,7 +71,6 @@ export async function PATCH(
         pitch_code,
         check_in: body.check_in,
         check_out: body.check_out,
-        status,
         guest_name: body.guest_name,
         guest_email: body.guest_email,
         guest_phone: body.guest_phone,
@@ -124,17 +78,7 @@ export async function PATCH(
         num_guests: body.num_guests,
         notes: body.notes || null,
         operational_notes: body.operational_notes || null,
-        total_cents,
-        paid_cents,
-        partial_payment_cents: body.is_fully_paid ? 0 : paid_cents,
-        partial_payment_method: body.is_fully_paid ? null : body.partial_payment_method ?? null,
-        payment_method,
-        payment_status: resolvePaymentStatus(
-          paid_cents,
-          total_cents,
-          payment_method,
-          existing.stripe_payment_intent_id
-        ),
+        total_cents: body.total_cents,
       })
       .eq("id", id);
 
@@ -142,6 +86,8 @@ export async function PATCH(
       console.error("Admin reservation update error:", updateError);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
+
+    const totals = await syncReservationPaymentState(supabase, id);
 
     if (existing.status === "checked_in" && pitchChanged) {
       if (oldPitchCode) {
@@ -163,47 +109,31 @@ export async function PATCH(
       });
     }
 
-    const { data: existingGuest } = await supabase
-      .from("guests")
-      .select("id")
-      .ilike("email", body.guest_email)
-      .maybeSingle();
-
-    let guestId = existingGuest?.id;
-    if (!guestId) {
-      const { data: newGuest } = await supabase
-        .from("guests")
-        .insert({
-          name: body.guest_name,
-          email: body.guest_email,
-          phone: body.guest_phone,
-          vehicle_plate: body.vehicle_plate || null,
-        })
-        .select("id")
-        .single();
-      guestId = newGuest?.id;
-    } else {
-      await supabase
-        .from("guests")
-        .update({
-          name: body.guest_name,
-          phone: body.guest_phone,
-          vehicle_plate: body.vehicle_plate || null,
-        })
-        .eq("id", guestId);
-    }
+    const guestId = await upsertGuestForReservation(supabase, {
+      name: body.guest_name,
+      email: body.guest_email,
+      phone: body.guest_phone,
+      vehicle_plate: body.vehicle_plate,
+      country: body.guest_country,
+    });
 
     if (guestId) {
       await supabase.from("reservations").update({ guest_id: guestId }).eq("id", id);
     }
 
+    const { data: updated } = await supabase
+      .from("reservations")
+      .select("status, total_cents")
+      .eq("id", id)
+      .single();
+
     return NextResponse.json({
       success: true,
       reservation_id: id,
-      total_cents,
-      paid_cents,
-      balance_cents,
-      status,
+      total_cents: updated?.total_cents ?? body.total_cents,
+      paid_cents: totals.paid_cents,
+      balance_cents: Math.max(0, (updated?.total_cents ?? body.total_cents) - totals.paid_cents),
+      status: updated?.status ?? existing.status,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

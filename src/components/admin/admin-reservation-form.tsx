@@ -2,14 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Mail } from "lucide-react";
+import { format } from "date-fns";
+import { Loader2, Mail, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ADMIN_PAYMENT_METHODS } from "@/lib/admin-payment-methods";
-import { adminT } from "@/lib/admin-i18n";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ADMIN_PAYMENT_METHODS, paymentMethodLabel } from "@/lib/admin-payment-methods";
+import { adminDateLocale, adminT } from "@/lib/admin-i18n";
 import { getSpotZoneSlug } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import type { Zone } from "@/types/database";
@@ -20,6 +29,14 @@ type Props = {
   spots: PitchMapSpotRecord[];
 };
 
+export type AdminReservationPayment = {
+  id: string;
+  amount_cents: number;
+  payment_method: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export type AdminReservationInitial = {
   id: string;
   pitch_code: string | null;
@@ -28,16 +45,22 @@ export type AdminReservationInitial = {
   guest_name: string;
   guest_email: string;
   guest_phone: string;
+  guest_country?: string | null;
   vehicle_plate: string | null;
   num_guests: number;
   notes: string | null;
   operational_notes: string | null;
   total_cents: number;
   paid_cents?: number;
-  partial_payment_cents?: number;
-  partial_payment_method?: string | null;
-  payment_method?: string | null;
 };
+
+function eurosToCents(value: string): number {
+  return Math.round((parseFloat(value.replace(",", ".")) || 0) * 100);
+}
+
+function centsToEurosInput(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
 
 export function AdminReservationForm({
   zones,
@@ -45,10 +68,12 @@ export function AdminReservationForm({
   initialPitchCode,
   mode = "create",
   initialReservation,
+  initialPayments = [],
 }: Props & {
   initialPitchCode?: string;
   mode?: "create" | "edit";
   initialReservation?: AdminReservationInitial;
+  initialPayments?: AdminReservationPayment[];
 }) {
   const router = useRouter();
   const sortedSpots = useMemo(
@@ -75,28 +100,25 @@ export function AdminReservationForm({
   const [guestName, setGuestName] = useState(initialReservation?.guest_name ?? "");
   const [guestEmail, setGuestEmail] = useState(initialReservation?.guest_email ?? "");
   const [guestPhone, setGuestPhone] = useState(initialReservation?.guest_phone ?? "");
+  const [guestCountry, setGuestCountry] = useState(initialReservation?.guest_country ?? "");
   const [vehiclePlate, setVehiclePlate] = useState(initialReservation?.vehicle_plate ?? "");
   const [numGuests, setNumGuests] = useState(initialReservation?.num_guests ?? 2);
   const [notes, setNotes] = useState(initialReservation?.notes ?? "");
   const [operationalNotes, setOperationalNotes] = useState(initialReservation?.operational_notes ?? "");
-  const [totalCents, setTotalCents] = useState<number | null>(
+  const [quotedCents, setQuotedCents] = useState<number | null>(
     initialReservation?.total_cents ?? null
   );
-  const [isFullyPaid, setIsFullyPaid] = useState(() => {
-    if (!initialReservation) return false;
-    const paid = initialReservation.paid_cents ?? 0;
-    return paid >= initialReservation.total_cents && initialReservation.total_cents > 0;
-  });
-  const [paymentMethod, setPaymentMethod] = useState(initialReservation?.payment_method ?? "");
-  const [partialPaymentCents, setPartialPaymentCents] = useState(() => {
-    if (!initialReservation) return "";
-    const paid = initialReservation.paid_cents ?? 0;
-    if (paid >= initialReservation.total_cents) return "";
-    return String((initialReservation.partial_payment_cents ?? paid) / 100);
-  });
-  const [partialPaymentMethod, setPartialPaymentMethod] = useState(
-    initialReservation?.partial_payment_method ?? ""
+  const [followQuote, setFollowQuote] = useState(!isEdit);
+  const [totalEuros, setTotalEuros] = useState(() =>
+    initialReservation ? centsToEurosInput(initialReservation.total_cents) : ""
   );
+  const [initialPaymentEuros, setInitialPaymentEuros] = useState("");
+  const [initialPaymentMethod, setInitialPaymentMethod] = useState("");
+  const [payments, setPayments] = useState(initialPayments);
+  const [paidCents, setPaidCents] = useState(initialReservation?.paid_cents ?? 0);
+  const [newPaymentEuros, setNewPaymentEuros] = useState("");
+  const [newPaymentMethod, setNewPaymentMethod] = useState("");
+  const [addingPayment, setAddingPayment] = useState(false);
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -107,14 +129,12 @@ export function AdminReservationForm({
   const zoneSlug = selectedSpot ? getSpotZoneSlug(selectedSpot) : null;
   const zoneId = zones.find((zone) => zone.slug === zoneSlug)?.id ?? "";
 
-  const paidCents = isFullyPaid
-    ? totalCents ?? 0
-    : Math.round((parseFloat(partialPaymentCents.replace(",", ".")) || 0) * 100);
-  const balanceCents = Math.max(0, (totalCents ?? 0) - paidCents);
+  const totalCents = eurosToCents(totalEuros);
+  const balanceCents = Math.max(0, totalCents - paidCents);
 
   useEffect(() => {
     if (!zoneId || !checkIn || !checkOut || checkOut <= checkIn) {
-      setTotalCents(null);
+      setQuotedCents(null);
       return;
     }
 
@@ -128,9 +148,9 @@ export function AdminReservationForm({
       .then((res) => res.json())
       .then((data) => {
         if (data.pricing?.totalCents != null) {
-          setTotalCents(data.pricing.totalCents);
+          setQuotedCents(data.pricing.totalCents);
         } else {
-          setTotalCents(null);
+          setQuotedCents(null);
           setError(data.error ?? adminT.reservationForm.quoteError);
         }
       })
@@ -139,6 +159,56 @@ export function AdminReservationForm({
 
     return () => controller.abort();
   }, [zoneId, checkIn, checkOut, numGuests]);
+
+  useEffect(() => {
+    if (followQuote && quotedCents != null) {
+      setTotalEuros(centsToEurosInput(quotedCents));
+    }
+  }, [followQuote, quotedCents]);
+
+  async function handleAddPayment() {
+    if (!isEdit || !initialReservation?.id) return;
+
+    const amountCents = eurosToCents(newPaymentEuros);
+    if (amountCents <= 0) {
+      setError(adminT.reservationForm.paymentAmountRequired);
+      return;
+    }
+    if (!newPaymentMethod) {
+      setError(adminT.reservationForm.selectPaymentMethod);
+      return;
+    }
+    if (amountCents > balanceCents) {
+      setError(adminT.reservationForm.paymentExceedsBalance);
+      return;
+    }
+
+    setAddingPayment(true);
+    setError(null);
+
+    const res = await fetch(`/api/admin/reservations/${initialReservation.id}/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount_cents: amountCents,
+        payment_method: newPaymentMethod,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setAddingPayment(false);
+
+    if (!res.ok) {
+      setError(typeof data.error === "string" ? data.error : adminT.reservationForm.addPaymentError);
+      return;
+    }
+
+    const historyRes = await fetch(`/api/admin/reservations/${initialReservation.id}/payments`);
+    const historyData = await historyRes.json().catch(() => ({ payments: [] }));
+    setPayments(historyData.payments ?? []);
+    setPaidCents(data.paid_cents ?? paidCents + amountCents);
+    setNewPaymentEuros("");
+    setNewPaymentMethod("");
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -152,21 +222,24 @@ export function AdminReservationForm({
       setError(adminT.reservationForm.invalidDates);
       return;
     }
-    if (totalCents == null) {
-      setError(adminT.reservationForm.waitForQuote);
+    if (totalCents <= 0) {
+      setError(adminT.reservationForm.invalidTotal);
       return;
     }
-    if (isFullyPaid && !paymentMethod) {
+
+    const initialPaymentCents = isEdit ? 0 : eurosToCents(initialPaymentEuros);
+    if (!isEdit && initialPaymentCents > 0 && !initialPaymentMethod) {
       setError(adminT.reservationForm.selectPaymentMethod);
       return;
     }
-    if (!isFullyPaid && paidCents > 0 && !partialPaymentMethod) {
-      setError(adminT.reservationForm.selectPartialMethod);
+    if (!isEdit && initialPaymentCents > totalCents) {
+      setError(adminT.reservationForm.paymentExceedsBalance);
       return;
     }
 
     setSubmitting(true);
-    const payload = {
+
+    const basePayload = {
       zone_id: zoneId,
       pitch_code: pitchCode,
       check_in: checkIn,
@@ -174,15 +247,12 @@ export function AdminReservationForm({
       guest_name: guestName,
       guest_email: guestEmail,
       guest_phone: guestPhone,
+      guest_country: guestCountry || undefined,
       vehicle_plate: vehiclePlate || undefined,
       num_guests: numGuests,
       notes: notes || undefined,
       operational_notes: operationalNotes || undefined,
       total_cents: totalCents,
-      is_fully_paid: isFullyPaid,
-      payment_method: paymentMethod || null,
-      partial_payment_cents: isFullyPaid ? 0 : paidCents,
-      partial_payment_method: partialPaymentMethod || null,
     };
 
     const res = await fetch(
@@ -190,7 +260,15 @@ export function AdminReservationForm({
       {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(
+          isEdit
+            ? basePayload
+            : {
+                ...basePayload,
+                initial_payment_cents: initialPaymentCents,
+                initial_payment_method: initialPaymentMethod || null,
+              }
+        ),
       }
     );
 
@@ -209,6 +287,7 @@ export function AdminReservationForm({
     }
 
     if (isEdit) {
+      setPaidCents(data.paid_cents ?? paidCents);
       router.push("/admin/reservations");
     } else if (data.reservation_id) {
       router.push(`/admin/reservations/${data.reservation_id}/edit`);
@@ -319,13 +398,39 @@ export function AdminReservationForm({
               className="mt-1"
             />
           </div>
-          <div className="flex items-end">
-            <div className="rounded-lg border bg-muted/40 px-4 py-3 w-full">
-              <p className="text-xs text-muted-foreground">{adminT.reservationForm.estimatedTotal}</p>
-              <p className="text-xl font-bold flex items-center gap-2">
-                {loadingQuote && <Loader2 className="h-4 w-4 animate-spin" />}
-                {totalCents != null ? formatPrice(totalCents) : "—"}
-              </p>
+          <div className="space-y-2">
+            <Label htmlFor="total_euros">{adminT.reservationForm.billableTotal}</Label>
+            <Input
+              id="total_euros"
+              type="number"
+              min={0}
+              step={0.01}
+              value={totalEuros}
+              onChange={(event) => {
+                setFollowQuote(false);
+                setTotalEuros(event.target.value);
+              }}
+              required
+              className="mt-1"
+            />
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {loadingQuote && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              <span>
+                {adminT.reservationForm.calculatedQuote.replace(
+                  "{amount}",
+                  quotedCents != null ? formatPrice(quotedCents) : "—"
+                )}
+              </span>
+              {quotedCents != null && !followQuote && (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setFollowQuote(true)}
+                >
+                  {adminT.reservationForm.useCalculatedQuote}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -368,6 +473,16 @@ export function AdminReservationForm({
             />
           </div>
           <div>
+            <Label htmlFor="guest_country">{adminT.reservationForm.country}</Label>
+            <Input
+              id="guest_country"
+              value={guestCountry}
+              onChange={(event) => setGuestCountry(event.target.value)}
+              placeholder={adminT.reservationForm.countryPlaceholder}
+              className="mt-1"
+            />
+          </div>
+          <div>
             <Label htmlFor="vehicle_plate">{adminT.common.plate}</Label>
             <Input
               id="vehicle_plate"
@@ -403,58 +518,72 @@ export function AdminReservationForm({
       <Card>
         <CardHeader>
           <CardTitle>{adminT.reservationForm.payment}</CardTitle>
+          <CardDescription>
+            {isEdit
+              ? adminT.reservationForm.paymentHistoryDescription
+              : adminT.reservationForm.initialPaymentDescription}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={isFullyPaid}
-              onChange={(event) => setIsFullyPaid(event.target.checked)}
-            />
-            {adminT.reservationForm.fullyPaid}
-          </label>
-
-          {isFullyPaid ? (
-            <div>
-              <Label htmlFor="payment_method">{adminT.reservationForm.paymentMethod}</Label>
-              <select
-                id="payment_method"
-                className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                value={paymentMethod}
-                onChange={(event) => setPaymentMethod(event.target.value)}
-                required
-              >
-                <option value="">{adminT.common.select}</option>
-                {ADMIN_PAYMENT_METHODS.map((method) => (
-                  <option key={method.value} value={method.value}>
-                    {method.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : (
+          {isEdit ? (
             <>
-              <div>
-                <Label htmlFor="partial_payment">{adminT.reservationForm.partialPayment}</Label>
-                <Input
-                  id="partial_payment"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={partialPaymentCents}
-                  onChange={(event) => setPartialPaymentCents(event.target.value)}
-                  placeholder="0,00"
-                  className="mt-1"
-                />
-              </div>
-              {paidCents > 0 && (
+              {payments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{adminT.reservationForm.noPayments}</p>
+              ) : (
+                <div className="rounded-lg border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{adminT.reservationForm.paymentDate}</TableHead>
+                        <TableHead>{adminT.reservationForm.paymentAmount}</TableHead>
+                        <TableHead>{adminT.reservationForm.paymentMethod}</TableHead>
+                        <TableHead>{adminT.reservationForm.paymentNotes}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {format(new Date(payment.created_at), "dd MMM yyyy HH:mm", {
+                              locale: adminDateLocale,
+                            })}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {formatPrice(payment.amount_cents)}
+                          </TableCell>
+                          <TableCell>{paymentMethodLabel(payment.payment_method)}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {payment.notes ?? "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
                 <div>
-                  <Label htmlFor="partial_payment_method">{adminT.reservationForm.partialMethod}</Label>
+                  <Label htmlFor="new_payment">{adminT.reservationForm.addPaymentAmount}</Label>
+                  <Input
+                    id="new_payment"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    max={balanceCents / 100}
+                    value={newPaymentEuros}
+                    onChange={(event) => setNewPaymentEuros(event.target.value)}
+                    placeholder="0,00"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new_payment_method">{adminT.reservationForm.paymentMethod}</Label>
                   <select
-                    id="partial_payment_method"
+                    id="new_payment_method"
                     className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                    value={partialPaymentMethod}
-                    onChange={(event) => setPartialPaymentMethod(event.target.value)}
+                    value={newPaymentMethod}
+                    onChange={(event) => setNewPaymentMethod(event.target.value)}
                   >
                     <option value="">{adminT.common.select}</option>
                     {ADMIN_PAYMENT_METHODS.map((method) => (
@@ -464,16 +593,45 @@ export function AdminReservationForm({
                     ))}
                   </select>
                 </div>
-              )}
-              <div>
-                <Label htmlFor="balance_method">{adminT.reservationForm.balanceMethod}</Label>
-                <select
-                  id="balance_method"
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                  value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value)}
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={addingPayment || submitting}
+                  onClick={handleAddPayment}
                 >
-                  <option value="">{adminT.common.toDefine}</option>
+                  {addingPayment ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  {adminT.reservationForm.addPayment}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="initial_payment">{adminT.reservationForm.initialPayment}</Label>
+                <Input
+                  id="initial_payment"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={initialPaymentEuros}
+                  onChange={(event) => setInitialPaymentEuros(event.target.value)}
+                  placeholder="0,00"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="initial_payment_method">{adminT.reservationForm.paymentMethod}</Label>
+                <select
+                  id="initial_payment_method"
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                  value={initialPaymentMethod}
+                  onChange={(event) => setInitialPaymentMethod(event.target.value)}
+                >
+                  <option value="">{adminT.common.select}</option>
                   {ADMIN_PAYMENT_METHODS.map((method) => (
                     <option key={method.value} value={method.value}>
                       {method.label}
@@ -481,13 +639,13 @@ export function AdminReservationForm({
                   ))}
                 </select>
               </div>
-            </>
+            </div>
           )}
 
           <div className="grid sm:grid-cols-3 gap-3 rounded-lg border bg-muted/30 p-4 text-sm">
             <div>
               <p className="text-muted-foreground">{adminT.common.total}</p>
-              <p className="font-semibold">{totalCents != null ? formatPrice(totalCents) : "—"}</p>
+              <p className="font-semibold">{formatPrice(totalCents)}</p>
             </div>
             <div>
               <p className="text-muted-foreground">{adminT.common.paid}</p>
@@ -502,7 +660,7 @@ export function AdminReservationForm({
       </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" size="lg" disabled={submitting || sendingEmail}>
+        <Button type="submit" size="lg" disabled={submitting || sendingEmail || addingPayment}>
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isEdit ? adminT.reservationForm.saveChanges : adminT.reservationForm.create}
         </Button>
@@ -512,7 +670,7 @@ export function AdminReservationForm({
             type="button"
             size="lg"
             variant="outline"
-            disabled={submitting || sendingEmail}
+            disabled={submitting || sendingEmail || addingPayment}
             onClick={handleSendConfirmation}
           >
             {sendingEmail ? (
@@ -525,9 +683,7 @@ export function AdminReservationForm({
         )}
       </div>
 
-      {emailMessage && (
-        <p className="text-sm text-muted-foreground">{emailMessage}</p>
-      )}
+      {emailMessage && <p className="text-sm text-muted-foreground">{emailMessage}</p>}
     </form>
   );
 }
