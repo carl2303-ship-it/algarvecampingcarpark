@@ -103,7 +103,7 @@ export async function fetchGoogleReviews(
   apiKey: string,
   placeId: string = process.env.GOOGLE_PLACE_ID ?? GOOGLE_PLACE_ID
 ): Promise<{ data: GoogleReviewsData; googleStatus?: string; googleError?: string }> {
-  const language = locale === "en" ? "en" : "pt";
+  const language = locale === "pt" ? "pt" : locale === "de" ? "de" : locale === "es" ? "es" : locale === "fr" ? "fr" : "en";
   const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
   url.searchParams.set("place_id", placeId);
   url.searchParams.set("fields", "reviews,rating,user_ratings_total");

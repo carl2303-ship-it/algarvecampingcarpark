@@ -1,4 +1,4 @@
-import PricesPageContent from "@/components/pages/prices-page";
+﻿import PricesPageContent from "@/components/pages/prices-page";
 
 export const revalidate = 60;
 

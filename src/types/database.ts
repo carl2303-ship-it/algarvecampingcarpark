@@ -99,6 +99,7 @@ export interface Reservation {
   partial_payment_method?: string | null;
   payment_method?: string | null;
   pitch_code?: string | null;
+  locale?: string | null;
   created_by_admin?: boolean;
   stripe_session_id: string | null;
   stripe_payment_intent_id: string | null;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getImageExtension } from "@/lib/gallery-upload";
-import { revalidatePath } from "next/cache";
+import { revalidateMarketingPaths } from "@/lib/revalidate-marketing";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -15,10 +15,7 @@ function isUploadFile(value: FormDataEntryValue | null): value is File {
 }
 
 function revalidatePitchMapPages() {
-  revalidatePath("/about");
-  revalidatePath("/en/about");
-  revalidatePath("/location");
-  revalidatePath("/en/location");
+  revalidateMarketingPaths(["/about", "/location"]);
 }
 
 export async function POST(request: Request) {

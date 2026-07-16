@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server";
 import { getZoneAvailability } from "@/lib/availability";
+import { isOnlineBookingCurrentlyOpen } from "@/lib/park-settings";
 
 export async function GET(request: Request) {
+  if (!(await isOnlineBookingCurrentlyOpen())) {
+    return NextResponse.json(
+      { error: "As reservas online estão temporariamente indisponíveis." },
+      { status: 503 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const checkIn = searchParams.get("check_in");
   const checkOut = searchParams.get("check_out");
-  const numGuests = Math.min(10, Math.max(1, parseInt(searchParams.get("num_guests") ?? "2", 10) || 2));
+  const numGuests = Math.min(
+    10,
+    Math.max(1, parseInt(searchParams.get("num_guests") ?? "2", 10) || 2)
+  );
 
   if (!checkIn || !checkOut) {
     return NextResponse.json(

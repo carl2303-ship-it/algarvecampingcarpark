@@ -31,13 +31,18 @@ export function ParkHoursSettings({ initial }: { initial: ParkSettings }) {
     const res = await fetch("/api/admin/park-settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(settings),
+      body: JSON.stringify({
+        reception_open: settings.reception_open,
+        reception_close: settings.reception_close,
+        check_in_time: settings.check_in_time,
+        check_out_time: settings.check_out_time,
+      }),
     });
     const data = await res.json().catch(() => ({}));
     setSaving(false);
 
     if (res.ok) {
-      setSettings(data.settings);
+      setSettings((current) => ({ ...current, ...data.settings }));
       setMessage(adminT.hours.saved);
     } else {
       setMessage(typeof data.error === "string" ? data.error : adminT.hours.saveError);

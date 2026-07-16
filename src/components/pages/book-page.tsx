@@ -2,11 +2,10 @@ import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { BookingDisabledView } from "@/components/booking/booking-disabled-view";
 import { PageHero } from "@/components/marketing/sections";
-import { BOOKING_ENABLED } from "@/lib/constants";
 import type { Locale } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
 import { getPitchMapSpotByCode } from "@/lib/pitch-map";
-import { getParkSettings } from "@/lib/park-settings";
+import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
 import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
 
 export default async function BookPageContent({
@@ -16,13 +15,14 @@ export default async function BookPageContent({
   locale: Locale;
   searchParams: Promise<{ cancelled?: string; pitch?: string }>;
 }) {
-  if (!BOOKING_ENABLED) {
+  const parkSettings = await getParkSettings();
+
+  if (!isOnlineBookingOpen(parkSettings)) {
     return <BookingDisabledView locale={locale} />;
   }
 
   const params = await searchParams;
   const t = getTranslations(locale);
-  const parkSettings = await getParkSettings();
   const preferredSpot: PitchMapSpot | null = params.pitch
     ? await getPitchMapSpotByCode(params.pitch.toUpperCase())
     : null;
@@ -32,11 +32,7 @@ export default async function BookPageContent({
       <PageHero
         eyebrow="ASA · Algarve"
         title={t.book.title}
-        description={
-          locale === "pt"
-            ? "Escolha as datas, selecione a zona e confirme a sua reserva em minutos."
-            : "Choose your dates, select a zone and confirm your booking in minutes."
-        }
+        description={t.book.hero_description}
         className="!pb-10"
       />
       <div className="container mx-auto px-4 pb-20 -mt-6 relative z-10">

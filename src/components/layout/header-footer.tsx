@@ -18,20 +18,61 @@ import {
   CONTACT_PHONE_ALT_RAW,
   CONTACT_PHONE_RAW,
   COMPLAINTS_BOOK_URL,
+  LOCALES,
   MAPS_URL,
   SITE_NAME,
+  type Locale,
 } from "@/lib/constants";
-import type { Locale } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
+import {
+  localePath,
+  LOCALE_LABELS,
+  switchLocalePath,
+} from "@/lib/locale-path";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/", key: "home" },
-  { href: "/about", key: "about" },
-  { href: "/precos", key: "prices" },
-  { href: "/location", key: "location" },
-  { href: "/contact", key: "contact" },
-] as const;
+  { href: "/", key: "home" as const },
+  { href: "/about", key: "about" as const },
+  { href: "/prices", key: "prices" as const },
+  { href: "/location", key: "location" as const },
+  { href: "/contact", key: "contact" as const },
+];
+
+function LocaleSwitcher({
+  locale,
+  pathname,
+  className,
+  linkClass,
+  onNavigate,
+}: {
+  locale: Locale;
+  pathname: string;
+  className?: string;
+  linkClass: (active: boolean) => string;
+  onNavigate?: () => void;
+}) {
+  return (
+    <div className={cn("flex items-center gap-1.5", className)} role="navigation" aria-label="Language">
+      {LOCALES.map((code) => (
+        <Link
+          key={code}
+          href={switchLocalePath(pathname, code)}
+          onClick={onNavigate}
+          className={cn(
+            linkClass(code === locale),
+            "uppercase text-xs tracking-wide px-1",
+            code === locale && "font-semibold underline underline-offset-4"
+          )}
+          hrefLang={code}
+          lang={code}
+        >
+          {LOCALE_LABELS[code]}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 export function Header({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
@@ -39,14 +80,8 @@ export function Header({ locale }: { locale: Locale }) {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const otherLocale = locale === "pt" ? "en" : "pt";
-  const localePath = (path: string) => {
-    if (locale === "pt") return path;
-    if (path === "/precos") return "/en/prices";
-    return `/en${path === "/" ? "" : path}`;
-  };
-
-  const isHome = pathname === localePath("/");
+  const path = (p: string) => localePath(locale, p);
+  const isHome = pathname === path("/");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -74,7 +109,6 @@ export function Header({ locale }: { locale: Locale }) {
           : "text-muted-foreground hover:text-primary"
     );
 
-
   const bookBtnClass =
     isHome && !scrolled
       ? cn(buttonVariants(), "bg-white text-primary hover:bg-white/90 shadow-md")
@@ -83,7 +117,7 @@ export function Header({ locale }: { locale: Locale }) {
   return (
     <header className={headerClass}>
       <div className="container mx-auto flex h-[100px] items-center justify-between px-4">
-        <Link href={localePath("/")} className="flex items-center shrink-0">
+        <Link href={path("/")} className="flex items-center shrink-0">
           <SiteLogo
             size="lg"
             priority
@@ -91,23 +125,18 @@ export function Header({ locale }: { locale: Locale }) {
           />
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
           {navItems.map((item) => (
             <Link
               key={item.key}
-              href={localePath(item.href)}
-              className={linkClass(pathname === localePath(item.href))}
+              href={path(item.href)}
+              className={linkClass(pathname === path(item.href))}
             >
               {t.nav[item.key]}
             </Link>
           ))}
-          <Link
-            href={locale === "pt" ? "/en" : "/"}
-            className={linkClass(false)}
-          >
-            {otherLocale.toUpperCase()}
-          </Link>
-          <BookCta locale={locale} href={localePath("/book")} className={bookBtnClass}>
+          <LocaleSwitcher locale={locale} pathname={pathname} linkClass={linkClass} />
+          <BookCta locale={locale} href={path("/book")} className={bookBtnClass}>
             {t.nav.book}
           </BookCta>
         </nav>
@@ -130,7 +159,7 @@ export function Header({ locale }: { locale: Locale }) {
               {navItems.map((item) => (
                 <Link
                   key={item.key}
-                  href={localePath(item.href)}
+                  href={path(item.href)}
                   onClick={() => setOpen(false)}
                   className="rounded-lg px-3 py-3 text-base font-medium hover:bg-muted transition-colors"
                 >
@@ -138,16 +167,16 @@ export function Header({ locale }: { locale: Locale }) {
                 </Link>
               ))}
               <hr className="my-4" />
-              <Link
-                href={locale === "pt" ? "/en" : "/"}
-                onClick={() => setOpen(false)}
-                className="px-3 text-muted-foreground uppercase text-sm"
-              >
-                {otherLocale}
-              </Link>
+              <LocaleSwitcher
+                locale={locale}
+                pathname={pathname}
+                className="px-3 flex-wrap"
+                linkClass={() => "text-muted-foreground hover:text-foreground"}
+                onNavigate={() => setOpen(false)}
+              />
               <BookCta
                 locale={locale}
-                href={localePath("/book")}
+                href={path("/book")}
                 onClick={() => setOpen(false)}
                 className={cn(buttonVariants(), "mt-4")}
               >
@@ -163,11 +192,7 @@ export function Header({ locale }: { locale: Locale }) {
 
 export function Footer({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
-  const localePath = (path: string) => {
-    if (locale === "pt") return path;
-    if (path === "/precos") return "/en/prices";
-    return `/en${path === "/" ? "" : path}`;
-  };
+  const path = (p: string) => localePath(locale, p);
 
   return (
     <footer className="bg-primary text-primary-foreground mt-auto">
@@ -196,7 +221,7 @@ export function Footer({ locale }: { locale: Locale }) {
               {navItems.map((item) => (
                 <Link
                   key={item.key}
-                  href={localePath(item.href)}
+                  href={path(item.href)}
                   className="text-sm text-primary-foreground/80 hover:text-white transition-colors"
                 >
                   {t.nav[item.key]}
@@ -204,7 +229,7 @@ export function Footer({ locale }: { locale: Locale }) {
               ))}
               <BookCta
                 locale={locale}
-                href={localePath("/book")}
+                href={path("/book")}
                 className="text-sm text-primary-foreground/80 hover:text-white transition-colors text-left"
               >
                 {t.nav.book}
@@ -255,10 +280,10 @@ export function Footer({ locale }: { locale: Locale }) {
             © {new Date().getFullYear()} {SITE_NAME}. {t.footer.rights}.
           </p>
           <div className="flex flex-wrap justify-center sm:justify-end gap-x-6 gap-y-2">
-            <Link href={localePath("/privacy")} className="hover:text-white transition-colors">
+            <Link href={path("/privacy")} className="hover:text-white transition-colors">
               {t.footer.privacy}
             </Link>
-            <Link href={localePath("/terms")} className="hover:text-white transition-colors">
+            <Link href={path("/terms")} className="hover:text-white transition-colors">
               {t.footer.terms}
             </Link>
             <a

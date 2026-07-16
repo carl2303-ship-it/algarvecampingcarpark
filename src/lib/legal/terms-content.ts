@@ -155,51 +155,306 @@ const termsEn: TermsContent = {
   lastUpdated: "July 2026",
 };
 
-function buildHoursSection(locale: Locale, settings: ParkSettings): TermsSection {
-  if (locale === "en") {
-    return {
-      title: "6. Check-in, Check-out and Stay Extension",
+const termsFr: TermsContent = {
+  eyebrow: "Réservations",
+  title: "Conditions de réservation et politique de paiement",
+  sections: [
+    {
+      title: "1. Système de paiement en ligne (Stripe)",
       list: [
         {
-          label: "Check-in Time",
-          text: `From ${settings.check_in_time}.`,
+          label: "Paiement sécurisé",
+          text: "Tous les paiements sur notre site sont traités de manière chiffrée via la plateforme Stripe, garantissant une sécurité maximale de vos données bancaires.",
         },
         {
-          label: "Check-out Time",
-          text: `The pitch must be vacated by ${settings.check_out_time} on the departure day. (Other times available upon request.)`,
+          label: "Moyens acceptés",
+          text: "Nous acceptons les cartes de crédit et de débit (Visa, Mastercard), les portefeuilles numériques (Apple Pay, Google Pay) et MB WAY pour les clients portugais.",
         },
         {
-          label: "Extension",
-          text: "If the customer wishes to stay longer than originally booked, the extension is strictly subject to pitch availability at the time and must be paid at the park reception or through a new payment link generated in our app.",
+          label: "Garantie de réservation",
+          text: "Une réservation n'est considérée comme confirmée et garantie qu'après le traitement réussi du paiement correspondant dans notre système.",
         },
       ],
-    };
-  }
+    },
+    {
+      title: "2. Modèles de réservation",
+      paragraphs: [
+        "Paiement d'un acompte de 50 % en ligne pour garantir l'emplacement, le solde étant payé le jour de l'arrivée (en espèces ou via MB WAY).",
+      ],
+    },
+    {
+      title: "3. Politique d'annulation et de remboursement",
+      list: [
+        {
+          label: "Annulation gratuite (remboursement intégral)",
+          text: "Si le client annule plus de 7 jours avant la date de check-in, il a droit au remboursement de 100 % du montant payé.",
+        },
+        {
+          label: "Annulation partielle",
+          text: "Si l'annulation est effectuée entre 48 heures et 7 jours à l'avance, un montant correspondant à 50 % de l'acompte payé sera retenu, le reste étant remboursé.",
+        },
+        {
+          label: 'Annulation de dernière minute ou "no-show"',
+          text: "Les annulations à moins de 48 heures ou le non-présentation à la date prévue ne donnent droit à aucun remboursement.",
+        },
+        {
+          label: "Frais du prestataire de paiement",
+          text: "En cas de remboursement, les frais facturés par le prestataire de paiement (Stripe) sur la transaction seront déduits et ne sont pas remboursables par le parc.",
+        },
+      ],
+    },
+    {
+      title: "4. Modification des dates",
+      paragraphs: [
+        "Les clients peuvent demander une modification des dates de leur réservation sans frais, à condition de prévenir au moins 3 jours à l'avance et sous réserve de disponibilité des emplacements pour les nouvelles dates souhaitées.",
+        "Si les nouvelles dates correspondent à une saison avec un tarif différent (ex. : passage de basse à haute saison), le client devra payer la différence de prix correspondante.",
+      ],
+    },
+    {
+      title: "5. Exactitude des données du client",
+      paragraphs: [
+        "Le client est responsable de l'exactitude et de la véracité de toutes les informations fournies lors de la réservation (nom, contacts, immatriculation du véhicule, nombre de personnes, dates, etc.).",
+        "L'exactitude de ces informations sera vérifiée par les responsables du parc lors du check-in. Des données incorrectes ou incomplètes peuvent empêcher l'accès au parc ou entraîner des ajustements du montant du séjour.",
+      ],
+    },
+  ],
+  lastUpdatedLabel: "Dernière mise à jour",
+  lastUpdated: "Juillet 2026",
+};
 
-  return {
-    title: "6. Check-in, Check-out e Prolongamento da Estadia",
-    list: [
-      {
-        label: "Horário de Check-in",
-        text: `A partir das ${formatTimeForLocale(settings.check_in_time)}.`,
-      },
-      {
-        label: "Horário de Check-out",
-        text: `O lugar deve ser libertado até às ${formatTimeForLocale(settings.check_out_time)} do dia de saída. (Outro horário, sob pedido.)`,
-      },
-      {
-        label: "Prolongamento",
-        text: "Se o cliente desejar ficar mais dias do que o contratado na reserva original, a extensão estará estritamente sujeita à disponibilidade de vagas no momento e deverá ser paga no balcão do parque ou através de um novo link gerado na nossa app.",
-      },
-    ],
-  };
+const termsDe: TermsContent = {
+  eyebrow: "Buchungen",
+  title: "Buchungsbedingungen und Zahlungsrichtlinie",
+  sections: [
+    {
+      title: "1. Online-Zahlungssystem (Stripe)",
+      list: [
+        {
+          label: "Sichere Zahlung",
+          text: "Alle Zahlungen auf unserer Website werden verschlüsselt über die Plattform Stripe abgewickelt und gewährleisten maximale Sicherheit Ihrer Bankdaten.",
+        },
+        {
+          label: "Akzeptierte Zahlungsmittel",
+          text: "Wir akzeptieren Kredit- und Debitkarten (Visa, Mastercard), digitale Wallets (Apple Pay, Google Pay) sowie MB WAY für portugiesische Kunden.",
+        },
+        {
+          label: "Buchungsgarantie",
+          text: "Eine Buchung gilt erst nach erfolgreicher Verarbeitung der jeweiligen Zahlung in unserem System als bestätigt und garantiert.",
+        },
+      ],
+    },
+    {
+      title: "2. Buchungsmodelle",
+      paragraphs: [
+        "Zahlung einer 50 %-Anzahlung online zur Sicherung des Stellplatzes; der Restbetrag wird am Anreisetag bar oder per MB WAY bezahlt.",
+      ],
+    },
+    {
+      title: "3. Stornierungs- und Rückerstattungsrichtlinie",
+      list: [
+        {
+          label: "Kostenlose Stornierung (volle Rückerstattung)",
+          text: "Storniert der Gast mehr als 7 Tage vor dem Check-in-Datum, hat er Anspruch auf eine 100 %-Rückerstattung des gezahlten Betrags.",
+        },
+        {
+          label: "Teilweise Stornierung",
+          text: "Bei einer Stornierung zwischen 48 Stunden und 7 Tagen im Voraus wird ein Betrag in Höhe von 50 % der gezahlten Anzahlung einbehalten; der Rest wird erstattet.",
+        },
+        {
+          label: 'Kurzfristige Stornierung oder "No-Show"',
+          text: "Stornierungen weniger als 48 Stunden im Voraus oder Nichterscheinen am vereinbarten Tag begründen keinen Anspruch auf Rückerstattung.",
+        },
+        {
+          label: "Gebühren des Zahlungsdienstleisters",
+          text: "Im Falle einer Rückerstattung werden die vom Zahlungsdienstleister (Stripe) erhobenen Transaktionsgebühren abgezogen und sind vom Park nicht erstattungsfähig.",
+        },
+      ],
+    },
+    {
+      title: "4. Datumsänderungen",
+      paragraphs: [
+        "Gäste können eine Änderung der Buchungsdaten kostenlos beantragen, sofern sie mindestens 3 Tage im Voraus Bescheid geben und Stellplätze für die gewünschten neuen Daten verfügbar sind.",
+        "Fallen die neuen Daten in eine Saison mit anderem Tarif (z. B. Wechsel von Nebensaison zu Hochsaison), muss der Gast die entsprechende Preisdifferenz zahlen.",
+      ],
+    },
+    {
+      title: "5. Richtigkeit der Kundendaten",
+      paragraphs: [
+        "Der Gast ist für die Richtigkeit und Wahrhaftigkeit aller bei der Buchung angegebenen Daten verantwortlich (Name, Kontaktdaten, Fahrzeugkennzeichen, Gästezahl, Daten usw.).",
+        "Die Richtigkeit dieser Angaben wird bei der Anreise von den Parkverantwortlichen überprüft. Falsche oder unvollständige Daten können den Zugang zum Park verhindern oder Anpassungen der Aufenthaltskosten erfordern.",
+      ],
+    },
+  ],
+  lastUpdatedLabel: "Zuletzt aktualisiert",
+  lastUpdated: "Juli 2026",
+};
+
+const termsEs: TermsContent = {
+  eyebrow: "Reservas",
+  title: "Términos de reserva y política de pagos",
+  sections: [
+    {
+      title: "1. Sistema de pago online (Stripe)",
+      list: [
+        {
+          label: "Pago seguro",
+          text: "Todos los pagos en nuestro sitio web se procesan de forma cifrada a través de la plataforma Stripe, garantizando la máxima seguridad de sus datos bancarios.",
+        },
+        {
+          label: "Métodos aceptados",
+          text: "Aceptamos tarjetas de crédito y débito (Visa, Mastercard), monederos digitales (Apple Pay, Google Pay) y MB WAY para clientes portugueses.",
+        },
+        {
+          label: "Garantía de reserva",
+          text: "Una reserva solo se considera confirmada y garantizada tras el procesamiento correcto del pago correspondiente en nuestro sistema.",
+        },
+      ],
+    },
+    {
+      title: "2. Modelos de reserva",
+      paragraphs: [
+        "Pago de una señal del 50 % online para garantizar la plaza; el resto se paga el día de llegada (en efectivo o mediante MB WAY).",
+      ],
+    },
+    {
+      title: "3. Política de cancelación y reembolsos",
+      list: [
+        {
+          label: "Cancelación gratuita (reembolso total)",
+          text: "Si el cliente cancela con más de 7 días de antelación respecto a la fecha de check-in, tendrá derecho al reembolso del 100 % del importe pagado.",
+        },
+        {
+          label: "Cancelación parcial",
+          text: "Si la cancelación se realiza entre 48 horas y 7 días de antelación, se retendrá un importe correspondiente al 50 % de la señal pagada y se devolverá el resto.",
+        },
+        {
+          label: 'Cancelación de última hora o "no-show"',
+          text: "Las cancelaciones con menos de 48 horas de antelación o la no presentación en el día estipulado no dan derecho a ningún reembolso.",
+        },
+        {
+          label: "Comisiones del procesador de pagos",
+          text: "En caso de reembolso, se deducirán las comisiones cobradas por el procesador de pagos (Stripe) sobre la transacción, que no son reembolsables por el parque.",
+        },
+      ],
+    },
+    {
+      title: "4. Cambios de fechas",
+      paragraphs: [
+        "Los huéspedes pueden solicitar el cambio de fechas de su reserva sin coste, siempre que lo hagan con al menos 3 días de antelación y sujeto a la disponibilidad de plazas para las nuevas fechas solicitadas.",
+        "Si las nuevas fechas corresponden a una temporada con tarifa distinta (p. ej., paso de temporada baja a alta), el cliente deberá pagar la diferencia de precio correspondiente.",
+      ],
+    },
+    {
+      title: "5. Exactitud de los datos del cliente",
+      paragraphs: [
+        "El cliente es responsable de la exactitud y veracidad de todos los datos facilitados al reservar (nombre, contactos, matrícula del vehículo, número de huéspedes, fechas, etc.).",
+        "La exactitud de esta información será verificada por los responsables del parque en el check-in. Datos incorrectos o incompletos pueden impedir el acceso al parque o implicar ajustes en el importe de la estancia.",
+      ],
+    },
+  ],
+  lastUpdatedLabel: "Última actualización",
+  lastUpdated: "Julio de 2026",
+};
+
+const termsByLocale: Record<Locale, TermsContent> = {
+  pt: termsPt,
+  en: termsEn,
+  fr: termsFr,
+  de: termsDe,
+  es: termsEs,
+};
+
+function buildHoursSection(locale: Locale, settings: ParkSettings): TermsSection {
+  const checkIn = formatTimeForLocale(settings.check_in_time, locale);
+  const checkOut = formatTimeForLocale(settings.check_out_time, locale);
+
+  switch (locale) {
+    case "en":
+      return {
+        title: "6. Check-in, Check-out and Stay Extension",
+        list: [
+          { label: "Check-in Time", text: `From ${checkIn}.` },
+          {
+            label: "Check-out Time",
+            text: `The pitch must be vacated by ${checkOut} on the departure day. (Other times available upon request.)`,
+          },
+          {
+            label: "Extension",
+            text: "If the customer wishes to stay longer than originally booked, the extension is strictly subject to pitch availability at the time and must be paid at the park reception or through a new payment link generated in our app.",
+          },
+        ],
+      };
+    case "fr":
+      return {
+        title: "6. Check-in, check-out et prolongation du séjour",
+        list: [
+          { label: "Heure de check-in", text: `À partir de ${checkIn}.` },
+          {
+            label: "Heure de check-out",
+            text: `L'emplacement doit être libéré avant ${checkOut} le jour du départ. (Autres horaires sur demande.)`,
+          },
+          {
+            label: "Prolongation",
+            text: "Si le client souhaite rester plus longtemps que prévu, la prolongation est strictement soumise à la disponibilité de l'emplacement au moment voulu et doit être payée à la réception du parc ou via un nouveau lien de paiement généré dans notre application.",
+          },
+        ],
+      };
+    case "de":
+      return {
+        title: "6. Check-in, Check-out und Aufenthaltsverlängerung",
+        list: [
+          { label: "Check-in-Zeit", text: `Ab ${checkIn}.` },
+          {
+            label: "Check-out-Zeit",
+            text: `Der Stellplatz muss am Abreisetag bis ${checkOut} geräumt sein. (Andere Zeiten auf Anfrage möglich.)`,
+          },
+          {
+            label: "Verlängerung",
+            text: "Möchte der Gast länger bleiben als ursprünglich gebucht, hängt die Verlängerung strikt von der Verfügbarkeit des Stellplatzes ab und muss an der Parkrezeption oder über einen neuen, in unserer App erzeugten Zahlungslink bezahlt werden.",
+          },
+        ],
+      };
+    case "es":
+      return {
+        title: "6. Check-in, check-out y prolongación de la estancia",
+        list: [
+          { label: "Horario de check-in", text: `A partir de las ${checkIn}.` },
+          {
+            label: "Horario de check-out",
+            text: `La plaza debe quedar libre antes de las ${checkOut} el día de salida. (Otros horarios bajo petición.)`,
+          },
+          {
+            label: "Prolongación",
+            text: "Si el cliente desea quedarse más días de los contratados en la reserva original, la extensión estará estrictamente sujeta a la disponibilidad de plazas en ese momento y deberá pagarse en recepción del parque o mediante un nuevo enlace de pago generado en nuestra app.",
+          },
+        ],
+      };
+    default:
+      return {
+        title: "6. Check-in, Check-out e Prolongamento da Estadia",
+        list: [
+          {
+            label: "Horário de Check-in",
+            text: `A partir das ${checkIn}.`,
+          },
+          {
+            label: "Horário de Check-out",
+            text: `O lugar deve ser libertado até às ${checkOut} do dia de saída. (Outro horário, sob pedido.)`,
+          },
+          {
+            label: "Prolongamento",
+            text: "Se o cliente desejar ficar mais dias do que o contratado na reserva original, a extensão estará estritamente sujeita à disponibilidade de vagas no momento e deverá ser paga no balcão do parque ou através de um novo link gerado na nossa app.",
+          },
+        ],
+      };
+  }
 }
 
 export function getTermsContent(
   locale: Locale,
   settings: ParkSettings = DEFAULT_PARK_SETTINGS
 ): TermsContent {
-  const base = locale === "en" ? termsEn : termsPt;
+  const base = termsByLocale[locale] ?? termsPt;
   return {
     ...base,
     sections: [...base.sections, buildHoursSection(locale, settings)],

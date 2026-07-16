@@ -62,6 +62,30 @@ export async function PATCH(
     }
 
     const pitch_code = body.pitch_code.toUpperCase();
+
+    if (
+      ["confirmed", "checked_in", "pending_payment"].includes(existing.status) &&
+      pitch_code
+    ) {
+      const { findPitchOverlapConflict } = await import("@/lib/availability");
+      const conflict = await findPitchOverlapConflict({
+        pitchCode: pitch_code,
+        checkIn: body.check_in,
+        checkOut: body.check_out,
+        excludeReservationId: id,
+      });
+
+      if (conflict) {
+        return NextResponse.json(
+          {
+            error: `L'emplacement ${pitch_code} est déjà réservé (${conflict.guest_name}, ${conflict.check_in} → ${conflict.check_out}). Réattribuez d'abord cette réservation.`,
+            conflict,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const plate = normalizeVehiclePlate(body.vehicle_plate);
     const oldPitchCode = existing.pitch_code as string | null;
     const pitchChanged = oldPitchCode !== pitch_code;

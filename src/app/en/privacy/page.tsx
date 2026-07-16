@@ -1,5 +1,5 @@
-import { PrivacyPageContent } from "@/components/pages/privacy-page";
+﻿import { PrivacyPageContent } from "@/components/pages/privacy-page";
 
-export default function PrivacyPageEn() {
+export default function PrivacyPageLocalized() {
   return <PrivacyPageContent locale="en" />;
 }

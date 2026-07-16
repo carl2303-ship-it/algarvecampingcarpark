@@ -14,18 +14,29 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import {
   PARK_AERIAL_IMAGE,
+  PARK_FACILITIES_PLAN_IMAGE,
   PARK_AERIAL_ASPECT_CLASS,
   PARK_AERIAL_MAP_MAX_WIDTH_CLASS,
   LEGEND_SWATCH_STYLES,
   getSpotMarkerClass,
   getSpotVisualType,
   getSpotZoneSlug,
+  spotIsOver9m,
   type PitchMapSpot,
   type SpotVisualType,
 } from "@/lib/park-pitch-map-defaults";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { localePath } from "@/lib/locale-path";
+
+const FACILITY_ITEMS = [
+  { id: "1", key: "reception" as const },
+  { id: "2", key: "showers" as const },
+  { id: "3", key: "laundry" as const },
+  { id: "4", key: "bbq" as const },
+  { id: "5", key: "petanque" as const },
+] as const;
 
 function PitchMarker({
   spot,
@@ -52,22 +63,24 @@ function PitchMarker({
 
 function formatDimensions(
   spot: PitchMapSpot,
-  locale: Locale,
   labels: { width: string; length: string; separator: string }
 ) {
   if (spot.width_m == null && spot.length_m == null) return null;
   const width = spot.width_m != null ? `${spot.width_m} m` : "—";
   const length = spot.length_m != null ? `${spot.length_m} m` : "—";
-  return locale === "pt"
-    ? `${labels.width}: ${width} · ${labels.length}: ${length}`
-    : `${labels.width}: ${width} ${labels.separator} ${labels.length}: ${length}`;
+  return `${labels.width}: ${width} ${labels.separator} ${labels.length}: ${length}`;
 }
 
 function zoneLabelForSlug(
   zoneSlug: ReturnType<typeof getSpotZoneSlug>,
+  over9m: boolean,
   mapT: ReturnType<typeof getTranslations>["about"]["pitch_map"]
 ) {
-  if (zoneSlug === "adaptada-9m") return mapT.zone_long_pitch;
+  if (over9m) {
+    return zoneSlug === "sem-eletricidade"
+      ? `${mapT.zone_long_pitch} · ${mapT.zone_no_electric}`
+      : `${mapT.zone_long_pitch} · ${mapT.zone_electric}`;
+  }
   if (zoneSlug === "sem-eletricidade") return mapT.zone_no_electric;
   return mapT.zone_electric;
 }
@@ -84,19 +97,18 @@ function SpotDetailDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = getTranslations(locale);
-  const prefix = locale === "en" ? "/en" : "";
   const mapT = t.about.pitch_map;
 
   if (!spot) return null;
 
-  const dimensions = formatDimensions(spot, locale, {
+  const dimensions = formatDimensions(spot, {
     width: mapT.width_label,
     length: mapT.length_label,
     separator: mapT.dimensions_separator,
   });
   const zoneSlug = getSpotZoneSlug(spot);
-  const zoneLabel = zoneLabelForSlug(zoneSlug, mapT);
-  const bookHref = `${prefix}/book?pitch=${encodeURIComponent(spot.code)}`;
+  const zoneLabel = zoneLabelForSlug(zoneSlug, spotIsOver9m(spot), mapT);
+  const bookHref = `${localePath(locale, "/book")}?pitch=${encodeURIComponent(spot.code)}`;
   const visualType = getSpotVisualType(spot);
   const traitLabel =
     visualType === "long-pitch"
@@ -172,20 +184,29 @@ function SpotDetailDialog({
 export function ParkPitchMap({
   locale,
   spots,
+  showFacilities = false,
 }: {
   locale: Locale;
   spots: PitchMapSpot[];
+  /** About page: facilities plan image + amenity legend + pitch markers */
+  showFacilities?: boolean;
 }) {
   const t = getTranslations(locale);
   const mapT = t.about.pitch_map;
+  const facilitiesT = t.about.facilities_map;
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const selectedSpot = spots.find((spot) => spot.code === selectedCode) ?? null;
+
+  const title = showFacilities ? facilitiesT.title : mapT.title;
+  const subtitle = showFacilities ? facilitiesT.combined_subtitle : mapT.subtitle;
+  const imageSrc = showFacilities ? PARK_FACILITIES_PLAN_IMAGE : PARK_AERIAL_IMAGE;
+  const imageAlt = showFacilities ? facilitiesT.image_alt : mapT.image_alt;
 
   return (
     <div className="space-y-4">
       <div className="text-center max-w-2xl mx-auto">
-        <h2 className="font-heading text-2xl md:text-3xl font-semibold mb-2">{mapT.title}</h2>
-        <p className="text-muted-foreground text-sm md:text-base leading-relaxed">{mapT.subtitle}</p>
+        <h2 className="font-heading text-2xl md:text-3xl font-semibold mb-2">{title}</h2>
+        <p className="text-muted-foreground text-sm md:text-base leading-relaxed">{subtitle}</p>
       </div>
 
       <div
@@ -196,12 +217,12 @@ export function ParkPitchMap({
         )}
       >
         <Image
-          src={PARK_AERIAL_IMAGE}
-          alt={mapT.image_alt}
+          src={imageSrc}
+          alt={imageAlt}
           fill
           className="object-contain"
           sizes="(max-width: 1024px) 100vw, 1152px"
-          priority={false}
+          priority={showFacilities}
         />
 
         <div className="absolute inset-0">
@@ -216,19 +237,48 @@ export function ParkPitchMap({
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-3 sm:gap-x-6 text-xs sm:text-sm text-muted-foreground max-w-3xl mx-auto">
-        {(
-          [
-            ["electric", mapT.legend_electric],
-            ["no-electric", mapT.legend_no_electric],
-            ["long-pitch", mapT.legend_long_pitch],
-          ] as const satisfies ReadonlyArray<[SpotVisualType, string]>
-        ).map(([type, label]) => (
-          <span key={type} className="inline-flex items-center gap-2">
-            <span className={LEGEND_SWATCH_STYLES[type]} />
-            {label}
-          </span>
-        ))}
+      <div className="mx-auto max-w-3xl space-y-4">
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-3 sm:gap-x-6 text-xs sm:text-sm text-muted-foreground">
+          {(
+            [
+              ["electric", mapT.legend_electric],
+              ["no-electric", mapT.legend_no_electric],
+              ["long-pitch", mapT.legend_long_pitch],
+            ] as const satisfies ReadonlyArray<[SpotVisualType, string]>
+          ).map(([type, label]) => (
+            <span key={type} className="inline-flex items-center gap-2">
+              <span className={LEGEND_SWATCH_STYLES[type]} />
+              {label}
+            </span>
+          ))}
+        </div>
+
+        {showFacilities && (
+          <div className="grid sm:grid-cols-2 gap-2 pt-2 border-t">
+            {FACILITY_ITEMS.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 rounded-lg border bg-card/80 px-3 py-2 text-sm"
+              >
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white"
+                  aria-hidden
+                >
+                  {item.id}
+                </span>
+                <span className="font-medium text-foreground">{facilitiesT[item.key]}</span>
+              </div>
+            ))}
+            <div className="flex items-center gap-3 rounded-lg border bg-card/80 px-3 py-2 text-sm sm:col-span-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center text-red-600" aria-hidden>
+                <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current">
+                  <path d="M12 4 L22 20 H2 Z" />
+                </svg>
+              </span>
+              <span className="font-medium text-foreground">{facilitiesT.electricity}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <SpotDetailDialog

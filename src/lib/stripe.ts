@@ -1,5 +1,6 @@
 import Stripe from "stripe";
-import { SITE_NAME, SITE_URL } from "./constants";
+import { SITE_NAME, SITE_URL, type Locale } from "./constants";
+import { localePath } from "./locale-path";
 import { getStripeSecrets } from "./stripe-settings";
 
 let stripeInstance: Stripe | null = null;
@@ -29,22 +30,29 @@ export async function getStripe(): Promise<Stripe> {
 
 export async function createCheckoutSession({
   reservationId,
+  depositCents,
   totalCents,
   guestEmail,
   guestName,
   zoneName,
+  pitchCode,
   checkIn,
   checkOut,
+  locale = "pt",
 }: {
   reservationId: string;
+  depositCents: number;
   totalCents: number;
   guestEmail: string;
   guestName: string;
   zoneName: string;
+  pitchCode: string;
   checkIn: string;
   checkOut: string;
+  locale?: Locale;
 }) {
   const stripe = await getStripe();
+  const balanceCents = Math.max(0, totalCents - depositCents);
   return stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: guestEmail,
@@ -54,10 +62,10 @@ export async function createCheckoutSession({
         price_data: {
           currency: "eur",
           product_data: {
-            name: `${SITE_NAME} — ${zoneName}`,
-            description: `Check-in: ${checkIn} | Check-out: ${checkOut}`,
+            name: `${SITE_NAME} — Sinal 50% · ${zoneName} · ${pitchCode}`,
+            description: `Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} € | Restante na chegada: ${(balanceCents / 100).toFixed(2)} €`,
           },
-          unit_amount: totalCents,
+          unit_amount: depositCents,
         },
         quantity: 1,
       },
@@ -65,9 +73,14 @@ export async function createCheckoutSession({
     metadata: {
       reservation_id: reservationId,
       guest_name: guestName,
+      type: "booking_deposit",
+      deposit_cents: String(depositCents),
+      total_cents: String(totalCents),
+      pitch_code: pitchCode,
+      locale,
     },
-    success_url: `${SITE_URL}/book/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE_URL}/book?cancelled=1`,
+    success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${SITE_URL}${localePath(locale, "/book")}?cancelled=1`,
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
   });
 }
@@ -80,6 +93,9 @@ export async function createExtensionCheckoutSession({
   pitchCode,
   oldCheckOut,
   newCheckOut,
+  applyOnPayment = false,
+  cancelUrl,
+  locale = "pt",
 }: {
   reservationId: string;
   extensionCents: number;
@@ -88,6 +104,10 @@ export async function createExtensionCheckoutSession({
   pitchCode: string;
   oldCheckOut: string;
   newCheckOut: string;
+  /** When true, webhook applies new check_out + total after payment (guest flow). */
+  applyOnPayment?: boolean;
+  cancelUrl?: string;
+  locale?: Locale;
 }) {
   const stripe = await getStripe();
   return stripe.checkout.sessions.create({
@@ -112,10 +132,13 @@ export async function createExtensionCheckoutSession({
       guest_name: guestName,
       type: "extension",
       new_check_out: newCheckOut,
+      old_check_out: oldCheckOut,
       extension_cents: String(extensionCents),
+      apply_on_payment: applyOnPayment ? "true" : "false",
+      locale,
     },
-    success_url: `${SITE_URL}/book/success?session_id={CHECKOUT_SESSION_ID}&extended=1`,
-    cancel_url: `${SITE_URL}/book?cancelled=1`,
+    success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}&extended=1`,
+    cancel_url: cancelUrl ?? `${SITE_URL}${localePath(locale, "/book")}?cancelled=1`,
     expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
   });
 }

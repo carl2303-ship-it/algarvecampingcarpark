@@ -34,7 +34,7 @@ export default function ContactPageContent({ locale }: { locale: Locale }) {
     {
       key: "maps",
       label: "Google Maps",
-      value: locale === "pt" ? "Como chegar" : "Get directions",
+      value: t.location.open_maps,
       href: MAPS_URL,
       icon: <MessageCircle className="h-6 w-6" />,
     },

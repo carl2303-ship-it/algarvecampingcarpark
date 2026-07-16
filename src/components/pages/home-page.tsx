@@ -29,17 +29,21 @@ import {
 } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
+import { bcp47Locale } from "@/lib/locale-format";
+import { localePath } from "@/lib/locale-path";
 import { cn } from "@/lib/utils";
 
 export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale }) {
   const t = getTranslations(locale);
-  const prefix = locale === "en" ? "/en" : "";
-  const bookPath = `${prefix}/book`;
+  const bookPath = localePath(locale, "/book");
+  const aboutPath = localePath(locale, "/about");
+  const locationPath = localePath(locale, "/location");
+  const contactPath = localePath(locale, "/contact");
 
   const features = [
     {
       iconSrc: "/icons/camping-car.png",
-      iconAlt: locale === "pt" ? "Autocaravana" : "Motorhome",
+      iconAlt: t.home.features.capacity,
       title: t.home.features.capacity,
       description: t.home.features.capacity_desc,
     },
@@ -99,7 +103,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
                 <ArrowRight className="ml-2 h-4 w-4" />
               </BookCta>
               <Link
-                href={`${prefix}/location`}
+                href={locationPath}
                 className={cn(
                   buttonVariants({ variant: "outline", size: "lg" }),
                   "border-white/40 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm h-12 px-8 text-base"
@@ -122,7 +126,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 divide-x divide-border/60">
             <StatItem value={String(TOTAL_CAPACITY)} label={t.home.stats.pitches} />
             <StatItem
-              value={PARK_AREA_M2.toLocaleString(locale === "pt" ? "pt-PT" : "en-GB")}
+              value={PARK_AREA_M2.toLocaleString(bcp47Locale(locale))}
               label={t.home.stats.area}
             />
             <StatItem value="2020" label={t.home.stats.since} />
@@ -180,7 +184,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
               <p className="text-muted-foreground text-lg leading-relaxed mb-8">
                 {t.home.experience_text}
               </p>
-              <Link href={`${prefix}/about`} className={buttonVariants({ variant: "outline", size: "lg" })}>
+              <Link href={aboutPath} className={buttonVariants({ variant: "outline", size: "lg" })}>
                 {t.home.experience_cta}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -233,7 +237,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
                 </p>
                 <p>{GPS_DMS}</p>
               </div>
-              <Link href={`${prefix}/location`} className={buttonVariants()}>
+              <Link href={locationPath} className={buttonVariants()}>
                 {t.home.location_cta}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

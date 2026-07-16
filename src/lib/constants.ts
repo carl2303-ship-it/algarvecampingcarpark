@@ -25,7 +25,7 @@ export const PRICING_SERVICES_IMAGE =
   "https://algarvecampingcarpark.pt/wp-content/uploads/2020/11/WhatsApp-Image-2020-10-23-at-10.29.00-e1604514590898.jpeg";
 export const HERO_IMAGE = "/images/hero.png";
 export const EXPERIENCE_IMAGE = "/images/our-story.png";
-export const TOTAL_CAPACITY = 57;
+export const TOTAL_CAPACITY = 63;
 export const PARK_AREA_M2 = 37000;
 export const CHECK_IN_TIME = "11:00";
 export const CHECK_OUT_TIME = "11:00";
@@ -36,6 +36,9 @@ export type ParkSettings = {
   check_in_time: string;
   check_out_time: string;
   gate_access_code: string | null;
+  online_booking_enabled: boolean;
+  online_booking_starts_at: string | null;
+  online_booking_ends_at: string | null;
 };
 
 export const DEFAULT_PARK_SETTINGS: ParkSettings = {
@@ -44,18 +47,30 @@ export const DEFAULT_PARK_SETTINGS: ParkSettings = {
   check_in_time: CHECK_IN_TIME,
   check_out_time: CHECK_OUT_TIME,
   gate_access_code: null,
+  online_booking_enabled: false,
+  online_booking_starts_at: null,
+  online_booking_ends_at: null,
 };
 
-export function formatTimeForLocale(time: string, locale: "pt" | "en" = "pt"): string {
+export const DEFAULT_LOCALE = "pt" as const;
+export const LOCALES = ["pt", "en", "fr", "de", "es"] as const;
+export type Locale = (typeof LOCALES)[number];
+
+export function isLocale(value: string): value is Locale {
+  return (LOCALES as readonly string[]).includes(value);
+}
+
+export function formatTimeForLocale(time: string, _locale: Locale = "pt"): string {
   return time;
 }
 
-export function formatReceptionHours(settings: ParkSettings, locale: "pt" | "en" = "pt"): string {
+export function formatReceptionHours(
+  settings: ParkSettings,
+  _locale: Locale = "pt"
+): string {
   return `${settings.reception_open} – ${settings.reception_close}`;
 }
+
 export const PENDING_PAYMENT_EXPIRY_MINUTES = 30;
-/** Set to true when Stripe and pitch inventory are ready for production bookings. */
-export const BOOKING_ENABLED = false;
-export const DEFAULT_LOCALE = "pt" as const;
-export const LOCALES = ["pt", "en"] as const;
-export type Locale = (typeof LOCALES)[number];
+/** Online deposit is 50% of the stay total; balance due on arrival. */
+export const ONLINE_BOOKING_DEPOSIT_RATIO = 0.5;

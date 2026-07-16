@@ -3,7 +3,13 @@ import { headers } from "next/headers";
 import { getStripe, getCheckoutReceiptUrl } from "@/lib/stripe";
 import { getStripeSecrets } from "@/lib/stripe-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendBookingConfirmation, sendPaymentReceipt } from "@/lib/email";
+import {
+  receiptDepositDescription,
+  receiptExtensionDescription,
+  sendBookingConfirmation,
+  sendPaymentReceipt,
+} from "@/lib/email";
+import { resolveLocale } from "@/lib/email-i18n";
 import { getParkSettings } from "@/lib/park-settings";
 import type Stripe from "stripe";
 
@@ -46,6 +52,8 @@ export async function POST(request: Request) {
 
     if (isExtension) {
       const extensionCents = Number(session.metadata?.extension_cents ?? amountCents);
+      const applyOnPayment = session.metadata?.apply_on_payment === "true";
+      const newCheckOut = session.metadata?.new_check_out;
 
       const { data: reservation } = await supabase
         .from("reservations")
@@ -55,12 +63,41 @@ export async function POST(request: Request) {
 
       if (reservation) {
         const newPaid = (reservation.paid_cents ?? 0) + extensionCents;
-        const paymentStatus =
-          newPaid >= reservation.total_cents ? "paid_stripe" : "partial";
+
+        let nextTotal = reservation.total_cents;
+        let nextCheckOut = reservation.check_out;
+
+        if (applyOnPayment && newCheckOut && newCheckOut > reservation.check_out) {
+          const { quoteStayExtension } = await import("@/lib/stay-extension");
+          const quote = await quoteStayExtension({
+            reservation: {
+              id: reservation.id,
+              status: reservation.status,
+              zone_id: reservation.zone_id,
+              check_in: reservation.check_in,
+              check_out: reservation.check_out,
+              total_cents: reservation.total_cents,
+              num_guests: reservation.num_guests,
+              pitch_code: reservation.pitch_code,
+            },
+            newCheckOut,
+          });
+
+          if (quote.available) {
+            nextCheckOut = newCheckOut;
+            nextTotal = quote.newTotalCents;
+          } else {
+            console.error("Extension webhook conflict after payment:", quote.error, quote.conflict);
+          }
+        }
+
+        const paymentStatus = newPaid >= nextTotal ? "paid_stripe" : "partial";
 
         await supabase
           .from("reservations")
           .update({
+            check_out: nextCheckOut,
+            total_cents: nextTotal,
             paid_cents: newPaid,
             payment_status: paymentStatus,
             stripe_payment_intent_id:
@@ -87,7 +124,11 @@ export async function POST(request: Request) {
           guestName: reservation.guest_name,
           amountCents: extensionCents,
           receiptUrl,
-          description: `Pagamento da extensão de estadia até ${reservation.check_out}.`,
+          description: receiptExtensionDescription(
+            resolveLocale(reservation.locale ?? session.metadata?.locale),
+            nextCheckOut
+          ),
+          locale: resolveLocale(reservation.locale ?? session.metadata?.locale),
         });
       }
     } else {
@@ -101,7 +142,10 @@ export async function POST(request: Request) {
               : session.payment_intent?.id ?? null,
           expires_at: null,
           paid_cents: amountCents,
-          payment_status: "paid_stripe",
+          payment_status:
+            amountCents >= (Number(session.metadata?.total_cents) || amountCents)
+              ? "paid_stripe"
+              : "partial",
         })
         .eq("id", reservationId)
         .eq("status", "pending_payment")
@@ -125,18 +169,24 @@ export async function POST(request: Request) {
           (reservation.zone as { name: string } | null)?.name ?? "Reserva";
 
         const parkSettings = await getParkSettings();
+        const totalCents = reservation.total_cents ?? amountCents;
+        const balanceCents = Math.max(0, totalCents - amountCents);
+        const locale = resolveLocale(reservation.locale ?? session.metadata?.locale);
 
         await sendBookingConfirmation({
           guestEmail: reservation.guest_email,
           guestName: reservation.guest_name,
           zoneName,
+          pitchCode: reservation.pitch_code,
           checkIn: reservation.check_in,
           checkOut: reservation.check_out,
           checkInTime: parkSettings.check_in_time,
           checkOutTime: parkSettings.check_out_time,
-          totalCents: reservation.total_cents,
+          totalCents,
+          paidCents: amountCents,
+          balanceCents,
           reservationId: reservation.id,
-          gateAccessCode: parkSettings.gate_access_code,
+          locale,
         });
 
         await sendPaymentReceipt({
@@ -144,7 +194,12 @@ export async function POST(request: Request) {
           guestName: reservation.guest_name,
           amountCents: amountCents,
           receiptUrl,
-          description: `Pagamento da reserva em ${zoneName}.`,
+          description: receiptDepositDescription(
+            locale,
+            zoneName,
+            reservation.pitch_code
+          ),
+          locale,
         });
       }
     }

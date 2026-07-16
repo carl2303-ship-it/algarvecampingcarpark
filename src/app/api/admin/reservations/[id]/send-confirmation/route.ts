@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingConfirmation } from "@/lib/email";
+import { getEmailSecrets } from "@/lib/email-settings";
 import { getParkSettings } from "@/lib/park-settings";
 
 export const dynamic = "force-dynamic";
@@ -43,27 +44,37 @@ export async function POST(
       return NextResponse.json({ error: "E-mail du client manquant." }, { status: 400 });
     }
 
-    if (!process.env.RESEND_API_KEY) {
+    const { resendApiKey } = await getEmailSecrets();
+    if (!resendApiKey) {
       return NextResponse.json(
-        { error: "Resend non configuré. Ajoutez RESEND_API_KEY sur Netlify." },
+        {
+          error:
+            "Resend non configuré. Ajoutez la clé dans Paramètres → E-mail (Resend), ou RESEND_API_KEY sur Netlify / .env.local.",
+        },
         { status: 503 }
       );
     }
 
     const parkSettings = await getParkSettings();
-    const zoneName = (reservation.zone as { name: string } | null)?.name ?? "Reserva";
+    const zoneRaw = reservation.zone as { name: string } | { name: string }[] | null;
+    const zoneName = (Array.isArray(zoneRaw) ? zoneRaw[0]?.name : zoneRaw?.name) ?? "Reserva";
+    const paidCents = reservation.paid_cents ?? 0;
+    const totalCents = reservation.total_cents ?? 0;
 
     await sendBookingConfirmation({
       guestEmail: reservation.guest_email,
       guestName: reservation.guest_name,
       zoneName,
+      pitchCode: reservation.pitch_code,
       checkIn: reservation.check_in,
       checkOut: reservation.check_out,
       checkInTime: parkSettings.check_in_time,
       checkOutTime: parkSettings.check_out_time,
-      totalCents: reservation.total_cents,
+      totalCents,
+      paidCents,
+      balanceCents: Math.max(0, totalCents - paidCents),
       reservationId: reservation.id,
-      gateAccessCode: parkSettings.gate_access_code,
+      locale: reservation.locale,
     });
 
     return NextResponse.json({

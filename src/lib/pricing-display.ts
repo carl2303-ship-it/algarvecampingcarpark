@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/constants";
+import { bcp47Locale } from "@/lib/locale-format";
 
 export interface PricingOccupancyRow {
   labelPt: string;
@@ -149,7 +150,7 @@ export const PRICING_EXTRAS: PricingExtra[] = [
 ];
 
 export function formatEuroAmount(amount: number, locale: Locale): string {
-  return new Intl.NumberFormat(locale === "pt" ? "pt-PT" : "en-GB", {
+  return new Intl.NumberFormat(bcp47Locale(locale), {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,

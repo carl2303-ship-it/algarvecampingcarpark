@@ -1,5 +1,6 @@
 import { addDays, format, startOfToday } from "date-fns";
 import { adminDateLocale } from "@/lib/admin-i18n";
+import { TOTAL_CAPACITY } from "@/lib/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type OccupancyDay = {
@@ -84,7 +85,7 @@ export async function getOccupancySeries(days = 14): Promise<OccupancyDay[]> {
       .gt("check_out", startDate),
   ]);
 
-  const totalCapacity = zones?.reduce((sum, zone) => sum + zone.capacity, 0) ?? 57;
+  const totalCapacity = zones?.reduce((sum, zone) => sum + zone.capacity, 0) ?? TOTAL_CAPACITY;
 
   return Array.from({ length: days }, (_, index) => {
     const day = addDays(today, index);

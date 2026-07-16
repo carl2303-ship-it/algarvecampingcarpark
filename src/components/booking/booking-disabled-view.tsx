@@ -3,15 +3,22 @@ import { Mail, Phone } from "lucide-react";
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { buttonVariants } from "@/components/ui/button";
-import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_RAW } from "@/lib/constants";
+import {
+  CONTACT_EMAIL,
+  CONTACT_PHONE,
+  CONTACT_PHONE_ALT,
+  CONTACT_PHONE_ALT_RAW,
+  CONTACT_PHONE_RAW,
+} from "@/lib/constants";
 import type { Locale } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
+import { localePath } from "@/lib/locale-path";
 import { cn } from "@/lib/utils";
 
 export function BookingDisabledView({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
-  const contactPath = locale === "en" ? "/en/contact" : "/contact";
-  const homePath = locale === "en" ? "/en" : "/";
+  const contactPath = localePath(locale, "/contact");
+  const homePath = localePath(locale, "/");
 
   return (
     <MarketingLayout locale={locale}>
@@ -38,6 +45,13 @@ export function BookingDisabledView({ locale }: { locale: Locale }) {
               >
                 <Phone className="h-4 w-4 shrink-0 text-primary" />
                 <span>{CONTACT_PHONE}</span>
+              </a>
+              <a
+                href={`tel:${CONTACT_PHONE_ALT_RAW}`}
+                className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3 text-sm hover:bg-muted transition-colors"
+              >
+                <Phone className="h-4 w-4 shrink-0 text-primary" />
+                <span>{CONTACT_PHONE_ALT}</span>
               </a>
             </div>
 

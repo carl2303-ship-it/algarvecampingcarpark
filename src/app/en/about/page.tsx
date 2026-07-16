@@ -1,4 +1,4 @@
-import AboutPageContent from "@/components/pages/about-page";
+﻿import AboutPageContent from "@/components/pages/about-page";
 
 export const dynamic = "force-dynamic";
 

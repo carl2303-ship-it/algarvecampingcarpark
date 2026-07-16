@@ -337,7 +337,10 @@ export function PricingManager({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {zones.map((z) => (
-                    <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
+                    <SelectItem key={z.id} value={z.id}>
+                      {z.name}
+                      {!z.active ? ` (${adminT.common.inactive})` : ""}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

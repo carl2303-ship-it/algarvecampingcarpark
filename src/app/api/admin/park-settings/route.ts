@@ -1,13 +1,18 @@
-import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getParkSettings } from "@/lib/park-settings";
+import { revalidateMarketingPaths } from "@/lib/revalidate-marketing";
 
 export const dynamic = "force-dynamic";
 
 const timeSchema = z.string().regex(/^\d{2}:\d{2}$/);
+const isoDateTimeSchema = z
+  .string()
+  .refine((value) => !Number.isNaN(Date.parse(value)), "Invalid datetime")
+  .nullable();
 
 const updateSchema = z.object({
   reception_open: timeSchema.optional(),
@@ -15,18 +20,16 @@ const updateSchema = z.object({
   check_in_time: timeSchema.optional(),
   check_out_time: timeSchema.optional(),
   gate_access_code: z.string().max(32).nullable().optional(),
+  online_booking_enabled: z.boolean().optional(),
+  online_booking_starts_at: isoDateTimeSchema.optional(),
+  online_booking_ends_at: isoDateTimeSchema.optional(),
 });
+
+const SELECT_COLUMNS =
+  "reception_open, reception_close, check_in_time, check_out_time, gate_access_code, online_booking_enabled, online_booking_starts_at, online_booking_ends_at";
 
 const REVALIDATE_PATHS = [
   "/admin/settings",
-  "/book",
-  "/en/book",
-  "/terms",
-  "/en/terms",
-  "/about",
-  "/en/about",
-  "/contact",
-  "/en/contact",
   "/admin/park-status",
   "/admin/timeline",
 ];
@@ -52,15 +55,23 @@ export async function PUT(request: Request) {
         body.gate_access_code !== undefined
           ? body.gate_access_code?.trim() || null
           : current.gate_access_code,
+      online_booking_enabled:
+        body.online_booking_enabled ?? current.online_booking_enabled,
+      online_booking_starts_at:
+        body.online_booking_starts_at !== undefined
+          ? body.online_booking_starts_at
+          : current.online_booking_starts_at,
+      online_booking_ends_at:
+        body.online_booking_ends_at !== undefined
+          ? body.online_booking_ends_at
+          : current.online_booking_ends_at,
     };
 
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("park_settings")
       .upsert({ id: true, ...merged, updated_at: new Date().toISOString() })
-      .select(
-        "reception_open, reception_close, check_in_time, check_out_time, gate_access_code"
-      )
+      .select(SELECT_COLUMNS)
       .single();
 
     if (error) {
@@ -70,6 +81,7 @@ export async function PUT(request: Request) {
     for (const path of REVALIDATE_PATHS) {
       revalidatePath(path);
     }
+    revalidateMarketingPaths(["/", "/book", "/terms", "/about", "/contact"]);
 
     return NextResponse.json({ settings: data });
   } catch (error) {

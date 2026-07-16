@@ -4,6 +4,8 @@ import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { OccupancyChart } from "@/components/admin/occupancy-chart";
+import { StaffChatPanel } from "@/components/admin/staff-chat-panel";
+import { StaffNotepadPanel } from "@/components/admin/staff-notepad-panel";
 import {
   getOccupancySeries,
   getUpcomingArrivals,
@@ -17,6 +19,7 @@ import {
 } from "@/lib/admin-i18n";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPrice } from "@/lib/pricing";
+import { TOTAL_CAPACITY } from "@/lib/constants";
 
 function ReservationList({ rows }: { rows: DashboardReservationRow[] }) {
   if (rows.length === 0) {
@@ -88,7 +91,7 @@ export default async function AdminDashboard() {
     getOccupancySeries(14),
   ]);
 
-  const totalCapacity = zones?.reduce((s, z) => s + z.capacity, 0) ?? 57;
+  const totalCapacity = zones?.reduce((s, z) => s + z.capacity, 0) ?? TOTAL_CAPACITY;
   const todayOccupancy = occupancy[0];
 
   return (
@@ -147,6 +150,11 @@ export default async function AdminDashboard() {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
+        <StaffChatPanel />
+        <StaffNotepadPanel />
       </div>
 
       <Card>

@@ -2,25 +2,33 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, MapPin, Save, Upload } from "lucide-react";
+import { Loader2, MapPin, Plus, Save, Trash2, Upload } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { adminT } from "@/lib/admin-i18n";
 import {
-  applyZoneSlugToSpot,
+  applyPitchTypeToSpot,
   getSpotMarkerClass,
   getSpotZoneSlug,
   PARK_AERIAL_IMAGE,
   PARK_AERIAL_ASPECT_CLASS,
-  type ZoneSlug,
+  spotIsOver9m,
 } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import { cn } from "@/lib/utils";
 
 function clampPercent(value: number) {
   return Math.min(100, Math.max(0, Number(value.toFixed(2))));
+}
+
+function normalizePitchCode(value: string) {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function isValidPitchCode(code: string) {
+  return /^[A-Z0-9]{1,10}$/.test(code);
 }
 
 function spotClassName(spot: PitchMapSpotRecord, selected: boolean, dragging: boolean) {
@@ -38,6 +46,7 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
   );
   const [selectedCode, setSelectedCode] = useState(initialSpots[0]?.code ?? "");
   const [filter, setFilter] = useState("");
+  const [newCode, setNewCode] = useState("");
   const [draggingCode, setDraggingCode] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -62,6 +71,65 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
     setDirty(true);
     setMessage(null);
   }, []);
+
+  function handleAddPitch() {
+    const code = normalizePitchCode(newCode);
+    if (!code) {
+      setMessage(adminT.pitchMap.addPitchEmpty);
+      return;
+    }
+    if (!isValidPitchCode(code)) {
+      setMessage(adminT.pitchMap.addPitchInvalid);
+      return;
+    }
+    if (spots.some((spot) => spot.code.toUpperCase() === code)) {
+      setMessage(adminT.pitchMap.addPitchExists);
+      return;
+    }
+
+    const pitchType = applyPitchTypeToSpot(false, true);
+    const next: PitchMapSpotRecord = {
+      code,
+      x: 50,
+      y: 50,
+      panoramic: false,
+      electric: pitchType.electric,
+      over_9m: pitchType.over_9m,
+      zone_slug: pitchType.zone_slug,
+      sort_order: spots.length + 1,
+      image_url: null,
+      width_m: null,
+      length_m: null,
+      electricity_distance_m: null,
+    };
+
+    setSpots((current) => [...current, next]);
+    setSelectedCode(code);
+    setNewCode("");
+    setDirty(true);
+    setMessage(null);
+  }
+
+  function handleRemovePitch() {
+    if (!selected) return;
+    if (spots.length <= 1) {
+      setMessage(adminT.pitchMap.removePitchLast);
+      return;
+    }
+    if (
+      !window.confirm(
+        adminT.pitchMap.removePitchConfirm.replace("{code}", selected.code)
+      )
+    ) {
+      return;
+    }
+
+    const remaining = spots.filter((spot) => spot.code !== selected.code);
+    setSpots(remaining);
+    setSelectedCode(remaining[0]?.code ?? "");
+    setDirty(true);
+    setMessage(null);
+  }
 
   const positionFromClient = useCallback((clientX: number, clientY: number) => {
     const rect = mapRef.current?.getBoundingClientRect();
@@ -133,6 +201,7 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
           y: spot.y,
           panoramic: false,
           electric: spot.electric,
+          over_9m: Boolean(spot.over_9m),
           sort_order: index + 1,
           image_url: spot.image_url ?? null,
           width_m: spot.width_m ?? null,
@@ -165,6 +234,26 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
             onChange={(event) => setFilter(event.target.value)}
             placeholder={adminT.pitchMap.filterPlaceholder}
           />
+
+          <div className="flex gap-2">
+            <Input
+              value={newCode}
+              onChange={(event) => setNewCode(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleAddPitch();
+                }
+              }}
+              placeholder={adminT.pitchMap.addPitchPlaceholder}
+              className="uppercase"
+              maxLength={10}
+            />
+            <Button type="button" variant="outline" onClick={handleAddPitch} className="shrink-0">
+              <Plus className="h-4 w-4 mr-1" />
+              {adminT.pitchMap.addPitch}
+            </Button>
+          </div>
 
           <div className="max-h-[420px] overflow-y-auto grid grid-cols-3 gap-2">
             {filteredSpots.map((spot) => (
@@ -215,20 +304,69 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                   />
                 </div>
               </div>
-              <div>
+              <div className="space-y-3 rounded-lg border p-3">
                 <Label className="text-xs">{adminT.pitchMap.pitchType}</Label>
-                <select
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                  value={selected.zone_slug ?? getSpotZoneSlug(selected)}
-                  onChange={(event) => {
-                    const zoneSlug = event.target.value as ZoneSlug;
-                    updateSpot(selected.code, applyZoneSlugToSpot(zoneSlug));
-                  }}
-                >
-                  <option value="com-eletricidade">{adminT.pitchMap.zoneWithElectricity}</option>
-                  <option value="sem-eletricidade">{adminT.pitchMap.zoneWithoutElectricity}</option>
-                  <option value="adaptada-9m">{adminT.pitchMap.zoneLongPitch}</option>
-                </select>
+                {(() => {
+                  const isOver9m = spotIsOver9m(selected);
+                  const withElectricity = Boolean(selected.electric);
+
+                  function setPitchType(nextElectricity: boolean, nextOver9m: boolean) {
+                    updateSpot(selected.code, applyPitchTypeToSpot(nextOver9m, nextElectricity));
+                  }
+
+                  return (
+                    <>
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] text-muted-foreground">
+                          {adminT.pitchMap.electricityLabel}
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPitchType(true, isOver9m)}
+                            className={cn(
+                              "flex-1 rounded-md border px-2 py-2 text-xs transition-colors",
+                              withElectricity
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
+                            {adminT.pitchMap.zoneWithElectricity}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPitchType(false, isOver9m)}
+                            className={cn(
+                              "flex-1 rounded-md border px-2 py-2 text-xs transition-colors",
+                              !withElectricity
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                                : "hover:bg-muted/50"
+                            )}
+                          >
+                            {adminT.pitchMap.zoneWithoutElectricity}
+                          </button>
+                        </div>
+                      </div>
+
+                      <label className="flex items-start gap-2 cursor-pointer rounded-md border px-2 py-2 hover:bg-muted/40">
+                        <input
+                          type="checkbox"
+                          checked={isOver9m}
+                          onChange={(event) => {
+                            setPitchType(withElectricity, event.target.checked);
+                          }}
+                          className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-input accent-primary"
+                        />
+                        <span className="text-xs leading-snug">
+                          <span className="font-medium">{adminT.pitchMap.over9mLabel}</span>
+                          <span className="block text-muted-foreground mt-0.5">
+                            {adminT.pitchMap.over9mHint}
+                          </span>
+                        </span>
+                      </label>
+                    </>
+                  );
+                })()}
               </div>
 
               <div>
@@ -323,6 +461,17 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                   {adminT.pitchMap.uploadPhoto}
                 </label>
               </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRemovePitch}
+                disabled={spots.length <= 1}
+                className="w-full text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {adminT.pitchMap.removePitch}
+              </Button>
             </div>
           )}
 

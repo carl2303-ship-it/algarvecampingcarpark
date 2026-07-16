@@ -40,13 +40,13 @@ export function GalleryCarousel({
   if (total === 0) return null;
 
   const current = images[index];
-  const alt = locale === "en" ? current.alt_en : current.alt_pt;
+  const alt = locale === "pt" ? current.alt_pt : current.alt_en;
 
   return (
     <div className="relative mx-auto max-w-5xl">
       <div className="relative overflow-hidden rounded-2xl border bg-muted shadow-lg aspect-[5/3]">
         {images.map((image, i) => {
-          const imageAlt = locale === "en" ? image.alt_en : image.alt_pt;
+          const imageAlt = locale === "pt" ? image.alt_pt : image.alt_en;
           return (
             <div
               key={image.id ?? image.src}
@@ -83,7 +83,7 @@ export function GalleryCarousel({
               size="icon"
               onClick={prev}
               className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/40 text-white hover:bg-black/60 hover:text-white h-10 w-10"
-              aria-label={locale === "en" ? "Previous image" : "Imagem anterior"}
+              aria-label={locale === "pt" ? "Imagem anterior" : "Previous image"}
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
@@ -93,7 +93,7 @@ export function GalleryCarousel({
               size="icon"
               onClick={next}
               className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/40 text-white hover:bg-black/60 hover:text-white h-10 w-10"
-              aria-label={locale === "en" ? "Next image" : "Imagem seguinte"}
+              aria-label={locale === "pt" ? "Imagem seguinte" : "Next image"}
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
@@ -114,7 +114,7 @@ export function GalleryCarousel({
                   ? "border-primary ring-2 ring-primary/30 scale-105"
                   : "border-transparent opacity-60 hover:opacity-100"
               )}
-              aria-label={locale === "en" ? image.alt_en : image.alt_pt}
+              aria-label={locale === "pt" ? image.alt_pt : image.alt_en}
               aria-current={i === index}
             >
               <Image

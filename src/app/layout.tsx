@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Área de Serviço para Autocaravanas em Armação de Pêra, Algarve. 57 lugares, vista mar, ambiente natural. Reserve online.",
+    "Área de Serviço para Autocaravanas em Armação de Pêra, Algarve. 63 lugares, vista mar, ambiente natural. Reserve online.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "https://algarvecampingcarpark.pt"
   ),
@@ -33,7 +33,6 @@ export const metadata: Metadata = {
     title: "Algarve Camping",
   },
   applicationName: "Algarve Camping Car Park",
-  themeColor: "#0e7a8c",
   icons: {
     icon: [
       { url: "/icons/app-icon.png", type: "image/png", sizes: "512x512" },
@@ -45,6 +44,10 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: true,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0e7a8c",
 };
 
 export default function RootLayout({

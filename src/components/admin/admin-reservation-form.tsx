@@ -21,7 +21,7 @@ import {
 import { ADMIN_PAYMENT_METHODS, paymentMethodLabel } from "@/lib/admin-payment-methods";
 import { adminDateLocale, adminT } from "@/lib/admin-i18n";
 import { COMPLETED_RESERVATION_STATUSES } from "@/lib/admin-reservation-status";
-import { getSpotZoneSlug } from "@/lib/park-pitch-map-defaults";
+import { getSpotZoneSlug, spotIsOver9m } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import type { Zone } from "@/types/database";
 import { formatPrice } from "@/lib/pricing";
@@ -132,6 +132,19 @@ export function AdminReservationForm({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailMessage, setEmailMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [extendCheckOut, setExtendCheckOut] = useState("");
+  const [extendSendLink, setExtendSendLink] = useState(true);
+  const [extending, setExtending] = useState(false);
+  const [extendQuoteCents, setExtendQuoteCents] = useState<number | null>(null);
+  const [extendNights, setExtendNights] = useState(0);
+  const [extendQuoteError, setExtendQuoteError] = useState<string | null>(null);
+  const [loadingExtendQuote, setLoadingExtendQuote] = useState(false);
+  const [extendMessage, setExtendMessage] = useState<string | null>(null);
+
+  const canExtend =
+    isEdit &&
+    initialReservation?.status &&
+    ["confirmed", "checked_in"].includes(initialReservation.status);
 
   const selectedSpot = sortedSpots.find((spot) => spot.code === pitchCode);
   const zoneSlug = selectedSpot ? getSpotZoneSlug(selectedSpot) : null;
@@ -200,6 +213,58 @@ export function AdminReservationForm({
       controller.abort();
     };
   }, [vehiclePlate]);
+
+  useEffect(() => {
+    if (!canExtend || !initialReservation || !extendCheckOut || !zoneId) {
+      setExtendQuoteCents(null);
+      setExtendNights(0);
+      setExtendQuoteError(null);
+      return;
+    }
+
+    if (extendCheckOut <= initialReservation.check_out) {
+      setExtendQuoteCents(null);
+      setExtendNights(0);
+      setExtendQuoteError(adminT.reservationForm.extendUnavailable);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoadingExtendQuote(true);
+    setExtendQuoteError(null);
+
+    fetch(
+      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${initialReservation.check_in}&check_out=${extendCheckOut}&num_guests=${numGuests}`,
+      { signal: controller.signal }
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.pricing?.totalCents != null) {
+          const extra = Math.max(0, data.pricing.totalCents - totalCents);
+          setExtendQuoteCents(extra);
+          const oldOut = new Date(initialReservation.check_out + "T12:00:00");
+          const newOut = new Date(extendCheckOut + "T12:00:00");
+          setExtendNights(
+            Math.max(
+              0,
+              Math.round((newOut.getTime() - oldOut.getTime()) / (1000 * 60 * 60 * 24))
+            )
+          );
+        } else {
+          setExtendQuoteCents(null);
+          setExtendQuoteError(adminT.reservationForm.extendUnavailable);
+        }
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setExtendQuoteCents(null);
+          setExtendQuoteError(adminT.reservationForm.quoteError);
+        }
+      })
+      .finally(() => setLoadingExtendQuote(false));
+
+    return () => controller.abort();
+  }, [canExtend, initialReservation, extendCheckOut, zoneId, numGuests, totalCents]);
 
   function formatStayLabel(payment: AdminReservationPayment): string {
     const from = format(new Date(payment.check_in), "dd/MM/yyyy", { locale: adminDateLocale });
@@ -374,6 +439,44 @@ export function AdminReservationForm({
     );
   }
 
+  async function handleExtend() {
+    if (!isEdit || !initialReservation?.id || !extendCheckOut) return;
+
+    setExtending(true);
+    setError(null);
+    setExtendMessage(null);
+
+    const res = await fetch(`/api/admin/reservations/${initialReservation.id}/extend`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        check_out: extendCheckOut,
+        send_payment_link: extendSendLink,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setExtending(false);
+
+    if (!res.ok) {
+      setError(typeof data.error === "string" ? data.error : adminT.reservationForm.extendError);
+      return;
+    }
+
+    const amount = formatPrice(data.extension_cents ?? 0);
+    setExtendMessage(
+      (data.extension_cents ?? 0) > 0
+        ? adminT.reservationForm.extendSuccess
+            .replace("{date}", data.check_out)
+            .replace("{amount}", amount)
+        : adminT.reservationForm.extendSuccessNoCharge.replace("{date}", data.check_out)
+    );
+    setCheckOut(data.check_out);
+    setTotalEuros(centsToEurosInput(data.total_cents ?? totalCents));
+    setFollowQuote(false);
+    setExtendCheckOut("");
+    router.refresh();
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
       {error && (
@@ -402,7 +505,7 @@ export function AdminReservationForm({
               {sortedSpots.map((spot) => (
                 <option key={spot.code} value={spot.code}>
                   {spot.code}
-                  {getSpotZoneSlug(spot) === "adaptada-9m"
+                  {spotIsOver9m(spot)
                     ? ` ${adminT.reservationForm.longPitch}`
                     : ""}
                   {spot.electric ? "" : ` ${adminT.reservationForm.noElectricity}`}
@@ -490,6 +593,86 @@ export function AdminReservationForm({
           </div>
         </CardContent>
       </Card>
+
+      {isEdit && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{adminT.reservationForm.extendTitle}</CardTitle>
+            <CardDescription>
+              {canExtend
+                ? adminT.reservationForm.extendDescription
+                : adminT.reservationForm.extendNotEligible}
+            </CardDescription>
+          </CardHeader>
+          {canExtend && (
+            <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="extend_check_out">
+                    {adminT.reservationForm.extendNewDeparture}
+                  </Label>
+                  <Input
+                    id="extend_check_out"
+                    type="date"
+                    min={checkOut || undefined}
+                    value={extendCheckOut}
+                    onChange={(event) => setExtendCheckOut(event.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex flex-col justify-end text-sm text-muted-foreground">
+                  {loadingExtendQuote && (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {adminT.common.loading}
+                    </span>
+                  )}
+                  {!loadingExtendQuote && extendQuoteError && (
+                    <span className="text-destructive">{extendQuoteError}</span>
+                  )}
+                  {!loadingExtendQuote && extendQuoteCents != null && !extendQuoteError && (
+                    <span>
+                      {adminT.reservationForm.extendQuote
+                        .replace("{amount}", formatPrice(extendQuoteCents))
+                        .replace("{nights}", String(extendNights))}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <label className="flex items-start gap-2 cursor-pointer text-sm">
+                <input
+                  type="checkbox"
+                  checked={extendSendLink}
+                  onChange={(event) => setExtendSendLink(event.target.checked)}
+                  className="mt-0.5 h-3.5 w-3.5 rounded border-input accent-primary"
+                />
+                <span>{adminT.reservationForm.extendSendLink}</span>
+              </label>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={
+                  extending ||
+                  !extendCheckOut ||
+                  extendQuoteCents == null ||
+                  Boolean(extendQuoteError) ||
+                  loadingExtendQuote
+                }
+                onClick={handleExtend}
+              >
+                {extending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {adminT.reservationForm.extendSubmit}
+              </Button>
+
+              {extendMessage && (
+                <p className="text-sm text-muted-foreground">{extendMessage}</p>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

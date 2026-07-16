@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getZoneRates } from "@/lib/availability";
-import { calculateTotalPrice } from "@/lib/pricing";
+import { quoteStayExtension } from "@/lib/stay-extension";
 import { createExtensionCheckoutSession } from "@/lib/stripe";
 import { sendExtensionPaymentLink } from "@/lib/email";
 
@@ -37,38 +36,39 @@ export async function PATCH(
       return NextResponse.json({ error: "Reserva não encontrada" }, { status: 404 });
     }
 
-    if (!["confirmed", "checked_in"].includes(reservation.status)) {
-      return NextResponse.json({ error: "Reserva não pode ser prolongada neste estado" }, { status: 400 });
-    }
+    const quote = await quoteStayExtension({
+      reservation: {
+        id: reservation.id,
+        status: reservation.status,
+        zone_id: reservation.zone_id,
+        check_in: reservation.check_in,
+        check_out: reservation.check_out,
+        total_cents: reservation.total_cents,
+        num_guests: reservation.num_guests,
+        pitch_code: reservation.pitch_code,
+      },
+      newCheckOut: body.check_out,
+    });
 
-    if (body.check_out <= reservation.check_in) {
-      return NextResponse.json({ error: "Data de partida inválida" }, { status: 400 });
-    }
-
-    if (body.check_out <= reservation.check_out) {
+    if (!quote.available) {
+      const status = quote.conflict ? 409 : 400;
       return NextResponse.json(
-        { error: "A nova data de partida deve ser posterior à atual" },
-        { status: 400 }
+        {
+          error: quote.error ?? "Não é possível prolongar",
+          conflict: quote.conflict,
+        },
+        { status }
       );
     }
 
-    const rates = await getZoneRates(reservation.zone_id);
-    const oldTotal = reservation.total_cents;
-    const newPricing = calculateTotalPrice(
-      rates,
-      reservation.check_in,
-      body.check_out,
-      reservation.num_guests
-    );
-    const extensionCents = newPricing.totalCents - oldTotal;
-
+    const extensionCents = quote.extensionCents;
     const oldCheckOut = reservation.check_out;
 
     const { error: updateError } = await supabase
       .from("reservations")
       .update({
         check_out: body.check_out,
-        total_cents: newPricing.totalCents,
+        total_cents: quote.newTotalCents,
         payment_status: extensionCents > 0 ? "partial" : reservation.payment_status,
       })
       .eq("id", id);
@@ -89,6 +89,8 @@ export async function PATCH(
           pitchCode: reservation.pitch_code ?? "—",
           oldCheckOut,
           newCheckOut: body.check_out,
+          applyOnPayment: false,
+          locale: reservation.locale ?? "pt",
         });
 
         payment_url = session.url;
@@ -110,12 +112,14 @@ export async function PATCH(
           newCheckOut: body.check_out,
           extensionCents,
           paymentUrl: session.url!,
+          locale: reservation.locale ?? "pt",
         });
       } catch (stripeError) {
         console.error("Extension Stripe session error:", stripeError);
         return NextResponse.json({
           success: true,
-          warning: "Estadia prolongada mas o link Stripe não foi enviado. Configure STRIPE_SECRET_KEY.",
+          warning:
+            "Estadia prolongada mas o link Stripe não foi enviado. Configure STRIPE_SECRET_KEY.",
           extension_cents: extensionCents,
           check_out: body.check_out,
         });
@@ -125,7 +129,7 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       check_out: body.check_out,
-      total_cents: newPricing.totalCents,
+      total_cents: quote.newTotalCents,
       extension_cents: extensionCents,
       payment_url,
     });

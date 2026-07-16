@@ -1,5 +1,3 @@
-"use client";
-
 import { ArrowRight, Info } from "lucide-react";
 import { BookCta } from "@/components/booking/book-cta";
 import { PageHero } from "@/components/marketing/sections";
@@ -8,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { formatEuroAmount, PRICING_EXTRAS, PRICING_SEASONS } from "@/lib/pricing-display";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
+import { localePath } from "@/lib/locale-path";
 import { cn } from "@/lib/utils";
 
 function PriceCell({ amount, locale }: { amount: number; locale: Locale }) {
@@ -30,8 +29,8 @@ function SeasonBlock({
     threeFourPeople: string;
   };
 }) {
-  const title = locale === "en" ? season.titleEn : season.titlePt;
-  const period = locale === "en" ? season.periodEn : season.periodPt;
+  const title = locale === "pt" ? season.titlePt : season.titleEn;
+  const period = locale === "pt" ? season.periodPt : season.periodEn;
 
   return (
     <article className="rounded-2xl border bg-card shadow-sm overflow-hidden">
@@ -49,7 +48,7 @@ function SeasonBlock({
 
       <div className="p-4 md:p-6 space-y-6">
         {season.categories.map((category) => {
-          const categoryLabel = locale === "en" ? category.labelEn : category.labelPt;
+          const categoryLabel = locale === "pt" ? category.labelPt : category.labelEn;
           const row = category.rows[0];
 
           return (
@@ -78,8 +77,7 @@ function SeasonBlock({
 
 export default function PricesPageContent({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
-  const prefix = locale === "en" ? "/en" : "";
-  const bookPath = `${prefix}/book`;
+  const bookPath = localePath(locale, "/book");
 
   const labels = {
     twoPeople: t.prices.two_people,
@@ -134,8 +132,8 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
             <p className="text-sm text-muted-foreground mb-5">{t.prices.extras_desc}</p>
             <div className="grid sm:grid-cols-2 gap-3">
               {PRICING_EXTRAS.map((extra) => {
-                const name = locale === "en" ? extra.nameEn : extra.namePt;
-                const unit = locale === "en" ? extra.unitEn : extra.unitPt;
+                const name = locale === "pt" ? extra.namePt : extra.nameEn;
+                const unit = locale === "pt" ? extra.unitPt : extra.unitEn;
                 return (
                   <div
                     key={extra.namePt}

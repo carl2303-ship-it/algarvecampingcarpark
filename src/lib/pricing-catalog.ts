@@ -1,4 +1,6 @@
 import { createPublicServerClient, getPublicSupabaseConfig } from "@/lib/supabase/public-server";
+import type { Locale } from "@/lib/constants";
+import { bcp47Locale } from "@/lib/locale-format";
 import type { Zone, ZoneRate } from "@/types/database";
 
 import type { ServiceItem } from "@/types/database";
@@ -80,8 +82,8 @@ export interface ZoneRateEntry {
 
 export type SeasonRates = ZoneRateEntry[];
 
-export function formatRatePeriod(start: string, end: string, locale: "pt" | "en"): string {
-  const fmt = new Intl.DateTimeFormat(locale === "pt" ? "pt-PT" : "en-GB", {
+export function formatRatePeriod(start: string, end: string, locale: Locale): string {
+  const fmt = new Intl.DateTimeFormat(bcp47Locale(locale), {
     day: "numeric",
     month: "short",
     year: "numeric",
