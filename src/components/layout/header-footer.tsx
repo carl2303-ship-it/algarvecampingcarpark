@@ -14,6 +14,9 @@ import {
   ADDRESS,
   CONTACT_EMAIL,
   CONTACT_PHONE,
+  CONTACT_PHONE_ALT,
+  CONTACT_PHONE_ALT_RAW,
+  CONTACT_PHONE_RAW,
   COMPLAINTS_BOOK_URL,
   MAPS_URL,
   SITE_NAME,
@@ -79,17 +82,13 @@ export function Header({ locale }: { locale: Locale }) {
 
   return (
     <header className={headerClass}>
-      <div className="container mx-auto flex h-[72px] items-center justify-between px-4">
-        <Link href={localePath("/")} className="flex items-center gap-3 group shrink-0">
-          <SiteLogo size="lg" priority className="drop-shadow-sm" />
-          <span
-            className={cn(
-              "hidden md:block text-xs max-w-[9rem] leading-snug",
-              isHome && !scrolled ? "text-white/70" : "text-muted-foreground"
-            )}
-          >
-            Armação de Pêra
-          </span>
+      <div className="container mx-auto flex h-[100px] items-center justify-between px-4">
+        <Link href={localePath("/")} className="flex items-center shrink-0">
+          <SiteLogo
+            size="lg"
+            priority
+            className="drop-shadow-sm !h-[88px] !max-w-[343px]"
+          />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-8">
@@ -125,9 +124,8 @@ export function Header({ locale }: { locale: Locale }) {
           </SheetTrigger>
           <SheetContent side="right" className="w-80">
             <div className="flex flex-col gap-1 mt-8">
-              <div className="flex items-center gap-3 mb-4 px-1">
-                <SiteLogo size="md" />
-                <span className="text-xs text-muted-foreground">Armação de Pêra</span>
+              <div className="mb-4 px-1">
+                <SiteLogo size="md" className="!h-[74px] !max-w-[281px]" />
               </div>
               {navItems.map((item) => (
                 <Link
@@ -226,9 +224,15 @@ export function Footer({ locale }: { locale: Locale }) {
                 </a>
               </li>
               <li>
-                <a href={`tel:${CONTACT_PHONE}`} className="flex items-center gap-2 hover:text-white">
+                <a href={`tel:${CONTACT_PHONE_RAW}`} className="flex items-center gap-2 hover:text-white">
                   <Phone className="h-4 w-4 shrink-0" />
                   {CONTACT_PHONE}
+                </a>
+              </li>
+              <li>
+                <a href={`tel:${CONTACT_PHONE_ALT_RAW}`} className="flex items-center gap-2 hover:text-white">
+                  <Phone className="h-4 w-4 shrink-0" />
+                  {CONTACT_PHONE_ALT}
                 </a>
               </li>
               <li>

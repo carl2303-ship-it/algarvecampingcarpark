@@ -402,7 +402,9 @@ export function AdminReservationForm({
               {sortedSpots.map((spot) => (
                 <option key={spot.code} value={spot.code}>
                   {spot.code}
-                  {spot.panoramic ? ` ${adminT.reservationForm.panoramic}` : ""}
+                  {getSpotZoneSlug(spot) === "adaptada-9m"
+                    ? ` ${adminT.reservationForm.longPitch}`
+                    : ""}
                   {spot.electric ? "" : ` ${adminT.reservationForm.noElectricity}`}
                 </option>
               ))}

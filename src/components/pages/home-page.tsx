@@ -2,11 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
+  Caravan,
   ChevronDown,
   MapPin,
-  Tent,
+  Phone,
   TreePine,
-  Waves,
   Zap,
 } from "lucide-react";
 import { BookCta } from "@/components/booking/book-cta";
@@ -17,6 +17,10 @@ import { CTABanner } from "@/components/marketing/cta-banner";
 import { SectionHeading } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import {
+  CONTACT_PHONE,
+  CONTACT_PHONE_ALT,
+  CONTACT_PHONE_ALT_RAW,
+  CONTACT_PHONE_RAW,
   EXPERIENCE_IMAGE,
   GPS_DECIMAL,
   GPS_DMS,
@@ -35,7 +39,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
 
   const features = [
     {
-      icon: Tent,
+      icon: Caravan,
       title: t.home.features.capacity,
       description: t.home.features.capacity_desc,
     },
@@ -45,9 +49,9 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
       description: t.home.features.nature_desc,
     },
     {
-      icon: Waves,
-      title: t.home.features.sea,
-      description: t.home.features.sea_desc,
+      icon: Zap,
+      title: t.home.features.electricity,
+      description: t.home.features.electricity_desc,
     },
     {
       icon: MapPin,
@@ -59,7 +63,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
   return (
     <MarketingLayout locale={locale}>
       {/* Hero */}
-      <section className="relative min-h-[100svh] flex items-center overflow-hidden -mt-[72px] pt-[72px]">
+      <section className="relative min-h-[100svh] flex items-center overflow-hidden -mt-[100px] pt-[100px]">
         <Image
           src={HERO_IMAGE}
           alt="Algarve Camping Car Park — vista aérea do parque"
@@ -122,7 +126,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
               label={t.home.stats.area}
             />
             <StatItem value="2020" label={t.home.stats.since} />
-            <StatItem value="360°" label={t.home.stats.view} />
+            <StatItem value="6A · 10A" label={t.home.stats.electricity} />
           </div>
         </div>
       </section>
@@ -161,10 +165,8 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
                   <Zap className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">16A · Água · Esgotos</p>
-                  <p className="text-xs text-muted-foreground">
-                    {locale === "pt" ? "Serviços completos" : "Full facilities"}
-                  </p>
+                  <p className="font-semibold text-sm">{t.home.experience_services}</p>
+                  <p className="text-xs text-muted-foreground">{t.home.experience_services_desc}</p>
                 </div>
               </div>
             </div>
@@ -209,6 +211,22 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
                   </li>
                 ))}
               </ul>
+              <div className="mb-8 space-y-2 text-muted-foreground">
+                <a
+                  href={`tel:${CONTACT_PHONE_RAW}`}
+                  className="flex items-center gap-2 hover:text-primary transition-colors"
+                >
+                  <Phone className="h-4 w-4 shrink-0" />
+                  {CONTACT_PHONE}
+                </a>
+                <a
+                  href={`tel:${CONTACT_PHONE_ALT_RAW}`}
+                  className="flex items-center gap-2 hover:text-primary transition-colors"
+                >
+                  <Phone className="h-4 w-4 shrink-0" />
+                  {CONTACT_PHONE_ALT}
+                </a>
+              </div>
               <div className="mb-8 space-y-1 text-muted-foreground">
                 <p>
                   <span className="font-medium text-foreground">GPS:</span> {GPS_DECIMAL}

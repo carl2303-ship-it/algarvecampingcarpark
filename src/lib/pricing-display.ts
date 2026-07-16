@@ -35,8 +35,6 @@ export interface PricingExtra {
   emoji: string;
 }
 
-export const PREMIUM_SURCHARGE_EUR = 1;
-
 export const PRICING_SEASONS: PricingSeasonBlock[] = [
   {
     id: "august",
@@ -157,8 +155,4 @@ export function formatEuroAmount(amount: number, locale: Locale): string {
     minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(amount);
-}
-
-export function premiumPrice(base: number): number {
-  return base + PREMIUM_SURCHARGE_EUR;
 }

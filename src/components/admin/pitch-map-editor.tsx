@@ -8,7 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { adminT } from "@/lib/admin-i18n";
-import { getSpotMarkerClass, getSpotZoneSlug, PARK_AERIAL_IMAGE, PARK_AERIAL_ASPECT_CLASS } from "@/lib/park-pitch-map-defaults";
+import {
+  applyZoneSlugToSpot,
+  getSpotMarkerClass,
+  getSpotZoneSlug,
+  PARK_AERIAL_IMAGE,
+  PARK_AERIAL_ASPECT_CLASS,
+  type ZoneSlug,
+} from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import { cn } from "@/lib/utils";
 
@@ -124,12 +131,13 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
           code: spot.code,
           x: spot.x,
           y: spot.y,
-          panoramic: spot.panoramic,
+          panoramic: false,
           electric: spot.electric,
           sort_order: index + 1,
           image_url: spot.image_url ?? null,
           width_m: spot.width_m ?? null,
           length_m: spot.length_m ?? null,
+          electricity_distance_m: spot.electricity_distance_m ?? null,
           zone_slug: spot.zone_slug ?? getSpotZoneSlug(spot),
         })),
       }),
@@ -207,49 +215,38 @@ export function PitchMapEditor({ initialSpots }: { initialSpots: PitchMapSpotRec
                   />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={selected.panoramic}
-                  onChange={(event) => {
-                    const panoramic = event.target.checked;
-                    updateSpot(selected.code, {
-                      panoramic,
-                      zone_slug: getSpotZoneSlug({ ...selected, panoramic }),
-                    });
-                  }}
-                />
-                {adminT.pitchMap.panoramic}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={selected.electric}
-                  onChange={(event) => {
-                    const electric = event.target.checked;
-                    updateSpot(selected.code, {
-                      electric,
-                      zone_slug: getSpotZoneSlug({ ...selected, electric }),
-                    });
-                  }}
-                />
-                {adminT.pitchMap.withElectricity}
-              </label>
-
               <div>
-                <Label className="text-xs">{adminT.pitchMap.bookingZone}</Label>
+                <Label className="text-xs">{adminT.pitchMap.pitchType}</Label>
                 <select
                   className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                   value={selected.zone_slug ?? getSpotZoneSlug(selected)}
-                  onChange={(event) =>
-                    updateSpot(selected.code, { zone_slug: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const zoneSlug = event.target.value as ZoneSlug;
+                    updateSpot(selected.code, applyZoneSlugToSpot(zoneSlug));
+                  }}
                 >
                   <option value="com-eletricidade">{adminT.pitchMap.zoneWithElectricity}</option>
                   <option value="sem-eletricidade">{adminT.pitchMap.zoneWithoutElectricity}</option>
-                  <option value="premium-vista-mar">{adminT.pitchMap.zonePremium}</option>
-                  <option value="premium-sem-eletricidade">{adminT.pitchMap.zonePremiumNoElectric}</option>
+                  <option value="adaptada-9m">{adminT.pitchMap.zoneLongPitch}</option>
                 </select>
+              </div>
+
+              <div>
+                <Label className="text-xs">{adminT.pitchMap.electricityDistance}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  placeholder={adminT.pitchMap.electricityDistancePlaceholder}
+                  value={selected.electricity_distance_m ?? ""}
+                  onChange={(event) =>
+                    updateSpot(selected.code, {
+                      electricity_distance_m: event.target.value
+                        ? Number(event.target.value)
+                        : null,
+                    })
+                  }
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

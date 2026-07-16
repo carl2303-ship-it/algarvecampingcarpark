@@ -34,10 +34,10 @@ export const metadata: Metadata = {
   themeColor: "#0e7a8c",
   icons: {
     icon: [
-      { url: "/icons/app-icon.png", type: "image/png" },
+      { url: "/icons/app-icon.png", type: "image/png", sizes: "512x512" },
       { url: "/favicon.png", type: "image/png", sizes: "32x32" },
     ],
-    apple: "/icons/app-icon.png",
+    apple: [{ url: "/icons/app-icon.png", type: "image/png", sizes: "180x180" }],
     shortcut: "/favicon.png",
   },
   formatDetection: {

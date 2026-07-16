@@ -2,7 +2,7 @@ import { Mail, MessageCircle, Phone } from "lucide-react";
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { SocialIcon } from "@/components/brand/social-links";
-import { CONTACT_EMAIL, CONTACT_PHONE, FACEBOOK_URL, INSTAGRAM_URL, MAPS_URL } from "@/lib/constants";
+import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_ALT, CONTACT_PHONE_ALT_RAW, CONTACT_PHONE_RAW, FACEBOOK_URL, INSTAGRAM_URL, MAPS_URL } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 
@@ -21,7 +21,14 @@ export default function ContactPageContent({ locale }: { locale: Locale }) {
       key: "phone",
       label: t.contact.phone_label,
       value: CONTACT_PHONE,
-      href: `tel:${CONTACT_PHONE}`,
+      href: `tel:${CONTACT_PHONE_RAW}`,
+      icon: <Phone className="h-6 w-6" />,
+    },
+    {
+      key: "phone-alt",
+      label: t.contact.phone_alt_label,
+      value: CONTACT_PHONE_ALT,
+      href: `tel:${CONTACT_PHONE_ALT_RAW}`,
       icon: <Phone className="h-6 w-6" />,
     },
     {

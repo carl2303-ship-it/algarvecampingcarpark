@@ -25,7 +25,7 @@ export function FooterBrandRow({ locale }: { locale: Locale }) {
 
   return (
     <div className="flex flex-wrap items-center gap-5 sm:gap-6">
-      <SiteLogo size="lg" className="shrink-0 !h-[88px] !w-[88px]" />
+      <SiteLogo size="lg" className="shrink-0 !h-[88px] !w-auto !max-w-[320px]" />
       <div className="flex items-center gap-4 sm:gap-5">
         {partnerLogos.map((logo) => (
           <Image

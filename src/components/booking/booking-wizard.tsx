@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { format, addDays, startOfToday } from "date-fns";
 import { pt, enUS } from "date-fns/locale";
-import { CalendarIcon, Loader2, MapPin, Zap, Waves } from "lucide-react";
+import { CalendarIcon, Caravan, Loader2, MapPin, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +48,9 @@ export function BookingWizard({
   const [vehiclePlate, setVehiclePlate] = useState("");
   const [numGuests, setNumGuests] = useState(2);
   const [notes, setNotes] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const termsPath = locale === "en" ? "/en/terms" : "/terms";
 
   useEffect(() => {
     if (!preferredSpot) return;
@@ -123,7 +127,7 @@ export function BookingWizard({
   }
 
   const zoneIcon = (slug: string) => {
-    if (slug.includes("premium")) return <Waves className="h-5 w-5" />;
+    if (slug.includes("adaptada") || slug.includes("9m")) return <Caravan className="h-5 w-5" />;
     if (slug.includes("eletricidade") && !slug.includes("sem")) return <Zap className="h-5 w-5" />;
     return <MapPin className="h-5 w-5" />;
   };
@@ -366,9 +370,43 @@ export function BookingWizard({
                 rows={3}
               />
             </div>
+            <div className="rounded-xl border bg-muted/40 p-4 space-y-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">{tr.book.terms_notice_title}</p>
+              <ul className="space-y-2 list-disc pl-5">
+                <li>{tr.book.terms_refund_fees}</li>
+                <li>{tr.book.terms_data_verification}</li>
+              </ul>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(event) => setAcceptedTerms(event.target.checked)}
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
+                />
+                <span>
+                  {locale === "en" ? (
+                    <>
+                      I have read and accept the{" "}
+                      <Link href={termsPath} className="text-primary underline underline-offset-2">
+                        {tr.book.terms_link}
+                      </Link>
+                      , including the refund policy and data verification.
+                    </>
+                  ) : (
+                    <>
+                      Li e aceito os{" "}
+                      <Link href={termsPath} className="text-primary underline underline-offset-2">
+                        {tr.book.terms_link}
+                      </Link>{" "}
+                      de reserva, incluindo a política de reembolsos e verificação de dados.
+                    </>
+                  )}
+                </span>
+              </label>
+            </div>
             <Button
               onClick={submitBooking}
-              disabled={loading || !guestName || !guestEmail || !guestPhone}
+              disabled={loading || !guestName || !guestEmail || !guestPhone || !acceptedTerms}
               className="w-full"
               size="lg"
             >

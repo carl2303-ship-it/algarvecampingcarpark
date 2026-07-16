@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { ArrowRight, Ruler, Zap, ZapOff, Waves } from "lucide-react";
+import { ArrowRight, Cable, Ruler, Zap, ZapOff } from "lucide-react";
 import { BookCta } from "@/components/booking/book-cta";
 import {
   Dialog,
@@ -63,6 +63,15 @@ function formatDimensions(
     : `${labels.width}: ${width} ${labels.separator} ${labels.length}: ${length}`;
 }
 
+function zoneLabelForSlug(
+  zoneSlug: ReturnType<typeof getSpotZoneSlug>,
+  mapT: ReturnType<typeof getTranslations>["about"]["pitch_map"]
+) {
+  if (zoneSlug === "adaptada-9m") return mapT.zone_long_pitch;
+  if (zoneSlug === "sem-eletricidade") return mapT.zone_no_electric;
+  return mapT.zone_electric;
+}
+
 function SpotDetailDialog({
   locale,
   spot,
@@ -86,25 +95,15 @@ function SpotDetailDialog({
     separator: mapT.dimensions_separator,
   });
   const zoneSlug = getSpotZoneSlug(spot);
-  const zoneLabel =
-    zoneSlug === "premium-vista-mar"
-      ? mapT.zone_premium
-      : zoneSlug === "premium-sem-eletricidade"
-        ? mapT.zone_premium_no_electric
-        : zoneSlug === "sem-eletricidade"
-          ? mapT.zone_no_electric
-          : mapT.zone_electric;
-
+  const zoneLabel = zoneLabelForSlug(zoneSlug, mapT);
   const bookHref = `${prefix}/book?pitch=${encodeURIComponent(spot.code)}`;
   const visualType = getSpotVisualType(spot);
   const traitLabel =
-    visualType === "panoramic-electric"
-      ? mapT.panoramic_electric
-      : visualType === "panoramic-no-electric"
-        ? mapT.panoramic_no_electric
-        : visualType === "electric"
-          ? mapT.electric
-          : mapT.no_electric;
+    visualType === "long-pitch"
+      ? mapT.long_pitch
+      : visualType === "electric"
+        ? mapT.electric
+        : mapT.no_electric;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -128,15 +127,13 @@ function SpotDetailDialog({
         <div className="p-6 space-y-4">
           <DialogHeader className="text-left space-y-2">
             <DialogTitle className="font-heading text-2xl">{spot.code}</DialogTitle>
-            <DialogDescription className="sr-only">
-              {spot.code}
-            </DialogDescription>
+            <DialogDescription className="sr-only">{spot.code}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2 text-sm text-muted-foreground">
             <p className="flex items-center gap-2">
-              {visualType === "panoramic-electric" || visualType === "panoramic-no-electric" ? (
-                <Waves className="h-4 w-4 text-emerald-600" />
+              {visualType === "long-pitch" ? (
+                <Cable className="h-4 w-4 text-amber-600" />
               ) : visualType === "electric" ? (
                 <Zap className="h-4 w-4 text-red-500" />
               ) : (
@@ -144,14 +141,23 @@ function SpotDetailDialog({
               )}
               <span>{traitLabel}</span>
             </p>
-                <p>{zoneLabel}</p>
-                {dimensions && (
-                  <p className="flex items-center gap-2">
-                    <Ruler className="h-4 w-4" />
-                    {dimensions}
-                  </p>
+            <p>{zoneLabel}</p>
+            {spot.electricity_distance_m != null && (
+              <p className="flex items-center gap-2">
+                <Cable className="h-4 w-4" />
+                {mapT.electricity_distance.replace(
+                  "{distance}",
+                  String(spot.electricity_distance_m)
                 )}
-              </div>
+              </p>
+            )}
+            {dimensions && (
+              <p className="flex items-center gap-2">
+                <Ruler className="h-4 w-4" />
+                {dimensions}
+              </p>
+            )}
+          </div>
 
           <BookCta locale={locale} href={bookHref} className={cn(buttonVariants({ size: "lg" }), "w-full")}>
             {mapT.reserve}
@@ -215,8 +221,7 @@ export function ParkPitchMap({
           [
             ["electric", mapT.legend_electric],
             ["no-electric", mapT.legend_no_electric],
-            ["panoramic-electric", mapT.legend_panoramic_electric],
-            ["panoramic-no-electric", mapT.legend_panoramic_no_electric],
+            ["long-pitch", mapT.legend_long_pitch],
           ] as const satisfies ReadonlyArray<[SpotVisualType, string]>
         ).map(([type, label]) => (
           <span key={type} className="inline-flex items-center gap-2">
@@ -230,9 +235,7 @@ export function ParkPitchMap({
         locale={locale}
         spot={selectedSpot}
         open={selectedCode !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedCode(null);
-        }}
+        onOpenChange={(open) => !open && setSelectedCode(null)}
       />
     </div>
   );

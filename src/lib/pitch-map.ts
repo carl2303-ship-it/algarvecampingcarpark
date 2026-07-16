@@ -6,7 +6,7 @@ export type PitchMapSpotRecord = PitchMapSpot & {
 };
 
 const SPOT_COLUMNS =
-  "code, x, y, panoramic, electric, sort_order, image_url, width_m, length_m, zone_slug, category, max_amperage, status";
+  "code, x, y, panoramic, electric, sort_order, image_url, width_m, length_m, zone_slug, electricity_distance_m, category, max_amperage, status";
 
 function toSpot(row: {
   code: string;
@@ -19,6 +19,7 @@ function toSpot(row: {
   width_m?: number | string | null;
   length_m?: number | string | null;
   zone_slug?: string | null;
+  electricity_distance_m?: number | string | null;
   category?: string | null;
   max_amperage?: number;
   status?: "available" | "occupied" | "maintenance";
@@ -34,6 +35,8 @@ function toSpot(row: {
     width_m: row.width_m != null ? Number(row.width_m) : null,
     length_m: row.length_m != null ? Number(row.length_m) : null,
     zone_slug: row.zone_slug ?? null,
+    electricity_distance_m:
+      row.electricity_distance_m != null ? Number(row.electricity_distance_m) : null,
     category: row.category ?? null,
     max_amperage: row.max_amperage != null ? Number(row.max_amperage) : undefined,
     status: row.status ?? "available",

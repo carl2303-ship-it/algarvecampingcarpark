@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/supabase/server";
 import { getPitchMapSpotsAdmin } from "@/lib/pitch-map";
-import { getSpotZoneSlug, ZONE_SLUGS } from "@/lib/park-pitch-map-defaults";
+import {
+  applyZoneSlugToSpot,
+  getSpotZoneSlug,
+  ZONE_SLUGS,
+} from "@/lib/park-pitch-map-defaults";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +28,13 @@ const spotSchema = z.object({
   code: z.string().min(1).max(10),
   x: z.number().min(0).max(100),
   y: z.number().min(0).max(100),
-  panoramic: z.boolean(),
-  electric: z.boolean(),
+  panoramic: z.boolean().optional(),
+  electric: z.boolean().optional(),
   sort_order: z.number().int().optional(),
   image_url: z.string().nullable().optional(),
   width_m: z.number().positive().nullable().optional(),
   length_m: z.number().positive().nullable().optional(),
+  electricity_distance_m: z.number().min(0).nullable().optional(),
   zone_slug: z.enum(ZONE_SLUGS).nullable().optional(),
 });
 
@@ -47,18 +52,25 @@ export async function PUT(request: Request) {
     const supabase = createAdminClient();
 
     const rows = spots.map((spot, index) => {
-      const zone_slug =
-        spot.zone_slug ?? getSpotZoneSlug({ panoramic: spot.panoramic, electric: spot.electric });
+      const zone_slug = getSpotZoneSlug({
+        electric: spot.electric ?? true,
+        zone_slug: spot.zone_slug,
+      });
+      const derived = applyZoneSlugToSpot(zone_slug);
       return {
         code: spot.code,
         x: Number(spot.x.toFixed(2)),
         y: Number(spot.y.toFixed(2)),
-        panoramic: spot.panoramic,
-        electric: spot.electric,
+        panoramic: false,
+        electric: derived.electric,
         sort_order: spot.sort_order ?? index + 1,
         image_url: spot.image_url ?? null,
         width_m: spot.width_m != null ? Number(spot.width_m.toFixed(2)) : null,
         length_m: spot.length_m != null ? Number(spot.length_m.toFixed(2)) : null,
+        electricity_distance_m:
+          spot.electricity_distance_m != null
+            ? Number(spot.electricity_distance_m.toFixed(1))
+            : null,
         zone_slug,
       };
     });

@@ -63,6 +63,10 @@ const termsPt: TermsContent = {
           label: 'Cancelamento de Última Hora ou "No-Show"',
           text: "Cancelamentos com menos de 48 horas de antecedência ou o não comparecimento no dia estipulado não conferem direito a qualquer reembolso.",
         },
+        {
+          label: "Taxas do organismo de pagamento",
+          text: "Em caso de reembolso, serão deduzidas as taxas cobradas pelo organismo de pagamento (Stripe) sobre a transação, não sendo estas reembolsáveis pelo parque.",
+        },
       ],
     },
     {
@@ -70,6 +74,13 @@ const termsPt: TermsContent = {
       paragraphs: [
         "Os hóspedes podem solicitar a alteração das datas da sua reserva sem qualquer custo, desde que o façam com um aviso prévio de pelo menos 3 dias e mediante a disponibilidade de lugares no parque para as novas datas pretendidas.",
         "Se as novas datas corresponderem a uma época com tarifário diferente (ex: passagem de época baixa para época alta), o cliente terá de pagar a respectiva diferença de valor.",
+      ],
+    },
+    {
+      title: "5. Exactidão dos Dados do Cliente",
+      paragraphs: [
+        "O cliente é responsável pela exactidão e veracidade de todos os dados fornecidos aquando da reserva (nome, contactos, matrícula do veículo, número de hóspedes, datas, etc.).",
+        "A exactidão das informações será verificada pelos responsáveis do parque aquando do check-in. Dados incorrectos ou incompletos podem impedir o acesso ao parque ou implicar ajustes ao valor da estadia.",
       ],
     },
   ],
@@ -119,6 +130,10 @@ const termsEn: TermsContent = {
           label: 'Last-Minute Cancellation or "No-Show"',
           text: "Cancellations less than 48 hours in advance or failure to arrive on the scheduled date do not entitle the customer to any refund.",
         },
+        {
+          label: "Payment processor fees",
+          text: "In the event of a refund, fees charged by the payment processor (Stripe) on the transaction will be deducted and are not refundable by the park.",
+        },
       ],
     },
     {
@@ -126,6 +141,13 @@ const termsEn: TermsContent = {
       paragraphs: [
         "Guests may request a change to their booking dates at no extra cost, provided they give at least 3 days' notice and subject to pitch availability for the new dates requested.",
         "If the new dates fall in a season with a different rate (e.g. moving from low to high season), the customer must pay the corresponding price difference.",
+      ],
+    },
+    {
+      title: "5. Accuracy of Customer Information",
+      paragraphs: [
+        "The customer is responsible for the accuracy and truthfulness of all information provided when booking (name, contact details, vehicle registration, number of guests, dates, etc.).",
+        "The accuracy of this information will be verified by the park managers at check-in. Incorrect or incomplete data may prevent access to the park or require adjustments to the stay charges.",
       ],
     },
   ],
@@ -136,7 +158,7 @@ const termsEn: TermsContent = {
 function buildHoursSection(locale: Locale, settings: ParkSettings): TermsSection {
   if (locale === "en") {
     return {
-      title: "5. Check-in, Check-out and Stay Extension",
+      title: "6. Check-in, Check-out and Stay Extension",
       list: [
         {
           label: "Check-in Time",
@@ -155,7 +177,7 @@ function buildHoursSection(locale: Locale, settings: ParkSettings): TermsSection
   }
 
   return {
-    title: "5. Check-in, Check-out e Prolongamento da Estadia",
+    title: "6. Check-in, Check-out e Prolongamento da Estadia",
     list: [
       {
         label: "Horário de Check-in",

@@ -6,13 +6,7 @@ import { BookCta } from "@/components/booking/book-cta";
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  formatEuroAmount,
-  premiumPrice,
-  PRICING_EXTRAS,
-  PRICING_SEASONS,
-  PREMIUM_SURCHARGE_EUR,
-} from "@/lib/pricing-display";
+import { formatEuroAmount, PRICING_EXTRAS, PRICING_SEASONS } from "@/lib/pricing-display";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -35,8 +29,6 @@ function SeasonBlock({
   labels: {
     twoPeople: string;
     threeFourPeople: string;
-    premiumTitle: string;
-    premiumElectricNote: string;
   };
 }) {
   const title = locale === "en" ? season.titleEn : season.titlePt;
@@ -80,28 +72,6 @@ function SeasonBlock({
             </div>
           );
         })}
-
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <h3 className="font-heading font-semibold text-primary mb-1">{labels.premiumTitle}</h3>
-          <p className="text-xs text-muted-foreground mb-3">{labels.premiumElectricNote}</p>
-          {(() => {
-            const electric = season.categories.find((c) => c.id === "electric");
-            if (!electric) return null;
-            const row = electric.rows[0];
-            return (
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-background/80 p-3 text-center">
-                  <p className="text-muted-foreground text-xs mb-1">{labels.twoPeople}</p>
-                  <PriceCell amount={premiumPrice(row.twoPeople)} locale={locale} />
-                </div>
-                <div className="rounded-lg bg-background/80 p-3 text-center">
-                  <p className="text-muted-foreground text-xs mb-1">{labels.threeFourPeople}</p>
-                  <PriceCell amount={premiumPrice(row.threeFourPeople)} locale={locale} />
-                </div>
-              </div>
-            );
-          })()}
-        </div>
       </div>
     </article>
   );
@@ -115,11 +85,6 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
   const labels = {
     twoPeople: t.prices.two_people,
     threeFourPeople: t.prices.three_four_people,
-    premiumTitle: t.prices.premium_zone,
-    premiumElectricNote: t.prices.premium_electric_note.replace(
-      "{amount}",
-      formatEuroAmount(PREMIUM_SURCHARGE_EUR, locale)
-    ),
   };
 
   return (
