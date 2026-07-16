@@ -164,6 +164,9 @@ const translations = {
       note: "Preços por noite, sem especificar o ano. Para reservar, o sistema calcula o total exacto no momento da reserva.",
       cta: "Reservar com preço em tempo real",
       updated: "Preços actualizados",
+      exclusive_alert_title: "Parque exclusivo para camping-cars",
+      exclusive_alert:
+        "Este parque é exclusivo para camping-cars (autocaravanas). Não são permitidas caravanas nem tendas.",
     },
     book: {
       title: "Reservar o seu lugar",
@@ -221,12 +224,16 @@ const translations = {
     },
     install: {
       title: "Instale a app no seu telemóvel",
+      desktop_title: "Instale a app no seu computador",
       android_desc: "Acesso rápido às reservas, preçário e contactos — como uma app nativa.",
+      desktop_desc: "Acesso rápido às reservas, preçário e contactos — como uma aplicação no ambiente de trabalho.",
       android_manual: "No Chrome: menu ⋮ → «Instalar aplicação» ou «Adicionar ao ecrã principal».",
+      desktop_manual: "No Chrome ou Edge: ícone de instalação na barra de endereço, ou menu ⋮ → «Instalar aplicação».",
       ios_desc: "Adicione ao ecrã principal para aceder rapidamente, sem abrir o browser.",
       ios_step1: "Toque em Partilhar no Safari",
       ios_step2: "Escolha «Adicionar ao ecrã principal»",
       install_btn: "Instalar app",
+      installing: "A instalar…",
       later: "Agora não",
       dismiss: "Fechar",
     },
@@ -393,6 +400,9 @@ const translations = {
       note: "Nightly rates without a specific year. When booking, the system calculates the exact total at checkout.",
       cta: "Book with live pricing",
       updated: "Updated prices",
+      exclusive_alert_title: "Park exclusive to motorhomes",
+      exclusive_alert:
+        "This park is exclusive to camping-cars (motorhomes). Caravans and tents are not allowed.",
     },
     book: {
       title: "Book your pitch",
@@ -450,12 +460,17 @@ const translations = {
     },
     install: {
       title: "Install the app on your phone",
+      desktop_title: "Install the app on your computer",
       android_desc: "Quick access to bookings, prices and contacts — just like a native app.",
+      desktop_desc: "Quick access to bookings, prices and contacts — like a desktop app.",
       android_manual: 'In Chrome: menu ⋮ → "Install app" or "Add to Home screen".',
+      desktop_manual:
+        'In Chrome or Edge: use the install icon in the address bar, or menu ⋮ → "Install app".',
       ios_desc: "Add to your home screen for fast access without opening the browser.",
       ios_step1: "Tap Share in Safari",
       ios_step2: 'Choose "Add to Home Screen"',
       install_btn: "Install app",
+      installing: "Installing…",
       later: "Not now",
       dismiss: "Close",
     },

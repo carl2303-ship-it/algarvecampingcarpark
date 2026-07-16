@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import { BookCta } from "@/components/booking/book-cta";
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
@@ -93,6 +92,21 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
 
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 max-w-3xl space-y-8">
+          <aside
+            role="alert"
+            className="rounded-2xl border border-amber-500/40 bg-amber-50 px-5 py-4 text-amber-950 shadow-sm"
+          >
+            <div className="flex gap-3">
+              <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" aria-hidden />
+              <div>
+                <p className="font-heading font-semibold">{t.prices.exclusive_alert_title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-amber-900/90">
+                  {t.prices.exclusive_alert}
+                </p>
+              </div>
+            </div>
+          </aside>
+
           {PRICING_SEASONS.map((season) => (
             <SeasonBlock key={season.id} locale={locale} season={season} labels={labels} />
           ))}

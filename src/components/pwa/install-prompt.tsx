@@ -10,51 +10,77 @@ import {
   dismissInstallPrompt,
   getInstallPlatform,
   isDismissedRecently,
-  isMobileDevice,
   isStandaloneMode,
+  PWA_DISMISS_KEY,
   registerServiceWorker,
   type InstallPlatform,
 } from "@/lib/pwa";
+import {
+  getDeferredInstallPrompt,
+  promptAppInstall,
+} from "@/lib/pwa-install";
 import { cn } from "@/lib/utils";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
 
 export function InstallPrompt({ locale }: { locale: Locale }) {
   const t = getTranslations(locale).install;
   const [visible, setVisible] = useState(false);
   const [platform, setPlatform] = useState<InstallPlatform>("other");
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [canOneClickInstall, setCanOneClickInstall] = useState(false);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
-    registerServiceWorker();
+    void registerServiceWorker();
 
-    if (isStandaloneMode() || isDismissedRecently() || !isMobileDevice()) return;
+    if (isStandaloneMode()) return;
+
+    const forceInstall =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("install");
+    if (forceInstall) {
+      localStorage.removeItem(PWA_DISMISS_KEY);
+    } else if (isDismissedRecently()) {
+      return;
+    }
 
     const detected = getInstallPlatform();
-    if (detected === "other") return;
-
     setPlatform(detected);
 
-    if (detected === "android") {
-      const onBeforeInstall = (e: Event) => {
-        e.preventDefault();
-        setDeferredPrompt(e as BeforeInstallPromptEvent);
+    const syncDeferred = () => {
+      const deferred = getDeferredInstallPrompt();
+      if (deferred) {
+        setCanOneClickInstall(true);
+        if (detected !== "ios") {
+          setPlatform(detected === "desktop" ? "desktop" : "android");
+        }
         setVisible(true);
-      };
-      const fallback = window.setTimeout(() => setVisible(true), 2500);
-      window.addEventListener("beforeinstallprompt", onBeforeInstall);
+      }
+    };
+
+    syncDeferred();
+    window.addEventListener("accp-install-ready", syncDeferred);
+    window.addEventListener("beforeinstallprompt", syncDeferred);
+
+    // iOS: Apple does not allow one-click install — show Share steps
+    if (detected === "ios") {
+      const timer = window.setTimeout(() => setVisible(true), 1500);
       return () => {
-        window.clearTimeout(fallback);
-        window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+        window.clearTimeout(timer);
+        window.removeEventListener("accp-install-ready", syncDeferred);
+        window.removeEventListener("beforeinstallprompt", syncDeferred);
       };
     }
 
-    // iOS: no beforeinstallprompt — show instructions after short delay
-    const timer = window.setTimeout(() => setVisible(true), 2000);
-    return () => window.clearTimeout(timer);
+    // Android / desktop: show as soon as one-click is ready, or after a short wait
+    const fallback = window.setTimeout(() => {
+      syncDeferred();
+      setVisible(true);
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(fallback);
+      window.removeEventListener("accp-install-ready", syncDeferred);
+      window.removeEventListener("beforeinstallprompt", syncDeferred);
+    };
   }, []);
 
   function handleDismiss() {
@@ -63,17 +89,29 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
   }
 
   async function handleInstall() {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-    if (outcome === "accepted") setVisible(false);
-    else handleDismiss();
+    setInstalling(true);
+    const outcome = await promptAppInstall();
+    setInstalling(false);
+
+    if (outcome === "accepted") {
+      setVisible(false);
+      setCanOneClickInstall(false);
+      return;
+    }
+
+    if (outcome === "dismissed") {
+      handleDismiss();
+      return;
+    }
+
+    // Prompt not available yet — keep banner; user may use browser menu
+    setCanOneClickInstall(Boolean(getDeferredInstallPrompt()));
   }
 
   if (!visible) return null;
 
   const isIos = platform === "ios";
+  const isDesktop = platform === "desktop" || platform === "other";
 
   return (
     <div
@@ -93,7 +131,7 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <p id="pwa-install-title" className="font-heading font-semibold leading-snug">
-                {t.title}
+                {isDesktop ? t.desktop_title : t.title}
               </p>
               <button
                 type="button"
@@ -105,7 +143,7 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
               </button>
             </div>
             <p id="pwa-install-desc" className="mt-1 text-sm text-muted-foreground leading-relaxed">
-              {isIos ? t.ios_desc : t.android_desc}
+              {isIos ? t.ios_desc : isDesktop ? t.desktop_desc : t.android_desc}
             </p>
 
             {isIos ? (
@@ -119,13 +157,21 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
                   <span>{t.ios_step2}</span>
                 </li>
               </ol>
-            ) : deferredPrompt ? (
-              <Button className="mt-3 w-full" onClick={handleInstall}>
+            ) : canOneClickInstall || getDeferredInstallPrompt() ? (
+              <Button className="mt-3 w-full" size="lg" onClick={handleInstall} disabled={installing}>
                 <Download className="h-4 w-4" />
-                {t.install_btn}
+                {installing ? t.installing : t.install_btn}
               </Button>
             ) : (
-              <p className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-sm">{t.android_manual}</p>
+              <div className="mt-3 space-y-2">
+                <Button className="w-full" size="lg" onClick={handleInstall} disabled={installing}>
+                  <Download className="h-4 w-4" />
+                  {installing ? t.installing : t.install_btn}
+                </Button>
+                <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  {isDesktop ? t.desktop_manual : t.android_manual}
+                </p>
+              </div>
             )}
 
             <button

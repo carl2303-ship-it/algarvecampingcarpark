@@ -1,17 +1,24 @@
+import Image from "next/image";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function FeatureCard({
-  icon: Icon,
-  title,
-  description,
-  className,
-}: {
-  icon: LucideIcon;
+type FeatureCardProps = {
   title: string;
   description?: string;
   className?: string;
-}) {
+} & (
+  | { icon: LucideIcon; iconSrc?: never; iconAlt?: never }
+  | { icon?: never; iconSrc: string; iconAlt: string }
+);
+
+export function FeatureCard({
+  icon: Icon,
+  iconSrc,
+  iconAlt,
+  title,
+  description,
+  className,
+}: FeatureCardProps) {
   return (
     <div
       className={cn(
@@ -21,7 +28,17 @@ export function FeatureCard({
       )}
     >
       <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-        <Icon className="h-7 w-7" />
+        {iconSrc ? (
+          <Image
+            src={iconSrc}
+            alt={iconAlt}
+            width={40}
+            height={40}
+            className="h-8 w-8 object-contain opacity-90 group-hover:brightness-0 group-hover:invert"
+          />
+        ) : (
+          Icon && <Icon className="h-7 w-7" />
+        )}
       </div>
       <h3 className="font-heading text-xl font-semibold mb-2">{title}</h3>
       {description && (

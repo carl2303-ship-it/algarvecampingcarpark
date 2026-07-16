@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
-  Caravan,
   ChevronDown,
   MapPin,
   Phone,
@@ -39,7 +38,8 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
 
   const features = [
     {
-      icon: Caravan,
+      iconSrc: "/icons/camping-car.png",
+      iconAlt: locale === "pt" ? "Autocaravana" : "Motorhome",
       title: t.home.features.capacity,
       description: t.home.features.capacity_desc,
     },
@@ -58,7 +58,7 @@ export default function HomePage({ locale = "pt" as Locale }: { locale?: Locale 
       title: t.home.features.location,
       description: t.home.features.location_desc,
     },
-  ];
+  ] as const;
 
   return (
     <MarketingLayout locale={locale}>
