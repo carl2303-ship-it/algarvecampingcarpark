@@ -70,11 +70,12 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
       };
     }
 
-    // Android / desktop: show as soon as one-click is ready, or after a short wait
+    // Chrome needs engagement (tap + ~30s) before beforeinstallprompt.
+    // Show banner with manual steps; upgrade to one-click when ready.
     const fallback = window.setTimeout(() => {
       syncDeferred();
       setVisible(true);
-    }, 1800);
+    }, 2500);
 
     return () => {
       window.clearTimeout(fallback);
@@ -89,6 +90,10 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
   }
 
   async function handleInstall() {
+    if (!getDeferredInstallPrompt()) {
+      setCanOneClickInstall(false);
+      return;
+    }
     setInstalling(true);
     const outcome = await promptAppInstall();
     setInstalling(false);
@@ -104,7 +109,6 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
       return;
     }
 
-    // Prompt not available yet — keep banner; user may use browser menu
     setCanOneClickInstall(Boolean(getDeferredInstallPrompt()));
   }
 
@@ -112,6 +116,7 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
 
   const isIos = platform === "ios";
   const isDesktop = platform === "desktop" || platform === "other";
+  const showOneClick = canOneClickInstall || Boolean(getDeferredInstallPrompt());
 
   return (
     <div
@@ -157,21 +162,15 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
                   <span>{t.ios_step2}</span>
                 </li>
               </ol>
-            ) : canOneClickInstall || getDeferredInstallPrompt() ? (
+            ) : showOneClick ? (
               <Button className="mt-3 w-full" size="lg" onClick={handleInstall} disabled={installing}>
                 <Download className="h-4 w-4" />
                 {installing ? t.installing : t.install_btn}
               </Button>
             ) : (
-              <div className="mt-3 space-y-2">
-                <Button className="w-full" size="lg" onClick={handleInstall} disabled={installing}>
-                  <Download className="h-4 w-4" />
-                  {installing ? t.installing : t.install_btn}
-                </Button>
-                <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-                  {isDesktop ? t.desktop_manual : t.android_manual}
-                </p>
-              </div>
+              <p className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                {isDesktop ? t.desktop_manual : t.android_manual}
+              </p>
             )}
 
             <button

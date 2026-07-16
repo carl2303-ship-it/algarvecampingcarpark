@@ -35,10 +35,11 @@ export const metadata: Metadata = {
   applicationName: "Algarve Camping Car Park",
   icons: {
     icon: [
+      { url: "/icons/app-icon-192.png", type: "image/png", sizes: "192x192" },
       { url: "/icons/app-icon.png", type: "image/png", sizes: "512x512" },
       { url: "/favicon.png", type: "image/png", sizes: "32x32" },
     ],
-    apple: [{ url: "/icons/app-icon.png", type: "image/png", sizes: "180x180" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
     shortcut: "/favicon.png",
   },
   formatDetection: {
@@ -61,9 +62,11 @@ export default function RootLayout({
       className={`${dmSans.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
-        <Script id="accp-pwa-early" strategy="beforeInteractive">
-          {EARLY_PWA_CAPTURE_SCRIPT}
-        </Script>
+        <Script
+          id="accp-pwa-early"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: EARLY_PWA_CAPTURE_SCRIPT }}
+        />
         {children}
       </body>
     </html>
