@@ -156,6 +156,8 @@ const es = {
     title: "Tarifas",
     subtitle:
       "Tarifas por temporada, ocupación y zona. El importe final de la reserva online se calcula automáticamente según las fechas elegidas.",
+    included_vehicles_note:
+      "No cobramos ningún suplemento por remolque, coche y toldos.",
     two_people: "2 personas",
     three_four_people: "3-4 personas",
     premium_zone: "Zona premium (con electricidad)",

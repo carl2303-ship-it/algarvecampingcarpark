@@ -86,7 +86,11 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
 
   return (
     <MarketingLayout locale={locale}>
-      <PageHero eyebrow={t.prices.updated} title={t.prices.title} description={t.prices.subtitle} />
+      <PageHero
+        eyebrow={t.prices.updated}
+        title={t.prices.title}
+        description={`${t.prices.subtitle} ${t.prices.included_vehicles_note}`}
+      />
 
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4 max-w-3xl space-y-8">

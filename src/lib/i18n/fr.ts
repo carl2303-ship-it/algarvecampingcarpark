@@ -156,6 +156,8 @@ const fr = {
     title: "Tarifs",
     subtitle:
       "Tarifs selon la saison, l'occupation et la zone. Le montant final de la réservation en ligne est calculé automatiquement selon les dates choisies.",
+    included_vehicles_note:
+      "Nous ne facturons aucun supplément pour remorque, voiture et auvent.",
     two_people: "2 personnes",
     three_four_people: "3-4 personnes",
     premium_zone: "Zone premium (avec électricité)",

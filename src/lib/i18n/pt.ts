@@ -155,6 +155,8 @@ const pt = {
     title: "Preçário",
     subtitle:
       "Tarifas por época, ocupação e zona. O valor final da reserva online é calculado automaticamente consoante as datas escolhidas.",
+    included_vehicles_note:
+      "Não cobramos nenhum suplemento para reboque, carro e toldos.",
     two_people: "2 pessoas",
     three_four_people: "3-4 pessoas",
     premium_zone: "Zona premium (com eletricidade)",

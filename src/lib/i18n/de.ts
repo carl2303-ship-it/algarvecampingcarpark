@@ -156,6 +156,8 @@ const de = {
     title: "Preisliste",
     subtitle:
       "Tarife nach Saison, Belegung und Zone. Der endgültige Online-Buchungspreis wird automatisch anhand Ihrer gewählten Daten berechnet.",
+    included_vehicles_note:
+      "Wir erheben keinen Aufpreis für Anhänger, Auto und Markisen.",
     two_people: "2 Personen",
     three_four_people: "3-4 Personen",
     premium_zone: "Premium-Zone (mit Strom)",

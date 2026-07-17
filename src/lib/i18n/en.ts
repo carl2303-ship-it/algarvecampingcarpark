@@ -154,6 +154,8 @@ const en = {
     title: "Price list",
     subtitle:
       "Rates by season, occupancy and zone. The final online booking price is calculated automatically based on your selected dates.",
+    included_vehicles_note:
+      "We do not charge any supplement for trailer, car or awnings.",
     two_people: "2 people",
     three_four_people: "3-4 people",
     premium_zone: "Premium zone (with electricity)",
