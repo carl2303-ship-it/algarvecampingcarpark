@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { Copy, Download, QrCode } from "lucide-react";
+import { Copy, Download, Printer, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { gateQrUrl } from "@/lib/constants";
 import { adminT } from "@/lib/admin-i18n";
+import { openGateQrPosterPrint } from "@/components/admin/gate-qr-poster";
 
 export function GateQrGenerator() {
   const gateUrl = useMemo(() => gateQrUrl(), []);
@@ -18,7 +19,7 @@ export function GateQrGenerator() {
   useEffect(() => {
     let active = true;
     void QRCode.toDataURL(gateUrl, {
-      width: 320,
+      width: 480,
       margin: 2,
       color: { dark: "#0e4a56", light: "#ffffff" },
       errorCorrectionLevel: "M",
@@ -46,6 +47,10 @@ export function GateQrGenerator() {
     link.href = qrDataUrl;
     link.download = "algarve-camping-gate-qr.png";
     link.click();
+  }
+
+  function handlePrintA4() {
+    openGateQrPosterPrint({ gateUrl, qrDataUrl });
   }
 
   return (
@@ -88,6 +93,10 @@ export function GateQrGenerator() {
               <Button type="button" onClick={handleDownload} disabled={!qrDataUrl}>
                 <Download className="mr-2 h-4 w-4" />
                 {adminT.gateAccess.qrDownload}
+              </Button>
+              <Button type="button" variant="secondary" onClick={handlePrintA4} disabled={!qrDataUrl}>
+                <Printer className="mr-2 h-4 w-4" />
+                {adminT.gateAccess.qrPrintA4}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">

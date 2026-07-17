@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getActiveZones, getAvailablePitchesForZone } from "@/lib/availability";
 import { isPricingZoneSlug, type PricingZoneSlug } from "@/lib/park-pitch-map-defaults";
-import { isOnlineBookingCurrentlyOpen } from "@/lib/park-settings";
+import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,16 @@ const querySchema = z.object({
     }),
 });
 
+function isGateEntryRequest(searchParams: URLSearchParams): boolean {
+  return searchParams.get("gate_entry") === "1";
+}
+
 export async function GET(request: Request) {
-  if (!(await isOnlineBookingCurrentlyOpen())) {
+  const { searchParams } = new URL(request.url);
+  const gateEntry = isGateEntryRequest(searchParams);
+  const parkSettings = await getParkSettings();
+
+  if (!isOnlineBookingOpen(parkSettings) && !gateEntry) {
     return NextResponse.json(
       { error: "As reservas online estão temporariamente indisponíveis." },
       { status: 503 }
@@ -36,7 +44,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { searchParams } = new URL(request.url);
     const parsed = querySchema.parse({
       check_in: searchParams.get("check_in"),
       check_out: searchParams.get("check_out"),

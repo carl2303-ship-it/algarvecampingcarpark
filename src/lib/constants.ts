@@ -74,8 +74,8 @@ export function formatReceptionHours(
 export const PENDING_PAYMENT_EXPIRY_MINUTES = 30;
 /** Online deposit is 50% of the stay total; balance due on arrival. */
 export const ONLINE_BOOKING_DEPOSIT_RATIO = 0.5;
-/** Public landing page for gate QR scans (walk-ins outside reception). */
-export const GATE_QR_PATH = "/gate?from=qr";
+/** Public booking entry via gate QR scan (bypasses online booking window). */
+export const GATE_QR_PATH = "/book?from=qr";
 
 export function gateQrUrl(): string {
   return `${SITE_URL}${GATE_QR_PATH}`;

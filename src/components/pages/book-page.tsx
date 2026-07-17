@@ -3,25 +3,28 @@ import { BookingWizard } from "@/components/booking/booking-wizard";
 import { BookingDisabledView } from "@/components/booking/booking-disabled-view";
 import { PageHero } from "@/components/marketing/sections";
 import type { Locale } from "@/lib/constants";
+import { isGateQrEntry, allowsPublicBooking } from "@/lib/gate-entry";
 import { getTranslations } from "@/lib/i18n";
 import { getPitchMapSpotByCode } from "@/lib/pitch-map";
-import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
+import { getParkSettings } from "@/lib/park-settings";
 import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
+import { QrCode } from "lucide-react";
 
 export default async function BookPageContent({
   locale,
   searchParams,
 }: {
   locale: Locale;
-  searchParams: Promise<{ cancelled?: string; pitch?: string }>;
+  searchParams: Promise<{ cancelled?: string; pitch?: string; from?: string }>;
 }) {
+  const params = await searchParams;
+  const gateEntry = isGateQrEntry(params.from);
   const parkSettings = await getParkSettings();
 
-  if (!isOnlineBookingOpen(parkSettings)) {
+  if (!allowsPublicBooking(parkSettings, gateEntry)) {
     return <BookingDisabledView locale={locale} />;
   }
 
-  const params = await searchParams;
   const t = getTranslations(locale);
   const preferredSpot: PitchMapSpot | null = params.pitch
     ? await getPitchMapSpotByCode(params.pitch.toUpperCase())
@@ -30,18 +33,29 @@ export default async function BookPageContent({
   return (
     <MarketingLayout locale={locale}>
       <PageHero
-        eyebrow="ASA · Algarve"
-        title={t.book.title}
-        description={t.book.hero_description}
+        eyebrow={gateEntry ? t.book.gate_entry_eyebrow : "ASA · Algarve"}
+        title={gateEntry ? t.book.gate_entry_title : t.book.title}
+        description={gateEntry ? t.book.gate_entry_message : t.book.hero_description}
         className="!pb-10"
       />
       <div className="container mx-auto px-4 pb-20 -mt-6 relative z-10">
+        {gateEntry ? (
+          <div className="max-w-3xl mx-auto mb-6 flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 p-4 text-sm text-primary">
+            <QrCode className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+            <p className="leading-relaxed">{t.book.gate_entry_required}</p>
+          </div>
+        ) : null}
         {params.cancelled && (
           <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-center text-amber-900">
             {t.book.cancelled}
           </div>
         )}
-        <BookingWizard locale={locale} preferredSpot={preferredSpot} parkSettings={parkSettings} />
+        <BookingWizard
+          locale={locale}
+          preferredSpot={preferredSpot}
+          parkSettings={parkSettings}
+          gateEntry={gateEntry}
+        />
       </div>
     </MarketingLayout>
   );

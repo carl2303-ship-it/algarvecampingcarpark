@@ -179,6 +179,12 @@ const en = {
   },
   book: {
     title: "Book your pitch",
+    gate_entry_eyebrow: "Gate QR entry",
+    gate_entry_title: "Booking required to enter",
+    gate_entry_message:
+      "Complete your booking below to enter the park. Choose a pitch, pay 50% via Stripe, and you will receive email confirmation.",
+    gate_entry_required:
+      "You scanned the gate QR code: a booking is required to enter the park, even when online booking is closed on the website.",
     hero_description:
       "Enter your details, choose pitch type, select on the map and pay a 50% deposit to secure your stay.",
     step_dates: "Dates & details",

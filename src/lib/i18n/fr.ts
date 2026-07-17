@@ -181,6 +181,12 @@ const fr = {
   },
   book: {
     title: "Réserver votre place",
+    gate_entry_eyebrow: "Entrée via QR code",
+    gate_entry_title: "Réservation obligatoire pour entrer",
+    gate_entry_message:
+      "Complétez la réservation ci-dessous pour entrer au parc. Choisissez l'emplacement, payez 50 % via Stripe et recevez la confirmation par e-mail.",
+    gate_entry_required:
+      "Vous avez scanné le QR code du portail : une réservation est obligatoire pour entrer, même si les réservations en ligne sont fermées sur le site.",
     hero_description:
       "Indiquez vos coordonnées, choisissez le type de place, sélectionnez sur le plan et payez 50 % pour garantir la réservation.",
     step_dates: "Dates et coordonnées",

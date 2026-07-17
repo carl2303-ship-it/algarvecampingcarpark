@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { appendGateEntryQuery } from "@/lib/gate-entry";
 import { formatPrice } from "@/lib/pricing";
 import type { Locale, ParkSettings } from "@/lib/constants";
 import { getTranslations, t as translate } from "@/lib/i18n";
@@ -44,10 +45,12 @@ export function BookingWizard({
   locale,
   preferredSpot = null,
   parkSettings,
+  gateEntry = false,
 }: {
   locale: Locale;
   preferredSpot?: PitchMapSpot | null;
   parkSettings: ParkSettings;
+  gateEntry?: boolean;
 }) {
   const tr = getTranslations(locale);
   const dateLocale = dateFnsLocale(locale);
@@ -102,7 +105,10 @@ export function BookingWizard({
 
     try {
       const availRes = await fetch(
-        `/api/availability?check_in=${checkInStr}&check_out=${checkOutStr}&num_guests=${numGuests}`
+        appendGateEntryQuery(
+          `/api/availability?check_in=${checkInStr}&check_out=${checkOutStr}&num_guests=${numGuests}`,
+          gateEntry
+        )
       );
       const availData = await availRes.json();
       if (!availRes.ok) throw new Error(availData.error ?? "Erro");
@@ -117,7 +123,10 @@ export function BookingWizard({
       }
 
       const pitchRes = await fetch(
-        `/api/availability/pitches?check_in=${checkInStr}&check_out=${checkOutStr}&zone_id=${zone.zone.id}&num_guests=${numGuests}&electric=${withElectricity ? "true" : "false"}&over_9m=${over9m ? "true" : "false"}`
+        appendGateEntryQuery(
+          `/api/availability/pitches?check_in=${checkInStr}&check_out=${checkOutStr}&zone_id=${zone.zone.id}&num_guests=${numGuests}&electric=${withElectricity ? "true" : "false"}&over_9m=${over9m ? "true" : "false"}`,
+          gateEntry
+        )
       );
       const pitchData = await pitchRes.json();
       if (!pitchRes.ok) {
@@ -171,6 +180,7 @@ export function BookingWizard({
           num_guests: numGuests,
           notes: notes || undefined,
           locale,
+          gate_entry: gateEntry || undefined,
         }),
       });
       const data = await res.json();

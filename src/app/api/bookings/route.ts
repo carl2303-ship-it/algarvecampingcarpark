@@ -7,7 +7,7 @@ import {
   ONLINE_BOOKING_DEPOSIT_RATIO,
   PENDING_PAYMENT_EXPIRY_MINUTES,
 } from "@/lib/constants";
-import { isOnlineBookingCurrentlyOpen } from "@/lib/park-settings";
+import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
 
 const bookingSchema = z.object({
   zone_id: z.string().uuid(),
@@ -21,10 +21,15 @@ const bookingSchema = z.object({
   num_guests: z.number().int().min(1).max(10),
   notes: z.string().max(500).optional(),
   locale: z.enum(["pt", "en", "fr", "de", "es"]).optional().default("pt"),
+  gate_entry: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
-  if (!(await isOnlineBookingCurrentlyOpen())) {
+  const body = await request.json();
+  const gateEntry = body?.gate_entry === true;
+  const parkSettings = await getParkSettings();
+
+  if (!isOnlineBookingOpen(parkSettings) && !gateEntry) {
     return NextResponse.json(
       {
         error:
@@ -35,7 +40,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
     const data = bookingSchema.parse(body);
     const pitchCode = data.pitch_code.toUpperCase();
 
@@ -86,7 +90,9 @@ export async function POST(request: Request) {
         guest_phone: data.guest_phone,
         vehicle_plate: data.vehicle_plate ?? null,
         num_guests: data.num_guests,
-        notes: data.notes ?? null,
+        notes: gateEntry
+          ? [data.notes, "[Entrada QR portão]"].filter(Boolean).join("\n")
+          : data.notes ?? null,
         total_cents: pricing.totalCents,
         paid_cents: 0,
         payment_status: "pending",

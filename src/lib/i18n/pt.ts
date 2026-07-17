@@ -180,6 +180,12 @@ const pt = {
   },
   book: {
     title: "Reservar o seu lugar",
+    gate_entry_eyebrow: "Entrada via QR code",
+    gate_entry_title: "Reserva obrigatória para entrar",
+    gate_entry_message:
+      "Complete a reserva abaixo para entrar no parque. Escolha o lugar, pague 50% via Stripe e receberá confirmação por email.",
+    gate_entry_required:
+      "Leu o QR code no portão: a reserva é obrigatória para entrar no parque, mesmo quando as reservas online estão fechadas no site.",
     hero_description:
       "Indique os seus dados, escolha o tipo de lugar, selecione no mapa e pague 50% para garantir a reserva.",
     step_dates: "Datas e dados",

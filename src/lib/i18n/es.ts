@@ -181,6 +181,12 @@ const es = {
   },
   book: {
     title: "Reservar su plaza",
+    gate_entry_eyebrow: "Entrada por código QR",
+    gate_entry_title: "Reserva obligatoria para entrar",
+    gate_entry_message:
+      "Complete la reserva abajo para entrar al parque. Elija la plaza, pague el 50 % con Stripe y recibirá confirmación por email.",
+    gate_entry_required:
+      "Ha escaneado el código QR de la puerta: la reserva es obligatoria para entrar, aunque las reservas online estén cerradas en la web.",
     hero_description:
       "Indique sus datos, elija el tipo de plaza, selecciónela en el mapa y pague el 50 % para garantizar la reserva.",
     step_dates: "Fechas y datos",

@@ -514,14 +514,23 @@ export const adminT = {
     saveError: "Erreur lors de l'enregistrement du code.",
     qrTitle: "QR code portail",
     qrDescription:
-      "À imprimer et fixer sur la barrière. Les clients sans réservation scannent le code pour accéder au site et contacter le parc hors horaires de réception.",
+      "Le QR code ouvre directement la réservation obligatoire pour entrer au parc, même si les réservations en ligne sont fermées sur le site.",
     qrAlt: "QR code d'accès au site depuis la barrière",
     qrUrlLabel: "Lien encodé dans le QR code",
     qrCopy: "Copier le lien",
     qrCopied: "Lien copié",
     qrDownload: "Télécharger le PNG",
+    qrPrintA4: "Imprimer affiche A4",
     qrPrintHint:
-      "Imprimez en couleur sur un support résistant (plastifié ou alu). Taille recommandée : au moins 15 × 15 cm pour une lecture facile depuis la voiture.",
+      "L'affiche A4 inclut le logo, le QR code et le texte en portugais. Imprimez en couleur sur papier plastifié ou alu et fixez-la sur la barrière.",
+    poster: {
+      docTitle: "Algarve Camping — QR code portail",
+      headline: "Bem-vindo ao parque",
+      instructions:
+        "Escaneie o QR Code para aceder às opções de contacto e de reserva.",
+      required:
+        "A reserva é obrigatória para entrar no parque. Complete a reserva no telemóvel e pague o sinal de 50%.",
+    },
   },
   onlineBooking: {
     title: "Réservations en ligne",

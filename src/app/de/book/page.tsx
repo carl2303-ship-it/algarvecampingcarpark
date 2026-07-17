@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export default function BookPageLocalized({
   searchParams,
 }: {
-  searchParams: Promise<{ cancelled?: string; pitch?: string }>;
+  searchParams: Promise<{ cancelled?: string; pitch?: string; from?: string }>;
 }) {
   return <BookPageContent locale="de" searchParams={searchParams} />;
 }

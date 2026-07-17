@@ -181,6 +181,12 @@ const de = {
   },
   book: {
     title: "Ihren Stellplatz buchen",
+    gate_entry_eyebrow: "Eintritt per QR-Code",
+    gate_entry_title: "Buchung zum Eintritt erforderlich",
+    gate_entry_message:
+      "Schließen Sie die Buchung unten ab, um den Park zu betreten. Wählen Sie den Stellplatz, zahlen Sie 50 % per Stripe und erhalten Sie die Bestätigung per E-Mail.",
+    gate_entry_required:
+      "Sie haben den QR-Code am Tor gescannt: Eine Buchung ist zum Eintritt erforderlich, auch wenn Online-Buchungen auf der Website geschlossen sind.",
     hero_description:
       "Geben Sie Ihre Daten ein, wählen Sie den Stellplatztyp, markieren Sie auf der Karte und zahlen Sie 50 % als Anzahlung zur Sicherung der Reservierung.",
     step_dates: "Daten & Angaben",
