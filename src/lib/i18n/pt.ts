@@ -272,6 +272,12 @@ const pt = {
     contact_page: "Página de contacto",
     open_maps: "Abrir no Google Maps",
     view_site: "Ver website",
+    poster: {
+      headline: "Bem-vindo ao parque",
+      instructions: "Escaneie o QR Code para contacto e reserva online.",
+      required:
+        "Reserva obrigatória para entrar. Complete a reserva no telemóvel e pague 50% de sinal.",
+    },
   },
   stay: {
     title: "A sua estadia",

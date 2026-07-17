@@ -273,6 +273,12 @@ const fr = {
     contact_page: "Page contact",
     open_maps: "Ouvrir dans Google Maps",
     view_site: "Voir le site",
+    poster: {
+      headline: "Bienvenue au parc",
+      instructions: "Scannez le QR code pour les contacts et la réservation en ligne.",
+      required:
+        "Réservation obligatoire pour entrer. Finalisez sur votre téléphone et payez 50% d'acompte.",
+    },
   },
   stay: {
     title: "Votre séjour",

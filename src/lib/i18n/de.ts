@@ -273,6 +273,12 @@ const de = {
     contact_page: "Kontaktseite",
     open_maps: "In Google Maps öffnen",
     view_site: "Website ansehen",
+    poster: {
+      headline: "Willkommen im Park",
+      instructions: "QR-Code scannen für Kontakt und Online-Buchung.",
+      required:
+        "Buchung erforderlich zum Einfahren. Reservierung am Handy abschließen und 50% Anzahlung leisten.",
+    },
   },
   stay: {
     title: "Ihr Aufenthalt",

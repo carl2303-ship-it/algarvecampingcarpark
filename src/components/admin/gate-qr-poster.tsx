@@ -1,11 +1,20 @@
 "use client";
 
-import { PUBLIC_SITE_URL, SITE_NAME } from "@/lib/constants";
+import { LOCALES, PUBLIC_SITE_URL, SITE_NAME, type Locale } from "@/lib/constants";
+import { getTranslations } from "@/lib/i18n";
 import { adminT } from "@/lib/admin-i18n";
 
 type GateQrPosterProps = {
   gateUrl: string;
   qrDataUrl: string | null;
+};
+
+const LOCALE_LABELS: Record<Locale, string> = {
+  pt: "Português",
+  en: "English",
+  fr: "Français",
+  de: "Deutsch",
+  es: "Español",
 };
 
 function escapeHtml(value: string): string {
@@ -16,6 +25,24 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function buildLanguageBlocks(): string {
+  return LOCALES.map((locale) => {
+    const poster = getTranslations(locale).gate.poster;
+    const tag = escapeHtml(locale.toUpperCase());
+    const label = escapeHtml(LOCALE_LABELS[locale]);
+    const headline = escapeHtml(poster.headline);
+    const instructions = escapeHtml(poster.instructions);
+    const required = escapeHtml(poster.required);
+
+    return `<article class="lang-block">
+      <p class="lang-tag"><span class="lang-code">${tag}</span> ${label}</p>
+      <p class="lang-headline">${headline}</p>
+      <p class="lang-text">${instructions}</p>
+      <p class="lang-required">${required}</p>
+    </article>`;
+  }).join("");
+}
+
 function buildPosterHtml({
   gateUrl,
   qrDataUrl,
@@ -23,14 +50,11 @@ function buildPosterHtml({
   gateUrl: string;
   qrDataUrl: string;
 }) {
-  const poster = adminT.gateAccess.poster;
+  const docTitle = escapeHtml(adminT.gateAccess.poster.docTitle);
   const logoUrl = `${PUBLIC_SITE_URL}/logo.png`;
   const siteName = escapeHtml(SITE_NAME);
-  const docTitle = escapeHtml(poster.docTitle);
-  const headline = escapeHtml(poster.headline);
-  const instructions = escapeHtml(poster.instructions);
-  const required = escapeHtml(poster.required);
   const safeGateUrl = escapeHtml(gateUrl);
+  const languageBlocks = buildLanguageBlocks();
 
   return `<!DOCTYPE html>
 <html lang="pt">
@@ -38,91 +62,152 @@ function buildPosterHtml({
   <meta charset="utf-8" />
   <title>${docTitle}</title>
   <style>
-    @page { size: A4 portrait; margin: 14mm; }
+    @page { size: A4 portrait; margin: 10mm; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
       color: #0e4a56;
       background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .sheet {
-      width: 182mm;
-      min-height: 269mm;
+      width: 190mm;
+      min-height: 277mm;
       margin: 0 auto;
+      padding: 6mm 8mm 8mm;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: space-between;
+    }
+    .header {
+      width: 100%;
       text-align: center;
-      padding: 8mm 6mm;
+      flex-shrink: 0;
     }
     .logo {
-      max-width: 72mm;
-      max-height: 28mm;
+      width: 108mm;
+      max-height: 44mm;
+      height: auto;
       object-fit: contain;
-    }
-    h1 {
-      margin: 6mm 0 2mm;
-      font-size: 17pt;
-      font-weight: 700;
-      line-height: 1.25;
-      max-width: 150mm;
-    }
-    .lead {
-      margin: 0 0 8mm;
-      font-size: 13pt;
-      line-height: 1.45;
-      max-width: 145mm;
-      color: #155e75;
-    }
-    .qr-wrap {
-      padding: 5mm;
-      border: 2px solid #0e7a8c;
-      border-radius: 6mm;
-      background: #fff;
-    }
-    .qr {
-      width: 78mm;
-      height: 78mm;
       display: block;
-    }
-    .sub {
-      margin: 8mm 0 0;
-      font-size: 11pt;
-      line-height: 1.45;
-      max-width: 145mm;
-      color: #334155;
-    }
-    .url {
-      margin-top: 10mm;
-      font-size: 9pt;
-      color: #64748b;
-      word-break: break-all;
+      margin: 0 auto;
     }
     .brand {
-      margin-top: 4mm;
-      font-size: 10pt;
+      margin: 3mm 0 0;
+      font-size: 11pt;
       font-weight: 600;
       color: #0e7a8c;
+      letter-spacing: 0.02em;
+    }
+    .qr-section {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8mm 0;
+      min-height: 108mm;
+    }
+    .qr-wrap {
+      padding: 6mm;
+      border: 3px solid #0e7a8c;
+      border-radius: 8mm;
+      background: #fff;
+      box-shadow: 0 4mm 12mm rgba(14, 74, 86, 0.12);
+    }
+    .qr {
+      width: 92mm;
+      height: 92mm;
+      display: block;
+    }
+    .languages {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3mm 5mm;
+      margin-top: 2mm;
+      padding-top: 4mm;
+      border-top: 1px solid #cbd5e1;
+    }
+    .lang-block {
+      border-left: 3px solid #0e7a8c;
+      padding: 0 0 0 3mm;
+      text-align: left;
+    }
+    .lang-block:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+      max-width: 50%;
+      justify-self: center;
+    }
+    .lang-tag {
+      margin: 0;
+      font-size: 7pt;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .lang-code {
+      display: inline-block;
+      min-width: 5mm;
+      padding: 0.4mm 1.6mm;
+      margin-right: 1mm;
+      border-radius: 1mm;
+      background: #0e7a8c;
+      color: #fff;
+      font-weight: 700;
+      font-size: 6.5pt;
+    }
+    .lang-headline {
+      margin: 1mm 0 0;
+      font-size: 8.5pt;
+      font-weight: 700;
+      line-height: 1.25;
+      color: #0e4a56;
+    }
+    .lang-text,
+    .lang-required {
+      margin: 0.8mm 0 0;
+      font-size: 7pt;
+      line-height: 1.35;
+      color: #475569;
+    }
+    .lang-required {
+      font-weight: 600;
+      color: #334155;
+    }
+    .footer-url {
+      width: 100%;
+      margin-top: 5mm;
+      padding-top: 3mm;
+      border-top: 1px dashed #cbd5e1;
+      text-align: center;
+      font-size: 8pt;
+      color: #64748b;
+      word-break: break-all;
     }
   </style>
 </head>
 <body>
   <div class="sheet">
-    <div>
+    <header class="header">
       <img class="logo" src="${logoUrl}" alt="${siteName}" />
       <p class="brand">${siteName}</p>
-    </div>
-    <div>
-      <h1>${headline}</h1>
-      <p class="lead">${instructions}</p>
+    </header>
+
+    <section class="qr-section" aria-label="QR code">
       <div class="qr-wrap">
         <img class="qr" src="${qrDataUrl}" alt="QR code" />
       </div>
-      <p class="sub">${required}</p>
-    </div>
-    <p class="url">${safeGateUrl}</p>
+    </section>
+
+    <section class="languages" aria-label="Instructions">
+      ${languageBlocks}
+    </section>
+
+    <p class="footer-url">${safeGateUrl}</p>
   </div>
   <script>
     function printWhenReady() {
@@ -157,7 +242,6 @@ export function openGateQrPosterPrint({ gateUrl, qrDataUrl }: GateQrPosterProps)
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const blobUrl = URL.createObjectURL(blob);
 
-  // Do not pass noopener — it makes window.open return null and leaves a blank tab.
   const printWindow = window.open(blobUrl, "_blank");
   if (!printWindow) {
     URL.revokeObjectURL(blobUrl);

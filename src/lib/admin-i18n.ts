@@ -522,7 +522,7 @@ export const adminT = {
     qrDownload: "Télécharger le PNG",
     qrPrintA4: "Imprimer affiche A4",
     qrPrintHint:
-      "L'affiche A4 inclut le logo, le QR code et le texte en portugais. Imprimez en couleur sur papier plastifié ou alu et fixez-la sur la barrière.",
+      "L'affiche A4 inclut le logo, le QR code centré et le texte en PT, EN, FR, DE et ES. Imprimez en couleur sur papier plastifié ou alu et fixez-la sur la barrière.",
     poster: {
       docTitle: "Algarve Camping — QR code portail",
       headline: "Bem-vindo ao parque",

@@ -271,6 +271,12 @@ const en = {
     contact_page: "Contact page",
     open_maps: "Open in Google Maps",
     view_site: "View website",
+    poster: {
+      headline: "Welcome to the park",
+      instructions: "Scan the QR code for contact details and online booking.",
+      required:
+        "Booking is required to enter. Complete your booking on your phone and pay a 50% deposit.",
+    },
   },
   stay: {
     title: "Your stay",
