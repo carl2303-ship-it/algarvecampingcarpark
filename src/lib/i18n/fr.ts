@@ -267,6 +267,7 @@ const fr = {
     help_text:
       "Sans réservation, appelez pour vérifier la disponibilité. Si la réservation en ligne est active, vous pouvez aussi réserver sur le site.",
     book_online: "Réserver en ligne",
+    book_required: "Réserver pour entrer",
     contact_page: "Page contact",
     open_maps: "Ouvrir dans Google Maps",
     view_site: "Voir le site",

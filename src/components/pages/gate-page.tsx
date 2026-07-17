@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Clock, Mail, MapPin, Phone, QrCode } from "lucide-react";
-import { BookCta } from "@/components/booking/book-cta";
 import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { buttonVariants } from "@/components/ui/button";
@@ -18,7 +17,6 @@ import { getTranslations } from "@/lib/i18n";
 import { localePath } from "@/lib/locale-path";
 import {
   getParkSettings,
-  isOnlineBookingOpen,
   isWithinReceptionHours,
 } from "@/lib/park-settings";
 import { cn } from "@/lib/utils";
@@ -32,12 +30,12 @@ export default async function GatePageContent({
 }) {
   const parkSettings = await getParkSettings();
   const receptionOpen = isWithinReceptionHours(parkSettings);
-  const bookingOpen = isOnlineBookingOpen(parkSettings);
   const t = getTranslations(locale);
   const g = t.gate;
 
   const contactPath = localePath(locale, "/contact");
   const homePath = localePath(locale, "/");
+  const bookGatePath = `${localePath(locale, "/book")}?from=qr`;
   const receptionHours = formatReceptionHours(parkSettings, locale);
 
   return (
@@ -99,14 +97,10 @@ export default async function GatePageContent({
             </div>
 
             <div className="flex flex-col gap-3 pt-1">
-              {bookingOpen ? (
-                <BookCta
-                  locale={locale}
-                  href={localePath(locale, "/book")}
-                  className={cn(buttonVariants(), "w-full")}
-                >
-                  {g.book_online}
-                </BookCta>
+              {fromQr ? (
+                <Link href={bookGatePath} className={cn(buttonVariants(), "w-full")}>
+                  {g.book_required}
+                </Link>
               ) : null}
               <Link href={contactPath} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
                 {g.contact_page}

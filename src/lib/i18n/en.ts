@@ -265,6 +265,7 @@ const en = {
     help_text:
       "If you don't have a booking, call to check availability. When online booking is open, you can also book on the website.",
     book_online: "Book online",
+    book_required: "Book to enter the park",
     contact_page: "Contact page",
     open_maps: "Open in Google Maps",
     view_site: "View website",

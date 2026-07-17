@@ -1,17 +1,7 @@
-import { redirect } from "next/navigation";
 import GatePageContent from "@/components/pages/gate-page";
-import { localePath } from "@/lib/locale-path";
 
 export const dynamic = "force-dynamic";
 
-export default async function GatePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ from?: string }>;
-}) {
-  const params = await searchParams;
-  if (params.from === "qr") {
-    redirect(`${localePath("en", "/book")}?from=qr`);
-  }
-  return <GatePageContent locale="en" fromQr={false} />;
+export default function GatePage() {
+  return <GatePageContent locale="en" fromQr />;
 }

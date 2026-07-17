@@ -267,6 +267,7 @@ const de = {
     help_text:
       "Ohne Reservierung rufen Sie bitte an, um die Verfügbarkeit zu prüfen. Bei aktiver Online-Buchung können Sie auch über die Website buchen.",
     book_online: "Online buchen",
+    book_required: "Buchen zum Eintritt",
     contact_page: "Kontaktseite",
     open_maps: "In Google Maps öffnen",
     view_site: "Website ansehen",
