@@ -8,18 +8,35 @@ type GateQrPosterProps = {
   qrDataUrl: string | null;
 };
 
-export function openGateQrPosterPrint({ gateUrl, qrDataUrl }: GateQrPosterProps) {
-  if (!qrDataUrl) return;
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
+function buildPosterHtml({
+  gateUrl,
+  qrDataUrl,
+}: {
+  gateUrl: string;
+  qrDataUrl: string;
+}) {
   const poster = adminT.gateAccess.poster;
-  const printWindow = window.open("", "_blank", "noopener,noreferrer");
-  if (!printWindow) return;
+  const logoUrl = `${PUBLIC_SITE_URL}/logo.png`;
+  const siteName = escapeHtml(SITE_NAME);
+  const docTitle = escapeHtml(poster.docTitle);
+  const headline = escapeHtml(poster.headline);
+  const instructions = escapeHtml(poster.instructions);
+  const required = escapeHtml(poster.required);
+  const safeGateUrl = escapeHtml(gateUrl);
 
-  printWindow.document.write(`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="pt">
 <head>
   <meta charset="utf-8" />
-  <title>${poster.docTitle}</title>
+  <title>${docTitle}</title>
   <style>
     @page { size: A4 portrait; margin: 14mm; }
     * { box-sizing: border-box; }
@@ -94,21 +111,60 @@ export function openGateQrPosterPrint({ gateUrl, qrDataUrl }: GateQrPosterProps)
 <body>
   <div class="sheet">
     <div>
-      <img class="logo" src="${PUBLIC_SITE_URL}/logo.png" alt="${SITE_NAME}" />
-      <p class="brand">${SITE_NAME}</p>
+      <img class="logo" src="${logoUrl}" alt="${siteName}" />
+      <p class="brand">${siteName}</p>
     </div>
     <div>
-      <h1>${poster.headline}</h1>
-      <p class="lead">${poster.instructions}</p>
+      <h1>${headline}</h1>
+      <p class="lead">${instructions}</p>
       <div class="qr-wrap">
         <img class="qr" src="${qrDataUrl}" alt="QR code" />
       </div>
-      <p class="sub">${poster.required}</p>
+      <p class="sub">${required}</p>
     </div>
-    <p class="url">${gateUrl}</p>
+    <p class="url">${safeGateUrl}</p>
   </div>
-  <script>window.onload = function () { window.print(); };</script>
+  <script>
+    function printWhenReady() {
+      var imgs = document.images;
+      if (!imgs.length) {
+        window.print();
+        return;
+      }
+      var pending = 0;
+      for (var i = 0; i < imgs.length; i++) {
+        if (imgs[i].complete) continue;
+        pending++;
+        imgs[i].addEventListener("load", onDone);
+        imgs[i].addEventListener("error", onDone);
+      }
+      if (!pending) window.print();
+      function onDone() {
+        pending--;
+        if (pending <= 0) window.print();
+      }
+    }
+    window.addEventListener("load", printWhenReady);
+  </script>
 </body>
-</html>`);
-  printWindow.document.close();
+</html>`;
+}
+
+export function openGateQrPosterPrint({ gateUrl, qrDataUrl }: GateQrPosterProps) {
+  if (!qrDataUrl) return;
+
+  const html = buildPosterHtml({ gateUrl, qrDataUrl });
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const blobUrl = URL.createObjectURL(blob);
+
+  // Do not pass noopener — it makes window.open return null and leaves a blank tab.
+  const printWindow = window.open(blobUrl, "_blank");
+  if (!printWindow) {
+    URL.revokeObjectURL(blobUrl);
+    return;
+  }
+
+  printWindow.addEventListener("load", () => {
+    URL.revokeObjectURL(blobUrl);
+  });
 }
