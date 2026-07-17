@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Área de Serviço para Autocaravanas em Armação de Pêra, Algarve. 63 lugares, vista mar, ambiente natural. Reserve online.",
+    "Área de Serviço para Autocaravanas em Armação de Pêra, Algarve. 57 lugares, vista mar, ambiente natural. Reserve online.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "https://algarvecampingcarpark.pt"
   ),

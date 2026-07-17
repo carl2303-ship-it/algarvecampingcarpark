@@ -27,7 +27,7 @@ const es = {
     features_subtitle:
       "Mucho más que un aparcamiento — un refugio junto al Atlántico.",
     features: {
-      capacity: "63 plazas",
+      capacity: "57 plazas",
       capacity_desc:
         "Capacidad para autocaravanas de todos los tamaños, con zonas con y sin electricidad.",
       nature: "Entorno natural",
@@ -61,7 +61,7 @@ const es = {
       "Electricidad 6A y 10A en las zonas equipadas",
       "Agua potable y aguas residuales",
       "37 000 m² de entorno natural",
-      "63 plazas para autocaravanas",
+      "57 plazas para autocaravanas",
       "Acceso fácil y amplio aparcamiento",
     ],
     gallery_title: "Galería",

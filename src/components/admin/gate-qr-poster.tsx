@@ -1,6 +1,6 @@
 "use client";
 
-import { SITE_NAME, SITE_URL } from "@/lib/constants";
+import { PUBLIC_SITE_URL, SITE_NAME } from "@/lib/constants";
 import { adminT } from "@/lib/admin-i18n";
 
 type GateQrPosterProps = {
@@ -94,7 +94,7 @@ export function openGateQrPosterPrint({ gateUrl, qrDataUrl }: GateQrPosterProps)
 <body>
   <div class="sheet">
     <div>
-      <img class="logo" src="${SITE_URL}/logo.png" alt="${SITE_NAME}" />
+      <img class="logo" src="${PUBLIC_SITE_URL}/logo.png" alt="${SITE_NAME}" />
       <p class="brand">${SITE_NAME}</p>
     </div>
     <div>

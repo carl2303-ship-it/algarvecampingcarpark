@@ -27,7 +27,7 @@ const fr = {
     features_subtitle:
       "Bien plus qu'un parking — un havre de paix au bord de l'Atlantique.",
     features: {
-      capacity: "63 places",
+      capacity: "57 places",
       capacity_desc:
         "Capacité pour camping-cars de toutes tailles, avec zones avec et sans électricité.",
       nature: "Cadre naturel",
@@ -61,7 +61,7 @@ const fr = {
       "Électricité 6A et 10A dans les zones équipées",
       "Eau potable et vidange",
       "37 000 m² d'environnement naturel",
-      "63 places pour camping-cars",
+      "57 places pour camping-cars",
       "Accès facile et grand parking",
     ],
     gallery_title: "Galerie",

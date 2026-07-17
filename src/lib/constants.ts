@@ -1,6 +1,8 @@
 export const SITE_NAME = "Elodie & Romy's Algarve Camping Car Park";
 export const SITE_SHORT_NAME = "Algarve Camping Car Park";
-export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+/** Public production origin (QR codes, emails, Stripe redirects when env unset). */
+export const PUBLIC_SITE_URL = "https://algarvecampingcarpark.pt";
+export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? PUBLIC_SITE_URL;
 export const CONTACT_EMAIL = "algarvecampingcarpark@gmail.com";
 export const CONTACT_PHONE = "+351 961 376 584";
 export const CONTACT_PHONE_RAW = "+351961376584";
@@ -25,7 +27,7 @@ export const PRICING_SERVICES_IMAGE =
   "https://algarvecampingcarpark.pt/wp-content/uploads/2020/11/WhatsApp-Image-2020-10-23-at-10.29.00-e1604514590898.jpeg";
 export const HERO_IMAGE = "/images/hero.png";
 export const EXPERIENCE_IMAGE = "/images/our-story.png";
-export const TOTAL_CAPACITY = 63;
+export const TOTAL_CAPACITY = 57;
 export const PARK_AREA_M2 = 37000;
 export const CHECK_IN_TIME = "11:00";
 export const CHECK_OUT_TIME = "11:00";
@@ -78,5 +80,5 @@ export const ONLINE_BOOKING_DEPOSIT_RATIO = 0.5;
 export const GATE_QR_PATH = "/gate";
 
 export function gateQrUrl(): string {
-  return `${SITE_URL}${GATE_QR_PATH}`;
+  return `${PUBLIC_SITE_URL}${GATE_QR_PATH}`;
 }

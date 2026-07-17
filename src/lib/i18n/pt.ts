@@ -27,7 +27,7 @@ const pt = {
     features_subtitle:
       "Muito mais do que um parque de estacionamento — um refúgio junto ao Atlântico.",
     features: {
-      capacity: "63 lugares",
+      capacity: "57 lugares",
       capacity_desc: "Capacidade para autocaravanas de todos os tamanhos, com zonas com e sem eletricidade.",
       nature: "Ambiente natural",
       nature_desc: "37 000 m² de terreno arborizado, sossegado e autêntico.",
@@ -60,7 +60,7 @@ const pt = {
       "Eletricidade 6A e 10A nas zonas equipadas",
       "Água potável e esgotos",
       "37 000 m² de ambiente natural",
-      "63 lugares para autocaravanas",
+      "57 lugares para autocaravanas",
       "Acesso fácil e estacionamento amplo",
     ],
     gallery_title: "Galeria",

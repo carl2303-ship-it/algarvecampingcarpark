@@ -514,7 +514,7 @@ export const adminT = {
     saveError: "Erreur lors de l'enregistrement du code.",
     qrTitle: "QR code portail",
     qrDescription:
-      "Le QR code ouvre directement la réservation obligatoire pour entrer au parc, même si les réservations en ligne sont fermées sur le site.",
+      "Le QR code ouvre la page /gate (contactos + réservation obligatoire), même si les réservations en ligne sont fermées sur le site.",
     qrAlt: "QR code d'accès au site depuis la barrière",
     qrUrlLabel: "Lien encodé dans le QR code",
     qrCopy: "Copier le lien",

@@ -27,7 +27,7 @@ const de = {
     features_subtitle:
       "Viel mehr als ein Parkplatz — ein Rückzugsort am Atlantik.",
     features: {
-      capacity: "63 Stellplätze",
+      capacity: "57 Stellplätze",
       capacity_desc:
         "Platz für Wohnmobile aller Größen, mit Zonen mit und ohne Stromanschluss.",
       nature: "Natürliche Umgebung",
@@ -61,7 +61,7 @@ const de = {
       "Strom 6A und 10A in ausgestatteten Zonen",
       "Trinkwasser und Entsorgung",
       "37.000 m² natürliche Umgebung",
-      "63 Stellplätze für Wohnmobile",
+      "57 Stellplätze für Wohnmobile",
       "Einfacher Zugang und großzügige Parkflächen",
     ],
     gallery_title: "Galerie",

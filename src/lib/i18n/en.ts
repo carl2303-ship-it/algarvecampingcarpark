@@ -27,7 +27,7 @@ const en = {
     features_subtitle:
       "Much more than a parking area — a retreat by the Atlantic.",
     features: {
-      capacity: "63 pitches",
+      capacity: "57 pitches",
       capacity_desc: "Room for motorhomes of all sizes, with electric and non-electric zones.",
       nature: "Natural setting",
       nature_desc: "37,000 m² of wooded, peaceful and authentic land.",
@@ -60,7 +60,7 @@ const en = {
       "6A and 10A electricity in equipped zones",
       "Fresh water and waste disposal",
       "37,000 m² natural environment",
-      "63 motorhome pitches",
+      "57 motorhome pitches",
       "Easy access and ample parking",
     ],
     gallery_title: "Gallery",
