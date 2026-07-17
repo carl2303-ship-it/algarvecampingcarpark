@@ -1,4 +1,4 @@
-const CACHE_NAME = "accp-v5";
+const CACHE_NAME = "accp-v6";
 const PRECACHE = ["/icons/app-icon-192.png", "/icons/app-icon.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -27,15 +27,25 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
+  // Never cache HTML navigations — always network for fresh app shell.
+  if (event.request.mode === "navigate") {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   if (url.pathname.startsWith("/icons/") || url.pathname.endsWith(".webmanifest")) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).then((response) => {
-          const copy = response.clone();
-          void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          return response;
-        });
+        const network = fetch(event.request)
+          .then((response) => {
+            if (response.ok) {
+              const copy = response.clone();
+              void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            }
+            return response;
+          })
+          .catch(() => cached);
+        return cached || network;
       })
     );
     return;

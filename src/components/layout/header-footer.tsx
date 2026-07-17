@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, MapPin, Menu, Phone } from "lucide-react";
+import { Download, Mail, MapPin, Menu, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -10,6 +10,7 @@ import { SiteLogo } from "@/components/brand/site-logo";
 import { FooterBrandRow } from "@/components/brand/footer-brand-row";
 import { SocialLinks } from "@/components/brand/social-links";
 import { BookCta } from "@/components/booking/book-cta";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import {
   ADDRESS,
   CONTACT_EMAIL,
@@ -29,6 +30,7 @@ import {
   LOCALE_LABELS,
   switchLocalePath,
 } from "@/lib/locale-path";
+import { isStandaloneMode } from "@/lib/pwa";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -79,6 +81,8 @@ export function Header({ locale }: { locale: Locale }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+  const [canOfferInstall, setCanOfferInstall] = useState(false);
 
   const path = (p: string) => localePath(locale, p);
   const isHome = pathname === path("/");
@@ -88,6 +92,10 @@ export function Header({ locale }: { locale: Locale }) {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    setCanOfferInstall(!isStandaloneMode());
   }, []);
 
   const headerClass = cn(
@@ -115,78 +123,106 @@ export function Header({ locale }: { locale: Locale }) {
       : buttonVariants();
 
   return (
-    <header className={headerClass}>
-      <div className="container mx-auto flex h-[100px] items-center justify-between px-4">
-        <Link href={path("/")} className="flex items-center shrink-0">
-          <SiteLogo
-            size="lg"
-            priority
-            className="drop-shadow-sm !h-[88px] !max-w-[343px]"
-          />
-        </Link>
+    <>
+      <header className={headerClass}>
+        <div className="container mx-auto flex h-[100px] items-center justify-between px-4">
+          <Link href={path("/")} className="flex items-center shrink-0">
+            <SiteLogo
+              size="lg"
+              priority
+              className="drop-shadow-sm !h-[88px] !max-w-[343px]"
+            />
+          </Link>
 
-        <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
-          {navItems.map((item) => (
-            <Link
-              key={item.key}
-              href={path(item.href)}
-              className={linkClass(pathname === path(item.href))}
-            >
-              {t.nav[item.key]}
-            </Link>
-          ))}
-          <LocaleSwitcher locale={locale} pathname={pathname} linkClass={linkClass} />
-          <BookCta locale={locale} href={path("/book")} className={bookBtnClass}>
-            {t.nav.book}
-          </BookCta>
-        </nav>
-
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "icon" }),
-              "lg:hidden",
-              isHome && !scrolled && "text-white hover:bg-white/10 hover:text-white"
-            )}
-          >
-            <Menu className="h-5 w-5" />
-          </SheetTrigger>
-          <SheetContent side="right" className="w-80">
-            <div className="flex flex-col gap-1 mt-8">
-              <div className="mb-4 px-1">
-                <SiteLogo size="md" className="!h-[74px] !max-w-[281px]" />
-              </div>
-              {navItems.map((item) => (
-                <Link
-                  key={item.key}
-                  href={path(item.href)}
-                  onClick={() => setOpen(false)}
-                  className="rounded-lg px-3 py-3 text-base font-medium hover:bg-muted transition-colors"
-                >
-                  {t.nav[item.key]}
-                </Link>
-              ))}
-              <hr className="my-4" />
-              <LocaleSwitcher
-                locale={locale}
-                pathname={pathname}
-                className="px-3 flex-wrap"
-                linkClass={() => "text-muted-foreground hover:text-foreground"}
-                onNavigate={() => setOpen(false)}
-              />
-              <BookCta
-                locale={locale}
-                href={path("/book")}
-                onClick={() => setOpen(false)}
-                className={cn(buttonVariants(), "mt-4")}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
+            {navItems.map((item) => (
+              <Link
+                key={item.key}
+                href={path(item.href)}
+                className={linkClass(pathname === path(item.href))}
               >
-                {t.nav.book}
-              </BookCta>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    </header>
+                {t.nav[item.key]}
+              </Link>
+            ))}
+            <LocaleSwitcher locale={locale} pathname={pathname} linkClass={linkClass} />
+            {canOfferInstall ? (
+              <button
+                type="button"
+                onClick={() => setShowInstall(true)}
+                className={cn(linkClass(false), "inline-flex items-center gap-1.5")}
+              >
+                <Download className="h-4 w-4" />
+                {t.install.install_btn}
+              </button>
+            ) : null}
+            <BookCta locale={locale} href={path("/book")} className={bookBtnClass}>
+              {t.nav.book}
+            </BookCta>
+          </nav>
+
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "lg:hidden",
+                isHome && !scrolled && "text-white hover:bg-white/10 hover:text-white"
+              )}
+            >
+              <Menu className="h-5 w-5" />
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80">
+              <div className="flex flex-col gap-1 mt-8">
+                <div className="mb-4 px-1">
+                  <SiteLogo size="md" className="!h-[74px] !max-w-[281px]" />
+                </div>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.key}
+                    href={path(item.href)}
+                    onClick={() => setOpen(false)}
+                    className="rounded-lg px-3 py-3 text-base font-medium hover:bg-muted transition-colors"
+                  >
+                    {t.nav[item.key]}
+                  </Link>
+                ))}
+                {canOfferInstall ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      setShowInstall(true);
+                    }}
+                    className="rounded-lg px-3 py-3 text-base font-medium hover:bg-muted transition-colors text-left inline-flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4 text-primary" />
+                    {t.install.install_btn}
+                  </button>
+                ) : null}
+                <hr className="my-4" />
+                <LocaleSwitcher
+                  locale={locale}
+                  pathname={pathname}
+                  className="px-3 flex-wrap"
+                  linkClass={() => "text-muted-foreground hover:text-foreground"}
+                  onNavigate={() => setOpen(false)}
+                />
+                <BookCta
+                  locale={locale}
+                  href={path("/book")}
+                  onClick={() => setOpen(false)}
+                  className={cn(buttonVariants(), "mt-4")}
+                >
+                  {t.nav.book}
+                </BookCta>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </header>
+      {showInstall ? (
+        <InstallPrompt locale={locale} forceOpen onClose={() => setShowInstall(false)} />
+      ) : null}
+    </>
   );
 }
 

@@ -22,9 +22,12 @@ export const EARLY_PWA_CAPTURE_SCRIPT = `
     window.__accpInstallReady = true;
     window.dispatchEvent(new Event("accp-install-ready"));
   });
-  if ("serviceWorker" in navigator) {
+  function registerSW() {
+    if (!("serviceWorker" in navigator)) return;
     navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {});
   }
+  if (document.readyState === "complete") registerSW();
+  else window.addEventListener("load", registerSW);
 })();
 `;
 

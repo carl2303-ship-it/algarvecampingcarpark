@@ -7,6 +7,7 @@ import { SiteLogo } from "@/components/brand/site-logo";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 import {
+  clearInstallPromptDismiss,
   dismissInstallPrompt,
   getInstallPlatform,
   isDismissedRecently,
@@ -18,11 +19,19 @@ import {
 import {
   getDeferredInstallPrompt,
   promptAppInstall,
-  waitForInstallPrompt,
 } from "@/lib/pwa-install";
 import { cn } from "@/lib/utils";
 
-export function InstallPrompt({ locale }: { locale: Locale }) {
+export function InstallPrompt({
+  locale,
+  forceOpen = false,
+  onClose,
+}: {
+  locale: Locale;
+  /** Open from header/menu — ignore recent dismiss */
+  forceOpen?: boolean;
+  onClose?: () => void;
+}) {
   const t = getTranslations(locale).install;
   const [visible, setVisible] = useState(false);
   const [platform, setPlatform] = useState<InstallPlatform>("other");
@@ -33,12 +42,17 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
   useEffect(() => {
     void registerServiceWorker();
 
-    if (isStandaloneMode()) return;
+    if (isStandaloneMode()) {
+      setVisible(false);
+      return;
+    }
 
-    const forceInstall =
+    const urlForce =
       typeof window !== "undefined" &&
       new URLSearchParams(window.location.search).has("install");
-    if (forceInstall) {
+
+    if (forceOpen || urlForce) {
+      clearInstallPromptDismiss();
       localStorage.removeItem(PWA_DISMISS_KEY);
     } else if (isDismissedRecently()) {
       return;
@@ -63,8 +77,17 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
     window.addEventListener("accp-install-ready", syncDeferred);
     window.addEventListener("beforeinstallprompt", syncDeferred);
 
+    if (forceOpen || urlForce) {
+      setVisible(true);
+      syncDeferred();
+      return () => {
+        window.removeEventListener("accp-install-ready", syncDeferred);
+        window.removeEventListener("beforeinstallprompt", syncDeferred);
+      };
+    }
+
     if (detected === "ios") {
-      const timer = window.setTimeout(() => setVisible(true), 1500);
+      const timer = window.setTimeout(() => setVisible(true), 1200);
       return () => {
         window.clearTimeout(timer);
         window.removeEventListener("accp-install-ready", syncDeferred);
@@ -75,43 +98,42 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
     const fallback = window.setTimeout(() => {
       syncDeferred();
       setVisible(true);
-    }, 2000);
+    }, 1800);
 
     return () => {
       window.clearTimeout(fallback);
       window.removeEventListener("accp-install-ready", syncDeferred);
       window.removeEventListener("beforeinstallprompt", syncDeferred);
     };
-  }, []);
+  }, [forceOpen]);
 
   function handleDismiss() {
     dismissInstallPrompt();
     setVisible(false);
+    onClose?.();
   }
 
   async function handleInstall() {
-    setInstalling(true);
-    setShowManualFallback(false);
-
-    let deferred = getDeferredInstallPrompt();
+    // CRITICAL: call prompt() in the same user-gesture turn.
+    // Do not await anything before deferred.prompt() — Chrome cancels install otherwise.
+    const deferred = getDeferredInstallPrompt();
     if (!deferred) {
-      deferred = await waitForInstallPrompt(800);
-    }
-
-    if (!deferred) {
-      setInstalling(false);
       setCanOneClickInstall(false);
       setShowManualFallback(true);
       return;
     }
 
+    setInstalling(true);
+    setShowManualFallback(false);
     setCanOneClickInstall(true);
+
     const outcome = await promptAppInstall();
     setInstalling(false);
 
     if (outcome === "accepted") {
       setVisible(false);
       setCanOneClickInstall(false);
+      onClose?.();
       return;
     }
 
@@ -194,12 +216,15 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
                   <p className="rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
                     {t.install_ready_hint}
                   </p>
-                ) : null}
-                {showManualFallback || !oneClickReady ? (
+                ) : (
                   <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-                    {showManualFallback ? t.install_not_ready : isDesktop ? t.desktop_manual : t.android_manual}
+                    {showManualFallback
+                      ? t.install_not_ready
+                      : isDesktop
+                        ? t.desktop_manual
+                        : t.android_manual}
                   </p>
-                ) : null}
+                )}
               </div>
             )}
 

@@ -1,15 +1,17 @@
 import type { MetadataRoute } from "next";
-import { SITE_NAME, SITE_SHORT_NAME } from "@/lib/constants";
+import { SITE_NAME } from "@/lib/constants";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/",
     name: SITE_NAME,
-    short_name: SITE_SHORT_NAME,
+    short_name: "Algarve CCP",
     description:
       "Área de serviço para autocaravanas em Armação de Pêra. Reserve o seu lugar online.",
-    start_url: "/",
+    start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",
+    orientation: "portrait-primary",
     background_color: "#0e7a8c",
     theme_color: "#0e7a8c",
     lang: "pt",
