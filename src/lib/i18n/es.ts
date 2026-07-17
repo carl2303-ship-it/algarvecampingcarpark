@@ -294,7 +294,11 @@ const es = {
     ios_step1: "Toque Compartir en Safari",
     ios_step2: "Elija «Añadir a pantalla de inicio»",
     install_btn: "Instalar app",
+    install_btn_wait: "Instalar app",
     installing: "Instalando…",
+    install_ready_hint: "Toque para instalar — abre el diálogo del navegador.",
+    install_not_ready:
+      "La instalación automática aún no está lista. Menú ⋮ → «Instalar aplicación», o navegue un poco y vuelva a tocar.",
     later: "Ahora no",
     dismiss: "Cerrar",
   },

@@ -290,7 +290,11 @@ const pt = {
     ios_step1: "Toque em Partilhar no Safari",
     ios_step2: "Escolha «Adicionar ao ecrã principal»",
     install_btn: "Instalar app",
+    install_btn_wait: "Instalar app",
     installing: "A instalar…",
+    install_ready_hint: "Toque para instalar — abre o diálogo do browser.",
+    install_not_ready:
+      "O browser ainda não activou a instalação automática. Use o menu ⋮ → «Instalar aplicação», ou navegue um pouco no site e toque novamente.",
     later: "Agora não",
     dismiss: "Fechar",
   },

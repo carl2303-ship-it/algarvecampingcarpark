@@ -294,7 +294,11 @@ const fr = {
     ios_step1: "Appuyez sur Partager dans Safari",
     ios_step2: "Choisissez « Sur l'écran d'accueil »",
     install_btn: "Installer l'application",
+    install_btn_wait: "Installer l'application",
     installing: "Installation…",
+    install_ready_hint: "Appuyez pour installer — ouvre la boîte de dialogue du navigateur.",
+    install_not_ready:
+      "L'installation automatique n'est pas encore prête. Menu ⋮ → « Installer l'application », ou naviguez un peu puis réessayez.",
     later: "Plus tard",
     dismiss: "Fermer",
   },

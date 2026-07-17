@@ -290,7 +290,11 @@ const en = {
     ios_step1: "Tap Share in Safari",
     ios_step2: 'Choose "Add to Home Screen"',
     install_btn: "Install app",
+    install_btn_wait: "Install app",
     installing: "Installing…",
+    install_ready_hint: "Tap to install — opens your browser's install dialog.",
+    install_not_ready:
+      "Automatic install is not ready yet. Use menu ⋮ → \"Install app\", or browse the site briefly and tap again.",
     later: "Not now",
     dismiss: "Close",
   },

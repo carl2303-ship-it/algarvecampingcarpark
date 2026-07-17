@@ -18,6 +18,7 @@ import {
 import {
   getDeferredInstallPrompt,
   promptAppInstall,
+  waitForInstallPrompt,
 } from "@/lib/pwa-install";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
   const [platform, setPlatform] = useState<InstallPlatform>("other");
   const [canOneClickInstall, setCanOneClickInstall] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [showManualFallback, setShowManualFallback] = useState(false);
 
   useEffect(() => {
     void registerServiceWorker();
@@ -49,6 +51,7 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
       const deferred = getDeferredInstallPrompt();
       if (deferred) {
         setCanOneClickInstall(true);
+        setShowManualFallback(false);
         if (detected !== "ios") {
           setPlatform(detected === "desktop" ? "desktop" : "android");
         }
@@ -60,7 +63,6 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
     window.addEventListener("accp-install-ready", syncDeferred);
     window.addEventListener("beforeinstallprompt", syncDeferred);
 
-    // iOS: Apple does not allow one-click install — show Share steps
     if (detected === "ios") {
       const timer = window.setTimeout(() => setVisible(true), 1500);
       return () => {
@@ -70,12 +72,10 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
       };
     }
 
-    // Chrome needs engagement (tap + ~30s) before beforeinstallprompt.
-    // Show banner with manual steps; upgrade to one-click when ready.
     const fallback = window.setTimeout(() => {
       syncDeferred();
       setVisible(true);
-    }, 2500);
+    }, 2000);
 
     return () => {
       window.clearTimeout(fallback);
@@ -90,11 +90,22 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
   }
 
   async function handleInstall() {
-    if (!getDeferredInstallPrompt()) {
+    setInstalling(true);
+    setShowManualFallback(false);
+
+    let deferred = getDeferredInstallPrompt();
+    if (!deferred) {
+      deferred = await waitForInstallPrompt(800);
+    }
+
+    if (!deferred) {
+      setInstalling(false);
       setCanOneClickInstall(false);
+      setShowManualFallback(true);
       return;
     }
-    setInstalling(true);
+
+    setCanOneClickInstall(true);
     const outcome = await promptAppInstall();
     setInstalling(false);
 
@@ -110,13 +121,14 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
     }
 
     setCanOneClickInstall(Boolean(getDeferredInstallPrompt()));
+    setShowManualFallback(true);
   }
 
   if (!visible) return null;
 
   const isIos = platform === "ios";
   const isDesktop = platform === "desktop" || platform === "other";
-  const showOneClick = canOneClickInstall || Boolean(getDeferredInstallPrompt());
+  const oneClickReady = canOneClickInstall || Boolean(getDeferredInstallPrompt());
 
   return (
     <div
@@ -162,15 +174,33 @@ export function InstallPrompt({ locale }: { locale: Locale }) {
                   <span>{t.ios_step2}</span>
                 </li>
               </ol>
-            ) : showOneClick ? (
-              <Button className="mt-3 w-full" size="lg" onClick={handleInstall} disabled={installing}>
-                <Download className="h-4 w-4" />
-                {installing ? t.installing : t.install_btn}
-              </Button>
             ) : (
-              <p className="mt-3 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-                {isDesktop ? t.desktop_manual : t.android_manual}
-              </p>
+              <div className="mt-3 space-y-2">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleInstall}
+                  disabled={installing}
+                  variant={oneClickReady ? "default" : "secondary"}
+                >
+                  <Download className="h-4 w-4" />
+                  {installing
+                    ? t.installing
+                    : oneClickReady
+                      ? t.install_btn
+                      : t.install_btn_wait}
+                </Button>
+                {oneClickReady ? (
+                  <p className="rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
+                    {t.install_ready_hint}
+                  </p>
+                ) : null}
+                {showManualFallback || !oneClickReady ? (
+                  <p className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                    {showManualFallback ? t.install_not_ready : isDesktop ? t.desktop_manual : t.android_manual}
+                  </p>
+                ) : null}
+              </div>
             )}
 
             <button

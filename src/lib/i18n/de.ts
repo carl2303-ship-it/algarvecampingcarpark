@@ -294,7 +294,11 @@ const de = {
     ios_step1: "In Safari auf Teilen tippen",
     ios_step2: "«Zum Home-Bildschirm» wählen",
     install_btn: "App installieren",
+    install_btn_wait: "App installieren",
     installing: "Wird installiert…",
+    install_ready_hint: "Tippen zum Installieren — öffnet den Browser-Dialog.",
+    install_not_ready:
+      "Automatische Installation noch nicht bereit. Menü ⋮ → «App installieren», oder kurz auf der Seite bleiben und erneut tippen.",
     later: "Nicht jetzt",
     dismiss: "Schließen",
   },

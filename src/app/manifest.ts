@@ -41,7 +41,6 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
-    id: "/",
     prefer_related_applications: false,
   };
 }

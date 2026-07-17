@@ -1,5 +1,5 @@
-const CACHE_NAME = "accp-v3";
-const PRECACHE = ["/", "/icons/app-icon-192.png", "/icons/app-icon.png", "/manifest.webmanifest"];
+const CACHE_NAME = "accp-v5";
+const PRECACHE = ["/icons/app-icon-192.png", "/icons/app-icon.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -27,7 +27,6 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Network-first for navigations and API; cache-first for static icons
   if (url.pathname.startsWith("/icons/") || url.pathname.endsWith(".webmanifest")) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
@@ -42,7 +41,5 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request).then((cached) => cached || caches.match("/")))
-  );
+  event.respondWith(fetch(event.request));
 });
