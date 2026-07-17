@@ -1,152 +1,99 @@
 import type { Locale } from "@/lib/constants";
 import { bcp47Locale } from "@/lib/locale-format";
 
+export type PricingSeasonId = "august" | "summer" | "low";
+export type PricingCategoryId = "electric" | "no-electric";
+export type PricingExtraId =
+  | "motorhome_service"
+  | "shower"
+  | "washing_machine"
+  | "dryer";
+
 export interface PricingOccupancyRow {
-  labelPt: string;
-  labelEn: string;
   twoPeople: number;
   threeFourPeople: number;
 }
 
 export interface PricingCategory {
-  id: "electric" | "no-electric";
-  labelPt: string;
-  labelEn: string;
+  id: PricingCategoryId;
   emoji: string;
   rows: PricingOccupancyRow[];
 }
 
 export interface PricingSeasonBlock {
-  id: "august" | "summer" | "low";
-  titlePt: string;
-  titleEn: string;
-  periodPt: string;
-  periodEn: string;
+  id: PricingSeasonId;
   emoji: string;
   gradient: string;
   categories: PricingCategory[];
 }
 
 export interface PricingExtra {
-  namePt: string;
-  nameEn: string;
+  id: PricingExtraId;
   price: number;
-  unitPt: string;
-  unitEn: string;
+  /** i18n key under prices.extras_units, or null if no unit suffix */
+  unitKey: "per_5_min" | null;
   emoji: string;
 }
 
 export const PRICING_SEASONS: PricingSeasonBlock[] = [
   {
     id: "august",
-    titlePt: "Agosto",
-    titleEn: "August",
-    periodPt: "01/08 — 31/08",
-    periodEn: "01 Aug — 31 Aug",
     emoji: "🌞",
     gradient: "from-orange-400 via-amber-500 to-yellow-500",
     categories: [
       {
         id: "electric",
-        labelPt: "Com eletricidade",
-        labelEn: "With electricity",
         emoji: "⚡",
-        rows: [{ labelPt: "Por noite", labelEn: "Per night", twoPeople: 14.5, threeFourPeople: 16.5 }],
+        rows: [{ twoPeople: 14.5, threeFourPeople: 16.5 }],
       },
       {
         id: "no-electric",
-        labelPt: "Sem eletricidade",
-        labelEn: "Without electricity",
         emoji: "🏕️",
-        rows: [{ labelPt: "Por noite", labelEn: "Per night", twoPeople: 11, threeFourPeople: 13 }],
+        rows: [{ twoPeople: 11, threeFourPeople: 13 }],
       },
     ],
   },
   {
     id: "summer",
-    titlePt: "Verão",
-    titleEn: "Summer",
-    periodPt: "15/06 — 31/07 e 01/09 — 15/09",
-    periodEn: "15 Jun — 31 Jul and 01 Sep — 15 Sep",
     emoji: "☀️",
     gradient: "from-amber-400 via-orange-400 to-rose-400",
     categories: [
       {
         id: "electric",
-        labelPt: "Com eletricidade",
-        labelEn: "With electricity",
         emoji: "⚡",
-        rows: [{ labelPt: "Por noite", labelEn: "Per night", twoPeople: 13.5, threeFourPeople: 15.5 }],
+        rows: [{ twoPeople: 13.5, threeFourPeople: 15.5 }],
       },
       {
         id: "no-electric",
-        labelPt: "Sem eletricidade",
-        labelEn: "Without electricity",
         emoji: "🏕️",
-        rows: [{ labelPt: "Por noite", labelEn: "Per night", twoPeople: 10, threeFourPeople: 12 }],
+        rows: [{ twoPeople: 10, threeFourPeople: 12 }],
       },
     ],
   },
   {
     id: "low",
-    titlePt: "Época baixa",
-    titleEn: "Low season",
-    periodPt: "15/09 — 15/06",
-    periodEn: "15 Sep — 15 Jun",
     emoji: "🌿",
     gradient: "from-sky-500 via-blue-500 to-indigo-600",
     categories: [
       {
         id: "electric",
-        labelPt: "Com eletricidade",
-        labelEn: "With electricity",
         emoji: "⚡",
-        rows: [{ labelPt: "Por noite", labelEn: "Per night", twoPeople: 12.5, threeFourPeople: 14.5 }],
+        rows: [{ twoPeople: 12.5, threeFourPeople: 14.5 }],
       },
       {
         id: "no-electric",
-        labelPt: "Sem eletricidade",
-        labelEn: "Without electricity",
         emoji: "🏕️",
-        rows: [{ labelPt: "Por noite", labelEn: "Per night", twoPeople: 9, threeFourPeople: 11 }],
+        rows: [{ twoPeople: 9, threeFourPeople: 11 }],
       },
     ],
   },
 ];
 
 export const PRICING_EXTRAS: PricingExtra[] = [
-  {
-    namePt: "Serviço Autocaravana",
-    nameEn: "Motorhome service",
-    price: 6,
-    unitPt: "",
-    unitEn: "",
-    emoji: "🚐",
-  },
-  {
-    namePt: "Duche",
-    nameEn: "Shower",
-    price: 1,
-    unitPt: "/ 5 min",
-    unitEn: "/ 5 min",
-    emoji: "🚿",
-  },
-  {
-    namePt: "Máquina de lavar",
-    nameEn: "Washing machine",
-    price: 4,
-    unitPt: "",
-    unitEn: "",
-    emoji: "🧺",
-  },
-  {
-    namePt: "Secador",
-    nameEn: "Tumble dryer",
-    price: 3,
-    unitPt: "",
-    unitEn: "",
-    emoji: "🌀",
-  },
+  { id: "motorhome_service", price: 6, unitKey: null, emoji: "🚐" },
+  { id: "shower", price: 1, unitKey: "per_5_min", emoji: "🚿" },
+  { id: "washing_machine", price: 4, unitKey: null, emoji: "🧺" },
+  { id: "dryer", price: 3, unitKey: null, emoji: "🌀" },
 ];
 
 export function formatEuroAmount(amount: number, locale: Locale): string {

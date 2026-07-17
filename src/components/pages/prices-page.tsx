@@ -27,10 +27,12 @@ function SeasonBlock({
   labels: {
     twoPeople: string;
     threeFourPeople: string;
+    seasons: ReturnType<typeof getTranslations>["prices"]["seasons"];
+    categories: ReturnType<typeof getTranslations>["prices"]["categories"];
   };
 }) {
-  const title = locale === "pt" ? season.titlePt : season.titleEn;
-  const period = locale === "pt" ? season.periodPt : season.periodEn;
+  const title = labels.seasons[season.id].title;
+  const period = labels.seasons[season.id].period;
 
   return (
     <article className="rounded-2xl border bg-card shadow-sm overflow-hidden">
@@ -48,7 +50,7 @@ function SeasonBlock({
 
       <div className="p-4 md:p-6 space-y-6">
         {season.categories.map((category) => {
-          const categoryLabel = locale === "pt" ? category.labelPt : category.labelEn;
+          const categoryLabel = labels.categories[category.id];
           const row = category.rows[0];
 
           return (
@@ -82,6 +84,8 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
   const labels = {
     twoPeople: t.prices.two_people,
     threeFourPeople: t.prices.three_four_people,
+    seasons: t.prices.seasons,
+    categories: t.prices.categories,
   };
 
   return (
@@ -136,11 +140,11 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
             <p className="text-sm text-muted-foreground mb-5">{t.prices.extras_desc}</p>
             <div className="grid sm:grid-cols-2 gap-3">
               {PRICING_EXTRAS.map((extra) => {
-                const name = locale === "pt" ? extra.namePt : extra.nameEn;
-                const unit = locale === "pt" ? extra.unitPt : extra.unitEn;
+                const name = t.prices.extras_items[extra.id];
+                const unit = extra.unitKey ? t.prices.extras_units[extra.unitKey] : "";
                 return (
                   <div
-                    key={extra.namePt}
+                    key={extra.id}
                     className="flex items-center justify-between rounded-xl bg-muted/50 px-4 py-3"
                   >
                     <span className="flex items-center gap-2 font-medium">

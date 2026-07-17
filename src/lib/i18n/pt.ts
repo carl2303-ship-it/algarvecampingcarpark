@@ -180,6 +180,24 @@ const pt = {
     exclusive_alert_title: "Parque exclusivo para camping-cars",
     exclusive_alert:
       "Este parque é exclusivo para camping-cars (autocaravanas). Não são permitidas caravanas nem tendas.",
+    seasons: {
+      august: { title: "Agosto", period: "01/08 — 31/08" },
+      summer: { title: "Verão", period: "15/06 — 31/07 e 01/09 — 15/09" },
+      low: { title: "Época baixa", period: "15/09 — 15/06" },
+    },
+    categories: {
+      electric: "Com eletricidade",
+      "no-electric": "Sem eletricidade",
+    },
+    extras_items: {
+      motorhome_service: "Serviço Autocaravana",
+      shower: "Duche",
+      washing_machine: "Máquina de lavar",
+      dryer: "Secador",
+    },
+    extras_units: {
+      per_5_min: "/ 5 min",
+    },
   },
   book: {
     title: "Reservar o seu lugar",

@@ -181,6 +181,24 @@ const de = {
     exclusive_alert_title: "Park ausschließlich für Wohnmobile",
     exclusive_alert:
       "Dieser Park ist ausschließlich für Camping-Cars (Wohnmobile) vorgesehen. Wohnwagen und Zelte sind nicht erlaubt.",
+    seasons: {
+      august: { title: "August", period: "01.08. — 31.08." },
+      summer: { title: "Sommer", period: "15.06. — 31.07. und 01.09. — 15.09." },
+      low: { title: "Nebensaison", period: "15.09. — 15.06." },
+    },
+    categories: {
+      electric: "Mit Strom",
+      "no-electric": "Ohne Strom",
+    },
+    extras_items: {
+      motorhome_service: "Wohnmobil-Service",
+      shower: "Dusche",
+      washing_machine: "Waschmaschine",
+      dryer: "Trockner",
+    },
+    extras_units: {
+      per_5_min: "/ 5 Min.",
+    },
   },
   book: {
     title: "Ihren Stellplatz buchen",

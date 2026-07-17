@@ -181,6 +181,24 @@ const fr = {
     exclusive_alert_title: "Parc réservé aux camping-cars",
     exclusive_alert:
       "Ce parc est exclusivement réservé aux camping-cars (autocaravanes). Les caravanes et tentes ne sont pas autorisées.",
+    seasons: {
+      august: { title: "Août", period: "01/08 — 31/08" },
+      summer: { title: "Été", period: "15/06 — 31/07 et 01/09 — 15/09" },
+      low: { title: "Basse saison", period: "15/09 — 15/06" },
+    },
+    categories: {
+      electric: "Avec électricité",
+      "no-electric": "Sans électricité",
+    },
+    extras_items: {
+      motorhome_service: "Service camping-car",
+      shower: "Douche",
+      washing_machine: "Machine à laver",
+      dryer: "Sèche-linge",
+    },
+    extras_units: {
+      per_5_min: "/ 5 min",
+    },
   },
   book: {
     title: "Réserver votre place",

@@ -179,6 +179,24 @@ const en = {
     exclusive_alert_title: "Park exclusive to motorhomes",
     exclusive_alert:
       "This park is exclusive to camping-cars (motorhomes). Caravans and tents are not allowed.",
+    seasons: {
+      august: { title: "August", period: "01 Aug — 31 Aug" },
+      summer: { title: "Summer", period: "15 Jun — 31 Jul and 01 Sep — 15 Sep" },
+      low: { title: "Low season", period: "15 Sep — 15 Jun" },
+    },
+    categories: {
+      electric: "With electricity",
+      "no-electric": "Without electricity",
+    },
+    extras_items: {
+      motorhome_service: "Motorhome service",
+      shower: "Shower",
+      washing_machine: "Washing machine",
+      dryer: "Tumble dryer",
+    },
+    extras_units: {
+      per_5_min: "/ 5 min",
+    },
   },
   book: {
     title: "Book your pitch",
