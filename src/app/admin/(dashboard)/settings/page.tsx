@@ -1,5 +1,6 @@
 import { ParkHoursSettings } from "@/components/admin/park-hours-settings";
 import { ParkGateAccessSettings } from "@/components/admin/park-gate-access-settings";
+import { GateQrGenerator } from "@/components/admin/gate-qr-generator";
 import { OnlineBookingSettings } from "@/components/admin/online-booking-settings";
 import { StripeSettingsForm } from "@/components/admin/stripe-settings-form";
 import { EmailSettingsForm } from "@/components/admin/email-settings-form";
@@ -28,6 +29,8 @@ export default async function SettingsPage() {
       <ParkHoursSettings initial={parkSettings} />
 
       <ParkGateAccessSettings initial={parkSettings} />
+
+      <GateQrGenerator />
 
       <StaffAccessManager />
 

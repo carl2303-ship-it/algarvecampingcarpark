@@ -242,6 +242,27 @@ const en = {
     unavailable_contact: "Contact us",
     unavailable_back: "Back to home",
   },
+  gate: {
+    eyebrow: "Arrival at the park",
+    qr_eyebrow: "Gate QR code",
+    title_open: "Reception open",
+    title_closed: "Reception closed",
+    desc_open:
+      "Welcome to Algarve Camping Car Park. Reception is open — call us or book online.",
+    desc_closed:
+      "Welcome. Reception is currently closed. No reservation? Contact us using the numbers below.",
+    qr_hint:
+      "You scanned the gate QR code. Use the contacts below if you arrived without a booking outside reception hours.",
+    reception_hours: "Reception hours",
+    reception_now_open: "We are available at reception right now.",
+    reception_now_closed: "Outside these hours, please call us by phone.",
+    help_text:
+      "If you don't have a booking, call to check availability. When online booking is open, you can also book on the website.",
+    book_online: "Book online",
+    contact_page: "Contact page",
+    open_maps: "Open in Google Maps",
+    view_site: "View website",
+  },
   stay: {
     title: "Your stay",
     description: "Review your booking and extend your departure if the pitch is free.",

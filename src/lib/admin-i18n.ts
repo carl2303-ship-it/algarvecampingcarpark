@@ -512,6 +512,16 @@ export const adminT = {
     save: "Enregistrer le code",
     saved: "Code d'accès enregistré.",
     saveError: "Erreur lors de l'enregistrement du code.",
+    qrTitle: "QR code portail",
+    qrDescription:
+      "À imprimer et fixer sur la barrière. Les clients sans réservation scannent le code pour accéder au site et contacter le parc hors horaires de réception.",
+    qrAlt: "QR code d'accès au site depuis la barrière",
+    qrUrlLabel: "Lien encodé dans le QR code",
+    qrCopy: "Copier le lien",
+    qrCopied: "Lien copié",
+    qrDownload: "Télécharger le PNG",
+    qrPrintHint:
+      "Imprimez en couleur sur un support résistant (plastifié ou alu). Taille recommandée : au moins 15 × 15 cm pour une lecture facile depuis la voiture.",
   },
   onlineBooking: {
     title: "Réservations en ligne",

@@ -38,6 +38,33 @@ export function isOnlineBookingOpen(
   return true;
 }
 
+function currentTimeInLisbon(now: Date): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Lisbon",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const hour = parts.find((part) => part.type === "hour")?.value ?? "00";
+  const minute = parts.find((part) => part.type === "minute")?.value ?? "00";
+  return `${hour}:${minute}`;
+}
+
+export function isWithinReceptionHours(
+  settings: ParkSettings,
+  now: Date = new Date()
+): boolean {
+  const current = currentTimeInLisbon(now);
+  const { reception_open: open, reception_close: close } = settings;
+
+  if (open <= close) {
+    return current >= open && current < close;
+  }
+
+  // Overnight window (e.g. 22:00 – 06:00)
+  return current >= open || current < close;
+}
+
 export async function getParkSettings(): Promise<ParkSettings> {
   if (!getPublicSupabaseConfig()) {
     return DEFAULT_PARK_SETTINGS;
