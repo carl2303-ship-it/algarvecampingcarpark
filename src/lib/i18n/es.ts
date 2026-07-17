@@ -89,6 +89,7 @@ const es = {
       bbq: "Zona de barbacoa y mesas",
       petanque: "Pistas de petanca",
       electricity: "Puntos de electricidad",
+      service_area: "Área de servicio",
     },
     pitch_map: {
       title: "Plano de plazas",
@@ -226,6 +227,7 @@ const es = {
     preferred_pitch: "Plaza seleccionada: {code}",
     preferred_pitch_hint: "Podrá confirmar o elegir otra plaza disponible en el mapa.",
     pitch_list_title: "Plazas disponibles",
+    select_this_pitch: "Seleccionar esta plaza",
     pre_arrival_alert:
       "La plaza definitiva y el código de acceso a la barrera se comunicarán por email 24 horas antes de la fecha de llegada.",
     terms_notice_title: "Antes de confirmar",

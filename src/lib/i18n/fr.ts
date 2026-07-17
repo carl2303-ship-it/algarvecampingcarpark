@@ -89,6 +89,7 @@ const fr = {
       bbq: "Zone barbecue et tables",
       petanque: "Terrains de pétanque",
       electricity: "Points d'électricité",
+      service_area: "Aire de service",
     },
     pitch_map: {
       title: "Plan des places",
@@ -226,6 +227,7 @@ const fr = {
     preferred_pitch: "Place sélectionnée : {code}",
     preferred_pitch_hint: "Vous pourrez confirmer ou choisir une autre place disponible sur le plan.",
     pitch_list_title: "Places disponibles",
+    select_this_pitch: "Choisir cette place",
     pre_arrival_alert:
       "La place définitive et le code d'accès à la barrière vous seront communiqués par email 24 heures avant la date d'arrivée.",
     terms_notice_title: "Avant de confirmer",

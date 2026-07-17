@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   PARK_AERIAL_IMAGE,
   PARK_FACILITIES_PLAN_IMAGE,
@@ -36,6 +36,7 @@ const FACILITY_ITEMS = [
   { id: "3", key: "laundry" as const },
   { id: "4", key: "bbq" as const },
   { id: "5", key: "petanque" as const },
+  { id: "6", key: "service_area" as const },
 ] as const;
 
 function PitchMarker({
@@ -90,26 +91,32 @@ function SpotDetailDialog({
   spot,
   open,
   onOpenChange,
+  mode = "about",
+  onSelectPitch,
 }: {
   locale: Locale;
   spot: PitchMapSpot | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode?: "about" | "booking";
+  onSelectPitch?: (spot: PitchMapSpot) => void;
 }) {
   const t = getTranslations(locale);
   const mapT = t.about.pitch_map;
 
   if (!spot) return null;
 
-  const dimensions = formatDimensions(spot, {
+  const pitch = spot;
+
+  const dimensions = formatDimensions(pitch, {
     width: mapT.width_label,
     length: mapT.length_label,
     separator: mapT.dimensions_separator,
   });
-  const zoneSlug = getSpotZoneSlug(spot);
-  const zoneLabel = zoneLabelForSlug(zoneSlug, spotIsOver9m(spot), mapT);
-  const bookHref = `${localePath(locale, "/book")}?pitch=${encodeURIComponent(spot.code)}`;
-  const visualType = getSpotVisualType(spot);
+  const zoneSlug = getSpotZoneSlug(pitch);
+  const zoneLabel = zoneLabelForSlug(zoneSlug, spotIsOver9m(pitch), mapT);
+  const bookHref = `${localePath(locale, "/book")}?pitch=${encodeURIComponent(pitch.code)}`;
+  const visualType = getSpotVisualType(pitch);
   const traitLabel =
     visualType === "long-pitch"
       ? mapT.long_pitch
@@ -117,14 +124,19 @@ function SpotDetailDialog({
         ? mapT.electric
         : mapT.no_electric;
 
+  function handleSelectPitch() {
+    onSelectPitch?.(pitch);
+    onOpenChange(false);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
         <div className="relative aspect-[4/3] bg-muted">
-          {spot.image_url ? (
+          {pitch.image_url ? (
             <Image
-              src={spot.image_url}
-              alt={mapT.spot_photo_alt.replace("{code}", spot.code)}
+              src={pitch.image_url}
+              alt={mapT.spot_photo_alt.replace("{code}", pitch.code)}
               fill
               className="object-cover"
               sizes="(max-width: 640px) 100vw, 448px"
@@ -138,8 +150,8 @@ function SpotDetailDialog({
 
         <div className="p-6 space-y-4">
           <DialogHeader className="text-left space-y-2">
-            <DialogTitle className="font-heading text-2xl">{spot.code}</DialogTitle>
-            <DialogDescription className="sr-only">{spot.code}</DialogDescription>
+            <DialogTitle className="font-heading text-2xl">{pitch.code}</DialogTitle>
+            <DialogDescription className="sr-only">{pitch.code}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2 text-sm text-muted-foreground">
@@ -154,12 +166,12 @@ function SpotDetailDialog({
               <span>{traitLabel}</span>
             </p>
             <p>{zoneLabel}</p>
-            {spot.electricity_distance_m != null && (
+            {pitch.electricity_distance_m != null && (
               <p className="flex items-center gap-2">
                 <Cable className="h-4 w-4" />
                 {mapT.electricity_distance.replace(
                   "{distance}",
-                  String(spot.electricity_distance_m)
+                  String(pitch.electricity_distance_m)
                 )}
               </p>
             )}
@@ -171,10 +183,16 @@ function SpotDetailDialog({
             )}
           </div>
 
-          <BookCta locale={locale} href={bookHref} className={cn(buttonVariants({ size: "lg" }), "w-full")}>
-            {mapT.reserve}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </BookCta>
+          {mode === "booking" ? (
+            <Button type="button" size="lg" className="w-full" onClick={handleSelectPitch}>
+              {t.book.select_this_pitch}
+            </Button>
+          ) : (
+            <BookCta locale={locale} href={bookHref} className={cn(buttonVariants({ size: "lg" }), "w-full")}>
+              {mapT.reserve}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </BookCta>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -185,11 +203,19 @@ export function ParkPitchMap({
   locale,
   spots,
   showFacilities = false,
+  mode = "about",
+  selectedPitchCode = null,
+  onSelectPitch,
+  hideHeader = false,
 }: {
   locale: Locale;
   spots: PitchMapSpot[];
   /** About page: facilities plan image + amenity legend + pitch markers */
   showFacilities?: boolean;
+  mode?: "about" | "booking";
+  selectedPitchCode?: string | null;
+  onSelectPitch?: (spot: PitchMapSpot) => void;
+  hideHeader?: boolean;
 }) {
   const t = getTranslations(locale);
   const mapT = t.about.pitch_map;
@@ -199,15 +225,20 @@ export function ParkPitchMap({
 
   const title = showFacilities ? facilitiesT.title : mapT.title;
   const subtitle = showFacilities ? facilitiesT.combined_subtitle : mapT.subtitle;
-  const imageSrc = showFacilities ? PARK_FACILITIES_PLAN_IMAGE : PARK_AERIAL_IMAGE;
-  const imageAlt = showFacilities ? facilitiesT.image_alt : mapT.image_alt;
+  const imageSrc =
+    showFacilities || mode === "booking" ? PARK_FACILITIES_PLAN_IMAGE : PARK_AERIAL_IMAGE;
+  const imageAlt =
+    showFacilities || mode === "booking" ? facilitiesT.image_alt : mapT.image_alt;
+  const showFacilityLegend = showFacilities || mode === "booking";
 
   return (
     <div className="space-y-4">
-      <div className="text-center max-w-2xl mx-auto">
-        <h2 className="font-heading text-2xl md:text-3xl font-semibold mb-2">{title}</h2>
-        <p className="text-muted-foreground text-sm md:text-base leading-relaxed">{subtitle}</p>
-      </div>
+      {!hideHeader && (
+        <div className="text-center max-w-2xl mx-auto">
+          <h2 className="font-heading text-2xl md:text-3xl font-semibold mb-2">{title}</h2>
+          <p className="text-muted-foreground text-sm md:text-base leading-relaxed">{subtitle}</p>
+        </div>
+      )}
 
       <div
         className={cn(
@@ -230,7 +261,7 @@ export function ParkPitchMap({
             <PitchMarker
               key={spot.code}
               spot={spot}
-              selected={selectedCode === spot.code}
+              selected={selectedPitchCode === spot.code || selectedCode === spot.code}
               onSelect={setSelectedCode}
             />
           ))}
@@ -253,7 +284,7 @@ export function ParkPitchMap({
           ))}
         </div>
 
-        {showFacilities && (
+        {showFacilityLegend && (
           <div className="grid sm:grid-cols-2 gap-2 pt-2 border-t">
             {FACILITY_ITEMS.map((item) => (
               <div
@@ -286,6 +317,8 @@ export function ParkPitchMap({
         spot={selectedSpot}
         open={selectedCode !== null}
         onOpenChange={(open) => !open && setSelectedCode(null)}
+        mode={mode}
+        onSelectPitch={onSelectPitch}
       />
     </div>
   );

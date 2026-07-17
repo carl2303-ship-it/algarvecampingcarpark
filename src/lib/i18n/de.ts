@@ -89,6 +89,7 @@ const de = {
       bbq: "Grillbereich & Tische",
       petanque: "Pétanque-Plätze",
       electricity: "Stromanschlüsse",
+      service_area: "Entsorgungsstation",
     },
     pitch_map: {
       title: "Stellplatzplan",
@@ -226,6 +227,7 @@ const de = {
     preferred_pitch: "Ausgewählter Stellplatz: {code}",
     preferred_pitch_hint: "Sie können bestätigen oder einen anderen verfügbaren Stellplatz auf der Karte wählen.",
     pitch_list_title: "Verfügbare Stellplätze",
+    select_this_pitch: "Diesen Stellplatz wählen",
     pre_arrival_alert:
       "Ihr endgültiger Stellplatz und der Schranken-Code werden 24 Stunden vor Anreise per E-Mail mitgeteilt.",
     terms_notice_title: "Vor der Bestätigung",

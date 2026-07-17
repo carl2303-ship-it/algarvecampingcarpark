@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { format, addDays, startOfToday } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
@@ -12,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { appendGateEntryQuery } from "@/lib/gate-entry";
+import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
 import { formatPrice } from "@/lib/pricing";
 import type { Locale, ParkSettings } from "@/lib/constants";
 import { getTranslations, t as translate } from "@/lib/i18n";
@@ -19,10 +19,6 @@ import { dateFnsLocale } from "@/lib/locale-format";
 import { localePath } from "@/lib/locale-path";
 import type { ZoneAvailability } from "@/types/database";
 import {
-  PARK_AERIAL_ASPECT_CLASS,
-  PARK_AERIAL_IMAGE,
-  PARK_AERIAL_MAP_MAX_WIDTH_CLASS,
-  getSpotMarkerClass,
   getSpotZoneSlug,
   spotIsOver9m,
   type PitchMapSpot,
@@ -433,36 +429,18 @@ export function BookingWizard({
             </p>
           </div>
 
-          <div
-            className={cn(
-              "relative mx-auto w-full overflow-hidden rounded-2xl border bg-muted",
-              PARK_AERIAL_MAP_MAX_WIDTH_CLASS,
-              PARK_AERIAL_ASPECT_CLASS
-            )}
-          >
-            <Image
-              src={PARK_AERIAL_IMAGE}
-              alt=""
-              fill
-              className="object-contain"
-              sizes="(max-width: 1024px) 100vw, 1152px"
-            />
-            <div className="absolute inset-0">
-              {pitches.map((spot) => (
-                <button
-                  key={spot.code}
-                  type="button"
-                  title={spot.code}
-                  aria-label={spot.code}
-                  onClick={() => setSelectedPitch(spot)}
-                  className={cn(getSpotMarkerClass(spot, selectedPitch?.code === spot.code))}
-                  style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
-                >
-                  {spot.code}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ParkPitchMap
+            locale={locale}
+            spots={pitches}
+            mode="booking"
+            showFacilities
+            hideHeader
+            selectedPitchCode={selectedPitch?.code ?? null}
+            onSelectPitch={(spot) => {
+              const match = pitches.find((p) => p.code === spot.code);
+              if (match) setSelectedPitch(match);
+            }}
+          />
 
           <div>
             <p className="text-sm font-medium mb-2">{tr.book.pitch_list_title}</p>

@@ -88,6 +88,7 @@ const en = {
       bbq: "Barbecue area & tables",
       petanque: "Pétanque courts",
       electricity: "Electricity points",
+      service_area: "Service area",
     },
     pitch_map: {
       title: "Pitch layout",
@@ -224,6 +225,7 @@ const en = {
     preferred_pitch: "Selected pitch: {code}",
     preferred_pitch_hint: "You can confirm or choose another available pitch on the map.",
     pitch_list_title: "Available pitches",
+    select_this_pitch: "Select this pitch",
     pre_arrival_alert:
       "Your final pitch and barrier entry code will be emailed 24 hours before arrival.",
     terms_notice_title: "Before confirming",
