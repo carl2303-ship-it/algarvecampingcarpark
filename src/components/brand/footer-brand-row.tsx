@@ -1,7 +1,6 @@
 import Image from "next/image";
-import { SiteLogo } from "@/components/brand/site-logo";
+import { SITE_NAME, type Locale } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
-import type { Locale } from "@/lib/constants";
 
 const partnerLogos = [
   {
@@ -25,7 +24,13 @@ export function FooterBrandRow({ locale }: { locale: Locale }) {
 
   return (
     <div className="flex flex-wrap items-center gap-5 sm:gap-6">
-      <SiteLogo size="lg" className="shrink-0 !h-[88px] !w-auto !max-w-[320px]" />
+      <Image
+        src="/logos/footer-logo.png"
+        alt={SITE_NAME}
+        width={640}
+        height={640}
+        className="h-[88px] w-auto max-w-[320px] shrink-0 object-contain"
+      />
       <div className="flex items-center gap-4 sm:gap-5">
         {partnerLogos.map((logo) => (
           <Image
