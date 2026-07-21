@@ -18,7 +18,10 @@ export function ParkHoursSettings({ initial }: { initial: ParkSettings }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  function updateField(field: keyof ParkSettings, value: string) {
+  function updateField(
+    field: "reception_open" | "reception_close" | "check_in_time" | "check_out_time",
+    value: string
+  ) {
     setSettings((current) => ({ ...current, [field]: value }));
     setMessage(null);
   }

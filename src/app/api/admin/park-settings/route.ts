@@ -23,10 +23,13 @@ const updateSchema = z.object({
   online_booking_enabled: z.boolean().optional(),
   online_booking_starts_at: isoDateTimeSchema.optional(),
   online_booking_ends_at: isoDateTimeSchema.optional(),
+  extra_guest_cents_per_night: z.number().int().min(0).max(5000).optional(),
+  long_motorhome_cents_per_night: z.number().int().min(0).max(10000).optional(),
+  electricity_10a_surcharge_cents_per_night: z.number().int().min(0).max(5000).optional(),
 });
 
 const SELECT_COLUMNS =
-  "reception_open, reception_close, check_in_time, check_out_time, gate_access_code, online_booking_enabled, online_booking_starts_at, online_booking_ends_at";
+  "reception_open, reception_close, check_in_time, check_out_time, gate_access_code, online_booking_enabled, online_booking_starts_at, online_booking_ends_at, extra_guest_cents_per_night, long_motorhome_cents_per_night, electricity_10a_surcharge_cents_per_night";
 
 const REVALIDATE_PATHS = [
   "/admin/settings",
@@ -65,6 +68,13 @@ export async function PUT(request: Request) {
         body.online_booking_ends_at !== undefined
           ? body.online_booking_ends_at
           : current.online_booking_ends_at,
+      extra_guest_cents_per_night:
+        body.extra_guest_cents_per_night ?? current.extra_guest_cents_per_night,
+      long_motorhome_cents_per_night:
+        body.long_motorhome_cents_per_night ?? current.long_motorhome_cents_per_night,
+      electricity_10a_surcharge_cents_per_night:
+        body.electricity_10a_surcharge_cents_per_night ??
+        current.electricity_10a_surcharge_cents_per_night,
     };
 
     const supabase = createAdminClient();

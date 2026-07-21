@@ -160,16 +160,10 @@ export function AdminReservationsTable({
         <TableHeader>
           <TableRow>
             <SortableHead
-              label={adminT.reservations.client}
-              active={sortKey === "guest_name"}
+              label={adminT.reservations.pitch}
+              active={sortKey === "pitch"}
               direction={sortDir}
-              onClick={() => toggleSort("guest_name")}
-            />
-            <SortableHead
-              label={adminT.reservations.zone}
-              active={sortKey === "zone"}
-              direction={sortDir}
-              onClick={() => toggleSort("zone")}
+              onClick={() => toggleSort("pitch")}
             />
             <SortableHead
               label={adminT.reservations.checkIn}
@@ -184,23 +178,29 @@ export function AdminReservationsTable({
               onClick={() => toggleSort("check_out")}
             />
             <SortableHead
-              label={adminT.reservations.total}
-              active={sortKey === "total_cents"}
-              direction={sortDir}
-              onClick={() => toggleSort("total_cents")}
-              className="text-right"
-            />
-            <SortableHead
               label={adminT.reservations.status}
               active={sortKey === "status"}
               direction={sortDir}
               onClick={() => toggleSort("status")}
             />
             <SortableHead
-              label={adminT.reservations.pitch}
-              active={sortKey === "pitch"}
+              label={adminT.reservations.zone}
+              active={sortKey === "zone"}
               direction={sortDir}
-              onClick={() => toggleSort("pitch")}
+              onClick={() => toggleSort("zone")}
+            />
+            <SortableHead
+              label={adminT.reservations.client}
+              active={sortKey === "guest_name"}
+              direction={sortDir}
+              onClick={() => toggleSort("guest_name")}
+            />
+            <SortableHead
+              label={adminT.reservations.total}
+              active={sortKey === "total_cents"}
+              direction={sortDir}
+              onClick={() => toggleSort("total_cents")}
+              className="text-right"
             />
             <TableHead>{adminT.reservations.actions}</TableHead>
           </TableRow>
@@ -218,21 +218,35 @@ export function AdminReservationsTable({
             sorted.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
-                  <div>
-                    <p className="font-medium">{r.guest_name}</p>
-                    <p className="text-xs text-muted-foreground">{r.guest_email}</p>
+                  <div className="flex flex-col gap-1">
+                    <span>{getPitchCode(r) || "—"}</span>
+                    {r.electricity_amperage === 10 && (
+                      <Badge variant="outline" className="w-fit text-xs py-0 px-1.5">
+                        10A ⚡
+                      </Badge>
+                    )}
+                    {r.motorhome_over_9m && (
+                      <Badge variant="outline" className="w-fit text-xs py-0 px-1.5">
+                        +9 m
+                      </Badge>
+                    )}
                   </div>
                 </TableCell>
-                <TableCell>{getZoneName(r) || "—"}</TableCell>
                 <TableCell className="text-sm whitespace-nowrap">{r.check_in}</TableCell>
                 <TableCell className="text-sm whitespace-nowrap">{r.check_out}</TableCell>
-                <TableCell className="text-right">{formatPrice(r.total_cents)}</TableCell>
                 <TableCell>
                   <Badge variant={statusColors[r.status] ?? "outline"}>
                     {formatAdminReservationStatus(r.status)}
                   </Badge>
                 </TableCell>
-                <TableCell>{getPitchCode(r) || "—"}</TableCell>
+                <TableCell>{getZoneName(r) || "—"}</TableCell>
+                <TableCell>
+                  <div>
+                    <p className="font-medium">{r.guest_name}</p>
+                    <p className="text-xs text-muted-foreground">{r.guest_email}</p>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">{formatPrice(r.total_cents)}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-2">
                     {variant === "active" && (

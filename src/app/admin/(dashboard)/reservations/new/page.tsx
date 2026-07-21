@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { adminT } from "@/lib/admin-i18n";
 import { getActiveZones } from "@/lib/availability";
 import { getPitchMapSpotsAdmin } from "@/lib/pitch-map";
+import { getPricingSupplements } from "@/lib/pricing-supplements";
 import { cn } from "@/lib/utils";
 
 export default async function NewReservationPage({
@@ -13,7 +14,11 @@ export default async function NewReservationPage({
   searchParams: Promise<{ pitch?: string }>;
 }) {
   const params = await searchParams;
-  const [zones, spots] = await Promise.all([getActiveZones(), getPitchMapSpotsAdmin()]);
+  const [zones, spots, pricingSupplements] = await Promise.all([
+    getActiveZones(),
+    getPitchMapSpotsAdmin(),
+    getPricingSupplements(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -27,6 +32,7 @@ export default async function NewReservationPage({
       <AdminReservationForm
         zones={zones}
         spots={spots}
+        pricingSupplements={pricingSupplements.filter((item) => item.applies_admin)}
         initialPitchCode={params.pitch?.toUpperCase()}
       />
     </div>

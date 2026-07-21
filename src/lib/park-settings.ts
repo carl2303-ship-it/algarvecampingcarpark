@@ -4,7 +4,7 @@ import { DEFAULT_PARK_SETTINGS, type ParkSettings } from "@/lib/constants";
 export type { ParkSettings };
 
 const PARK_SETTINGS_COLUMNS =
-  "reception_open, reception_close, check_in_time, check_out_time, gate_access_code, online_booking_enabled, online_booking_starts_at, online_booking_ends_at";
+  "reception_open, reception_close, check_in_time, check_out_time, gate_access_code, online_booking_enabled, online_booking_starts_at, online_booking_ends_at, extra_guest_cents_per_night, long_motorhome_cents_per_night, electricity_10a_surcharge_cents_per_night";
 
 function normalizeSettings(row: Partial<ParkSettings> | null): ParkSettings {
   return {
@@ -17,6 +17,15 @@ function normalizeSettings(row: Partial<ParkSettings> | null): ParkSettings {
       row?.online_booking_enabled ?? DEFAULT_PARK_SETTINGS.online_booking_enabled,
     online_booking_starts_at: row?.online_booking_starts_at ?? null,
     online_booking_ends_at: row?.online_booking_ends_at ?? null,
+    extra_guest_cents_per_night:
+      row?.extra_guest_cents_per_night ??
+      DEFAULT_PARK_SETTINGS.extra_guest_cents_per_night,
+    long_motorhome_cents_per_night:
+      row?.long_motorhome_cents_per_night ??
+      DEFAULT_PARK_SETTINGS.long_motorhome_cents_per_night,
+    electricity_10a_surcharge_cents_per_night:
+      row?.electricity_10a_surcharge_cents_per_night ??
+      DEFAULT_PARK_SETTINGS.electricity_10a_surcharge_cents_per_night,
   };
 }
 

@@ -25,10 +25,13 @@ import { getSpotZoneSlug, spotIsOver9m } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import type { Zone } from "@/types/database";
 import { formatPrice } from "@/lib/pricing";
+import type { PricingSupplement } from "@/lib/pricing-supplements";
+import { cn } from "@/lib/utils";
 
 type Props = {
   zones: Zone[];
   spots: PitchMapSpotRecord[];
+  pricingSupplements?: PricingSupplement[];
 };
 
 export type AdminReservationPayment = {
@@ -59,6 +62,9 @@ export type AdminReservationInitial = {
   total_cents: number;
   paid_cents?: number;
   status?: string;
+  motorhome_over_9m?: boolean;
+  electricity_amperage?: 6 | 10 | null;
+  manual_supplement_ids?: string[];
 };
 
 function eurosToCents(value: string): number {
@@ -72,6 +78,7 @@ function centsToEurosInput(cents: number): string {
 export function AdminReservationForm({
   zones,
   spots,
+  pricingSupplements = [],
   initialPitchCode,
   mode = "create",
   initialReservation,
@@ -140,6 +147,21 @@ export function AdminReservationForm({
   const [extendQuoteError, setExtendQuoteError] = useState<string | null>(null);
   const [loadingExtendQuote, setLoadingExtendQuote] = useState(false);
   const [extendMessage, setExtendMessage] = useState<string | null>(null);
+  const [motorhomeOver9m, setMotorhomeOver9m] = useState(
+    initialReservation?.motorhome_over_9m ?? false
+  );
+  const [electricityAmperage, setElectricityAmperage] = useState<6 | 10 | null>(
+    initialReservation?.electricity_amperage ?? 6
+  );
+  const [manualSupplementIds, setManualSupplementIds] = useState<string[]>(
+    initialReservation?.manual_supplement_ids ?? []
+  );
+
+  const motorhomeSupplement = pricingSupplements.find((item) => item.slug === "motorhome_over_9m");
+  const electricity10aSupplement = pricingSupplements.find((item) => item.slug === "electricity_10a");
+  const manualSupplements = pricingSupplements.filter(
+    (item) => item.trigger_type === "manual_per_night" && item.applies_admin && item.active
+  );
 
   const canExtend =
     isEdit &&
@@ -149,6 +171,25 @@ export function AdminReservationForm({
   const selectedSpot = sortedSpots.find((spot) => spot.code === pitchCode);
   const zoneSlug = selectedSpot ? getSpotZoneSlug(selectedSpot) : null;
   const zoneId = zones.find((zone) => zone.slug === zoneSlug)?.id ?? "";
+  const pitchHasElectricity = Boolean(selectedSpot?.electric);
+
+  useEffect(() => {
+    if (!pitchHasElectricity) {
+      setElectricityAmperage(null);
+    } else if (electricityAmperage == null) {
+      setElectricityAmperage(6);
+    }
+  }, [pitchHasElectricity, pitchCode]);
+
+  const quoteAmperageParam =
+    pitchHasElectricity && electricityAmperage != null
+      ? `&electricity_amperage=${electricityAmperage}`
+      : "";
+
+  const quoteManualParam =
+    manualSupplementIds.length > 0
+      ? `&manual_supplement_ids=${manualSupplementIds.join(",")}`
+      : "";
 
   const totalCents = eurosToCents(totalEuros);
   const balanceCents = Math.max(0, totalCents - paidCents);
@@ -163,7 +204,7 @@ export function AdminReservationForm({
     setLoadingQuote(true);
 
     fetch(
-      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${checkIn}&check_out=${checkOut}&num_guests=${numGuests}`,
+      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${checkIn}&check_out=${checkOut}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
       { signal: controller.signal }
     )
       .then((res) => res.json())
@@ -179,7 +220,7 @@ export function AdminReservationForm({
       .finally(() => setLoadingQuote(false));
 
     return () => controller.abort();
-  }, [zoneId, checkIn, checkOut, numGuests]);
+  }, [zoneId, checkIn, checkOut, numGuests, motorhomeOver9m, quoteAmperageParam, quoteManualParam]);
 
   useEffect(() => {
     if (followQuote && quotedCents != null) {
@@ -234,7 +275,7 @@ export function AdminReservationForm({
     setExtendQuoteError(null);
 
     fetch(
-      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${initialReservation.check_in}&check_out=${extendCheckOut}&num_guests=${numGuests}`,
+      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${initialReservation.check_in}&check_out=${extendCheckOut}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
       { signal: controller.signal }
     )
       .then((res) => res.json())
@@ -264,7 +305,17 @@ export function AdminReservationForm({
       .finally(() => setLoadingExtendQuote(false));
 
     return () => controller.abort();
-  }, [canExtend, initialReservation, extendCheckOut, zoneId, numGuests, totalCents]);
+  }, [
+    canExtend,
+    initialReservation,
+    extendCheckOut,
+    zoneId,
+    numGuests,
+    totalCents,
+    motorhomeOver9m,
+    quoteAmperageParam,
+    quoteManualParam,
+  ]);
 
   function formatStayLabel(payment: AdminReservationPayment): string {
     const from = format(new Date(payment.check_in), "dd/MM/yyyy", { locale: adminDateLocale });
@@ -366,6 +417,9 @@ export function AdminReservationForm({
       notes: notes || undefined,
       operational_notes: operationalNotes || undefined,
       total_cents: totalCents,
+      motorhome_over_9m: motorhomeOver9m,
+      electricity_amperage: pitchHasElectricity ? (electricityAmperage ?? 6) : null,
+      manual_supplement_ids: manualSupplementIds,
     };
 
     const res = await fetch(
@@ -556,6 +610,101 @@ export function AdminReservationForm({
               className="mt-1"
             />
           </div>
+
+          <div className="sm:col-span-2 rounded-xl border p-4 space-y-4">
+            <p className="font-medium text-sm">{adminT.reservationForm.supplementsTitle}</p>
+
+            <label className="flex items-start gap-3 cursor-pointer rounded-lg border px-4 py-3 hover:bg-muted/40">
+              <input
+                type="checkbox"
+                checked={motorhomeOver9m}
+                onChange={(event) => setMotorhomeOver9m(event.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-foreground">
+                  {motorhomeSupplement?.name_pt ?? adminT.reservationForm.supplementOver9mLabel}
+                </span>
+                <span className="block text-muted-foreground mt-0.5">
+                  {motorhomeSupplement?.description_pt ?? adminT.reservationForm.supplementOver9mHint}
+                  {motorhomeSupplement ? (
+                    <span className="block mt-1">
+                      {formatPrice(motorhomeSupplement.amount_cents_per_night)} / nuit
+                    </span>
+                  ) : null}
+                </span>
+              </span>
+            </label>
+
+            {pitchHasElectricity && (
+              <div className="space-y-2">
+                <Label>{adminT.reservationForm.supplementElectricityLabel}</Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setElectricityAmperage(6)}
+                    className={cn(
+                      "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
+                      electricityAmperage === 6
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    {adminT.reservationForm.supplement6a}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setElectricityAmperage(10)}
+                    className={cn(
+                      "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
+                      electricityAmperage === 10
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                      <span className="font-medium">{adminT.reservationForm.supplement10a}</span>
+                      <span className="block text-muted-foreground mt-0.5 text-xs">
+                        {electricity10aSupplement
+                          ? `${formatPrice(electricity10aSupplement.amount_cents_per_night)} / nuit`
+                          : adminT.reservationForm.supplement10aHint}
+                      </span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {manualSupplements.map((supplement) => (
+              <label
+                key={supplement.id}
+                className="flex items-start gap-3 cursor-pointer rounded-lg border px-4 py-3 hover:bg-muted/40"
+              >
+                <input
+                  type="checkbox"
+                  checked={manualSupplementIds.includes(supplement.id)}
+                  onChange={(event) => {
+                    setManualSupplementIds((current) =>
+                      event.target.checked
+                        ? [...current, supplement.id]
+                        : current.filter((id) => id !== supplement.id)
+                    );
+                  }}
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-foreground">{supplement.name_pt}</span>
+                  {supplement.description_pt && (
+                    <span className="block text-muted-foreground mt-0.5">
+                      {supplement.description_pt}
+                    </span>
+                  )}
+                  <span className="block text-muted-foreground mt-0.5 text-xs">
+                    {formatPrice(supplement.amount_cents_per_night)} / nuit
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="total_euros">{adminT.reservationForm.billableTotal}</Label>
             <Input

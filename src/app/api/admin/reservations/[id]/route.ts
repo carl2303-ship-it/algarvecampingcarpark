@@ -25,6 +25,9 @@ const updateSchema = z.object({
   operational_notes: z.string().optional(),
   notes: z.string().optional(),
   total_cents: z.number().int().min(0),
+  motorhome_over_9m: z.boolean().optional().default(false),
+  electricity_amperage: z.union([z.literal(6), z.literal(10)]).nullable().optional(),
+  manual_supplement_ids: z.array(z.string().uuid()).optional().default([]),
 });
 
 export async function PATCH(
@@ -105,6 +108,10 @@ export async function PATCH(
         notes: body.notes || null,
         operational_notes: body.operational_notes || null,
         total_cents: body.total_cents,
+        electricity: body.electricity_amperage != null,
+        electricity_amperage: body.electricity_amperage ?? null,
+        motorhome_over_9m: body.motorhome_over_9m ?? false,
+        manual_supplement_ids: body.manual_supplement_ids ?? [],
       })
       .eq("id", id);
 

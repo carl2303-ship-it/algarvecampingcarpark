@@ -33,6 +33,9 @@ const createSchema = z.object({
   total_cents: z.number().int().min(0),
   initial_payment_cents: z.number().int().min(0).default(0),
   initial_payment_method: paymentMethodSchema.nullable().optional(),
+  motorhome_over_9m: z.boolean().optional().default(false),
+  electricity_amperage: z.union([z.literal(6), z.literal(10)]).nullable().optional(),
+  manual_supplement_ids: z.array(z.string().uuid()).optional().default([]),
 });
 
 export async function POST(request: Request) {
@@ -77,7 +80,10 @@ export async function POST(request: Request) {
         partial_payment_method: null,
         payment_method: body.initial_payment_method ?? null,
         payment_status: "pending",
-        electricity: true,
+        electricity: body.electricity_amperage != null,
+        electricity_amperage: body.electricity_amperage ?? null,
+        motorhome_over_9m: body.motorhome_over_9m ?? false,
+        manual_supplement_ids: body.manual_supplement_ids ?? [],
         created_by_admin: true,
         expires_at: null,
       })

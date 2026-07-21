@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, Pencil, Plus, Trash2, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,23 @@ export function PricingManager({
     price_label_en: "",
     icon: "sparkles",
   });
+  const [dupSourceYear, setDupSourceYear] = useState("");
+  const [dupTargetYear, setDupTargetYear] = useState("");
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    rates.forEach((rate) => {
+      const year = Number.parseInt(rate.start_date.slice(0, 4), 10);
+      if (Number.isFinite(year)) years.add(year);
+    });
+    return Array.from(years).sort((a, b) => a - b);
+  }, [rates]);
+
+  function zoneLabelById(zoneId: string) {
+    const zone = zones.find((z) => z.id === zoneId);
+    if (!zone) return zoneId;
+    return `${zone.name}${!zone.active ? ` (${adminT.common.inactive})` : ""}`;
+  }
 
   async function refreshRates() {
     const res = await fetch("/api/admin/zone-rates");
@@ -192,6 +209,35 @@ export function PricingManager({
     refreshServices();
   }
 
+  async function handleDuplicateYear() {
+    if (!dupSourceYear || !dupTargetYear) return;
+    setSaving(true);
+    const res = await fetch("/api/admin/zone-rates/duplicate-year", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source_year: Number.parseInt(dupSourceYear, 10),
+        target_year: Number.parseInt(dupTargetYear, 10),
+      }),
+    });
+    const data = await res.json();
+    setSaving(false);
+
+    if (!res.ok) {
+      alert(typeof data.error === "string" ? data.error : adminT.pricing.duplicateYearError);
+      return;
+    }
+
+    setDupTargetYear("");
+    await refreshRates();
+    alert(
+      adminT.pricing.duplicateYearSuccess
+        .replace("{count}", String(data.inserted_count ?? 0))
+        .replace("{source}", dupSourceYear)
+        .replace("{target}", String(data.target_year ?? dupTargetYear))
+    );
+  }
+
   return (
     <div className="space-y-8">
       <Card>
@@ -227,7 +273,9 @@ export function PricingManager({
                               setEditRate((r) => ({ ...r, season: (v as RateSeason) ?? r.season }))
                             }
                           >
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger>
+                              <SelectValue>{seasonLabel((editRate.season as RateSeason) ?? "summer")}</SelectValue>
+                            </SelectTrigger>
                             <SelectContent>
                               {SEASON_OPTIONS.map((s) => (
                                 <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
@@ -334,7 +382,9 @@ export function PricingManager({
                 value={newRate.zone_id}
                 onValueChange={(v) => setNewRate((r) => ({ ...r, zone_id: v ?? r.zone_id }))}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue>{zoneLabelById(newRate.zone_id)}</SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   {zones.map((z) => (
                     <SelectItem key={z.id} value={z.id}>
@@ -353,7 +403,9 @@ export function PricingManager({
                   setNewRate((r) => ({ ...r, season: (v as RateSeason) ?? r.season }))
                 }
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue>{seasonLabel(newRate.season)}</SelectValue>
+                </SelectTrigger>
                 <SelectContent>
                   {SEASON_OPTIONS.map((s) => (
                     <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
@@ -388,6 +440,49 @@ export function PricingManager({
               </Button>
             </div>
           </form>
+
+          <div className="border-t pt-6 space-y-3">
+            <h3 className="font-semibold">{adminT.pricing.duplicateYearTitle}</h3>
+            <p className="text-sm text-muted-foreground">{adminT.pricing.duplicateYearDescription}</p>
+            <div className="grid md:grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>{adminT.pricing.sourceYear}</Label>
+                <Select value={dupSourceYear} onValueChange={(v) => setDupSourceYear(v ?? "")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={adminT.common.select} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((year) => (
+                      <SelectItem key={year} value={String(year)}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{adminT.pricing.targetYear}</Label>
+                <Input
+                  type="number"
+                  min="2020"
+                  max="2100"
+                  value={dupTargetYear}
+                  onChange={(e) => setDupTargetYear(e.target.value)}
+                  placeholder="2027"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  onClick={handleDuplicateYear}
+                  disabled={saving || !dupSourceYear || !dupTargetYear}
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {adminT.pricing.duplicateYearAction}
+                </Button>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

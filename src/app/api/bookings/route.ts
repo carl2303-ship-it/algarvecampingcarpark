@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validatePitchBookingAvailability } from "@/lib/availability";
+import { getPricingSupplements } from "@/lib/pricing-supplements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createCheckoutSession } from "@/lib/stripe";
 import {
@@ -22,6 +23,8 @@ const bookingSchema = z.object({
   notes: z.string().max(500).optional(),
   locale: z.enum(["pt", "en", "fr", "de", "es"]).optional().default("pt"),
   gate_entry: z.boolean().optional(),
+  over_9m: z.boolean().optional(),
+  electricity_amperage: z.union([z.literal(6), z.literal(10)]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -43,12 +46,20 @@ export async function POST(request: Request) {
     const data = bookingSchema.parse(body);
     const pitchCode = data.pitch_code.toUpperCase();
 
+    const withElectricity = data.electricity_amperage != null;
+
+    const supplements = await getPricingSupplements();
+
     const { available, pricing, pitch, zone } = await validatePitchBookingAvailability({
       zoneId: data.zone_id,
       pitchCode,
       checkIn: data.check_in,
       checkOut: data.check_out,
       numGuests: data.num_guests,
+      electric: withElectricity,
+      over9m: data.over_9m,
+      electricityAmperage: withElectricity ? (data.electricity_amperage ?? 6) : null,
+      supplements,
     });
 
     if (!available || !pitch || !zone) {
@@ -96,7 +107,8 @@ export async function POST(request: Request) {
         total_cents: pricing.totalCents,
         paid_cents: 0,
         payment_status: "pending",
-        electricity: Boolean(pitch.electric),
+        electricity: withElectricity,
+        electricity_amperage: withElectricity ? (data.electricity_amperage ?? 6) : null,
         expires_at: expiresAt,
         locale: data.locale,
       })

@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculateTotalPrice } from "@/lib/pricing";
+import { calculateTotalPrice, type PricingOptions } from "@/lib/pricing";
 import {
   getSpotZoneSlug,
   isPricingZoneSlug,
@@ -46,7 +46,8 @@ export async function getZoneRates(zoneId: string): Promise<ZoneRate[]> {
 export async function getZoneAvailability(
   checkIn: string,
   checkOut: string,
-  numGuests = 2
+  numGuests = 2,
+  pricingOptions?: PricingOptions
 ): Promise<ZoneAvailability[]> {
   const supabase = createAdminClient();
 
@@ -74,7 +75,7 @@ export async function getZoneAvailability(
     const rates = await getZoneRates(zone.id);
 
     try {
-      const pricing = calculateTotalPrice(rates, checkIn, checkOut, numGuests);
+      const pricing = calculateTotalPrice(rates, checkIn, checkOut, numGuests, pricingOptions);
       if (pricing.nights < pricing.minNights) continue;
 
       results.push({
@@ -97,7 +98,8 @@ export async function validateBookingAvailability(
   zoneId: string,
   checkIn: string,
   checkOut: string,
-  numGuests = 2
+  numGuests = 2,
+  pricingOptions?: PricingOptions
 ): Promise<{ available: boolean; pricing: ReturnType<typeof calculateTotalPrice> }> {
   const supabase = createAdminClient();
 
@@ -114,7 +116,7 @@ export async function validateBookingAvailability(
   }
 
   const rates = await getZoneRates(zoneId);
-  const pricing = calculateTotalPrice(rates, checkIn, checkOut, numGuests);
+  const pricing = calculateTotalPrice(rates, checkIn, checkOut, numGuests, pricingOptions);
 
   if (pricing.nights < pricing.minNights) {
     return { available: false, pricing };
@@ -209,16 +211,28 @@ export async function getAvailablePitchesForZone(params: {
   electric?: boolean;
   /** When set, only +9 m (or not) pitches are returned. */
   over9m?: boolean;
+  /** Hook-up intensity when electric pitches are requested (6A or 10A). */
+  electricityAmperage?: PricingOptions["electricityAmperage"];
+  manualSupplementIds?: string[];
+  supplements?: PricingOptions["supplements"];
 }): Promise<{
   available: boolean;
   pricing: ReturnType<typeof calculateTotalPrice>;
   pitches: AvailablePitch[];
 }> {
+  const pricingOptions: PricingOptions = {
+    motorhomeOver9m: params.over9m,
+    electricityAmperage: params.electricityAmperage,
+    manualSupplementIds: params.manualSupplementIds,
+    supplements: params.supplements,
+  };
+
   const { available, pricing } = await validateBookingAvailability(
     params.zoneId,
     params.checkIn,
     params.checkOut,
-    params.numGuests ?? 2
+    params.numGuests ?? 2,
+    pricingOptions
   );
 
   if (!available) {
@@ -270,6 +284,10 @@ export async function getAvailablePitchesForZone(params: {
       if (params.over9m !== undefined && spotIsOver9m(spot) !== params.over9m) {
         return false;
       }
+      if (params.electricityAmperage != null && spot.electric) {
+        const maxAmps = spot.max_amperage ?? 16;
+        if (maxAmps < params.electricityAmperage) return false;
+      }
       return true;
     });
 
@@ -288,6 +306,9 @@ export async function validatePitchBookingAvailability(params: {
   numGuests?: number;
   electric?: boolean;
   over9m?: boolean;
+  electricityAmperage?: PricingOptions["electricityAmperage"];
+  manualSupplementIds?: string[];
+  supplements?: PricingOptions["supplements"];
 }): Promise<{
   available: boolean;
   pricing: ReturnType<typeof calculateTotalPrice>;
@@ -331,6 +352,9 @@ export async function validatePitchBookingAvailability(params: {
     numGuests: params.numGuests,
     electric: params.electric,
     over9m: params.over9m,
+    electricityAmperage: params.electricityAmperage,
+    manualSupplementIds: params.manualSupplementIds,
+    supplements: params.supplements,
   });
 
   const pitch = pitches.find((p) => p.code.toUpperCase() === code) ?? null;

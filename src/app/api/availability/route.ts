@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getZoneAvailability } from "@/lib/availability";
+import { getPublicPricingSupplements } from "@/lib/pricing-supplements";
 import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
 
 function isGateEntryRequest(searchParams: URLSearchParams): boolean {
@@ -40,7 +41,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const availability = await getZoneAvailability(checkIn, checkOut, numGuests);
+    const supplements = await getPublicPricingSupplements();
+    const availability = await getZoneAvailability(checkIn, checkOut, numGuests, {
+      supplements,
+    });
     return NextResponse.json({ availability });
   } catch (error) {
     console.error("Availability error:", error);

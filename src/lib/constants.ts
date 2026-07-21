@@ -41,6 +41,9 @@ export type ParkSettings = {
   online_booking_enabled: boolean;
   online_booking_starts_at: string | null;
   online_booking_ends_at: string | null;
+  extra_guest_cents_per_night: number;
+  long_motorhome_cents_per_night: number;
+  electricity_10a_surcharge_cents_per_night: number;
 };
 
 export const DEFAULT_PARK_SETTINGS: ParkSettings = {
@@ -52,6 +55,9 @@ export const DEFAULT_PARK_SETTINGS: ParkSettings = {
   online_booking_enabled: false,
   online_booking_starts_at: null,
   online_booking_ends_at: null,
+  extra_guest_cents_per_night: 150,
+  long_motorhome_cents_per_night: 200,
+  electricity_10a_surcharge_cents_per_night: 50,
 };
 
 export const DEFAULT_LOCALE = "pt" as const;

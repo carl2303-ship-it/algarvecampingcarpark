@@ -52,6 +52,25 @@ export interface ServiceItem {
   updated_at: string;
 }
 
+export interface PricingSupplementRow {
+  id: string;
+  slug: string | null;
+  name_pt: string;
+  name_en: string | null;
+  description_pt: string | null;
+  description_en: string | null;
+  amount_cents_per_night: number;
+  trigger_type: "extra_guest" | "motorhome_over_9m" | "electricity_10a" | "manual_per_night";
+  trigger_config: Record<string, unknown>;
+  applies_online: boolean;
+  applies_admin: boolean;
+  is_system: boolean;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface GalleryImageRecord {
   id: string;
   src: string;
@@ -93,6 +112,10 @@ export interface Reservation {
   vehicle_plate: string | null;
   num_guests: number;
   notes: string | null;
+  electricity?: boolean;
+  electricity_amperage?: 6 | 10 | null;
+  motorhome_over_9m?: boolean;
+  manual_supplement_ids?: string[];
   total_cents: number;
   paid_cents?: number;
   partial_payment_cents?: number;

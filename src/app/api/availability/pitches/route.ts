@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getActiveZones, getAvailablePitchesForZone } from "@/lib/availability";
 import { isPricingZoneSlug, type PricingZoneSlug } from "@/lib/park-pitch-map-defaults";
+import { getPublicPricingSupplements } from "@/lib/pricing-supplements";
 import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ const querySchema = z.object({
       if (value === undefined) return undefined;
       return value === "true" || value === "1";
     }),
+  electricity_amperage: z.coerce.number().int().pipe(z.union([z.literal(6), z.literal(10)])).optional(),
 });
 
 function isGateEntryRequest(searchParams: URLSearchParams): boolean {
@@ -51,6 +53,7 @@ export async function GET(request: Request) {
       num_guests: searchParams.get("num_guests") ?? 2,
       electric: searchParams.get("electric") ?? undefined,
       over_9m: searchParams.get("over_9m") ?? undefined,
+      electricity_amperage: searchParams.get("electricity_amperage") ?? undefined,
     });
 
     if (parsed.check_out <= parsed.check_in) {
@@ -63,6 +66,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Zona inválida" }, { status: 400 });
     }
 
+    const supplements = await getPublicPricingSupplements();
+
     const result = await getAvailablePitchesForZone({
       zoneId: zone.id,
       zoneSlug: zone.slug as PricingZoneSlug,
@@ -71,6 +76,9 @@ export async function GET(request: Request) {
       numGuests: parsed.num_guests,
       electric: parsed.electric,
       over9m: parsed.over_9m,
+      electricityAmperage:
+        parsed.electric === false ? null : (parsed.electricity_amperage ?? 6),
+      supplements,
     });
 
     return NextResponse.json({

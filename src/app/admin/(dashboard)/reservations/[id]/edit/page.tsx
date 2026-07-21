@@ -10,6 +10,7 @@ import { adminT } from "@/lib/admin-i18n";
 import { getActiveZones } from "@/lib/availability";
 import { getPitchMapSpotsAdmin } from "@/lib/pitch-map";
 import { getClientPaymentHistory } from "@/lib/admin-reservation-payments";
+import { getPricingSupplements } from "@/lib/pricing-supplements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cn } from "@/lib/utils";
 
@@ -21,10 +22,11 @@ export default async function EditReservationPage({
   const { id } = await params;
   const supabase = createAdminClient();
 
-  const [{ data: reservation }, zones, spots] = await Promise.all([
+  const [{ data: reservation }, zones, spots, pricingSupplements] = await Promise.all([
     supabase.from("reservations").select("*").eq("id", id).maybeSingle(),
     getActiveZones(),
     getPitchMapSpotsAdmin(),
+    getPricingSupplements(),
   ]);
 
   if (!reservation) {
@@ -60,6 +62,14 @@ export default async function EditReservationPage({
     total_cents: reservation.total_cents,
     paid_cents: reservation.paid_cents,
     status: reservation.status,
+    motorhome_over_9m: Boolean(reservation.motorhome_over_9m),
+    electricity_amperage:
+      reservation.electricity_amperage === 6 || reservation.electricity_amperage === 10
+        ? reservation.electricity_amperage
+        : null,
+    manual_supplement_ids: Array.isArray(reservation.manual_supplement_ids)
+      ? reservation.manual_supplement_ids.map(String)
+      : [],
   };
 
   return (
@@ -80,6 +90,7 @@ export default async function EditReservationPage({
         initialPayments={clientPayments}
         zones={zones}
         spots={spots}
+        pricingSupplements={pricingSupplements.filter((item) => item.applies_admin)}
         initialPitchCode={reservation.pitch_code ?? undefined}
       />
     </div>

@@ -130,6 +130,10 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
               </li>
               <li className="flex gap-2">
                 <span className="text-primary shrink-0">•</span>
+                {t.prices.electricity_10a}
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary shrink-0">•</span>
                 {t.prices.children_free}
               </li>
             </ul>

@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findPitchOverlapConflict, getZoneRates } from "@/lib/availability";
 import { calculateTotalPrice } from "@/lib/pricing";
+import { getPricingSupplements } from "@/lib/pricing-supplements";
 
 export type ExtensionQuote = {
   available: boolean;
@@ -27,6 +28,9 @@ type ReservationForExtend = {
   total_cents: number;
   num_guests: number;
   pitch_code: string | null;
+  electricity_amperage?: 6 | 10 | null;
+  motorhome_over_9m?: boolean;
+  manual_supplement_ids?: string[] | null;
 };
 
 export async function quoteStayExtension(params: {
@@ -105,11 +109,18 @@ export async function quoteStayExtension(params: {
   }
 
   const rates = await getZoneRates(reservation.zone_id);
+  const supplements = await getPricingSupplements();
   const newPricing = calculateTotalPrice(
     rates,
     reservation.check_in,
     newCheckOut,
-    reservation.num_guests
+    reservation.num_guests,
+    {
+      motorhomeOver9m: Boolean(reservation.motorhome_over_9m),
+      electricityAmperage: reservation.electricity_amperage ?? null,
+      manualSupplementIds: reservation.manual_supplement_ids ?? [],
+      supplements,
+    }
   );
   const extensionCents = Math.max(0, newPricing.totalCents - reservation.total_cents);
 
@@ -137,7 +148,7 @@ export async function getReservationForStay(reservationId: string) {
   const { data, error } = await supabase
     .from("reservations")
     .select(
-      "id, status, zone_id, check_in, check_out, total_cents, paid_cents, num_guests, pitch_code, guest_name, guest_email, payment_status, zone:zones(name)"
+      "id, status, zone_id, check_in, check_out, total_cents, paid_cents, num_guests, pitch_code, electricity_amperage, motorhome_over_9m, manual_supplement_ids, guest_name, guest_email, payment_status, zone:zones(name)"
     )
     .eq("id", reservationId)
     .maybeSingle();

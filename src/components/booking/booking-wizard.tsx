@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { appendGateEntryQuery } from "@/lib/gate-entry";
 import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
-import { formatPrice } from "@/lib/pricing";
+import { formatPrice, ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT, type ElectricityAmperage } from "@/lib/pricing";
 import type { Locale, ParkSettings } from "@/lib/constants";
 import { getTranslations, t as translate } from "@/lib/i18n";
 import { dateFnsLocale } from "@/lib/locale-format";
@@ -75,10 +75,14 @@ export function BookingWizard({
   const [withElectricity, setWithElectricity] = useState(
     preferredSpot ? Boolean(preferredSpot.electric) : preferredSlug !== "sem-eletricidade"
   );
+  const [electricityAmperage, setElectricityAmperage] = useState<ElectricityAmperage>(6);
   const [over9m, setOver9m] = useState(preferredSpot ? spotIsOver9m(preferredSpot) : false);
 
   const checkInStr = checkIn ? format(checkIn, "yyyy-MM-dd") : "";
   const checkOutStr = checkOut ? format(checkOut, "yyyy-MM-dd") : "";
+  const preferredMaxAmps = preferredSpot?.max_amperage ?? 16;
+  const canChoose10A = !preferredSpot || preferredMaxAmps >= 10;
+  const amperage10SurchargeLabel = formatPrice(ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT);
   const steps: Step[] = useMemo(() => ["details", "pitch", "pay"], []);
 
   useEffect(() => {
@@ -118,9 +122,10 @@ export function BookingWizard({
         return;
       }
 
+      const amperageParam = withElectricity ? `&electricity_amperage=${electricityAmperage}` : "";
       const pitchRes = await fetch(
         appendGateEntryQuery(
-          `/api/availability/pitches?check_in=${checkInStr}&check_out=${checkOutStr}&zone_id=${zone.zone.id}&num_guests=${numGuests}&electric=${withElectricity ? "true" : "false"}&over_9m=${over9m ? "true" : "false"}`,
+          `/api/availability/pitches?check_in=${checkInStr}&check_out=${checkOutStr}&zone_id=${zone.zone.id}&num_guests=${numGuests}&electric=${withElectricity ? "true" : "false"}&over_9m=${over9m ? "true" : "false"}${amperageParam}`,
           gateEntry
         )
       );
@@ -177,6 +182,8 @@ export function BookingWizard({
           notes: notes || undefined,
           locale,
           gate_entry: gateEntry || undefined,
+          over_9m: over9m || undefined,
+          electricity_amperage: withElectricity ? electricityAmperage : undefined,
         }),
       });
       const data = await res.json();
@@ -190,7 +197,11 @@ export function BookingWizard({
 
   const typeSummary = [
     over9m ? tr.book.type_over_9m : null,
-    withElectricity ? tr.book.type_with_electricity : tr.book.type_without_electricity,
+    withElectricity
+      ? electricityAmperage === 10
+        ? tr.book.type_electricity_10a
+        : tr.book.type_electricity_6a
+      : tr.book.type_without_electricity,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -329,7 +340,9 @@ export function BookingWizard({
                 <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     type="button"
-                    onClick={() => setWithElectricity(true)}
+                    onClick={() => {
+                      setWithElectricity(true);
+                    }}
                     className={cn(
                       "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
                       withElectricity
@@ -341,7 +354,10 @@ export function BookingWizard({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setWithElectricity(false)}
+                    onClick={() => {
+                      setWithElectricity(false);
+                      setElectricityAmperage(6);
+                    }}
                     className={cn(
                       "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
                       !withElectricity
@@ -353,6 +369,46 @@ export function BookingWizard({
                   </button>
                 </div>
               </div>
+
+              {withElectricity && (
+                <div className="space-y-2">
+                  <Label>{tr.book.amperage_label}</Label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setElectricityAmperage(6)}
+                      className={cn(
+                        "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
+                        electricityAmperage === 6
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "hover:bg-muted/50"
+                      )}
+                    >
+                      <span className="font-medium">{tr.book.amperage_6a}</span>
+                      <span className="block text-muted-foreground mt-0.5 text-xs">
+                        {tr.book.amperage_6a_hint}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => canChoose10A && setElectricityAmperage(10)}
+                      disabled={!canChoose10A}
+                      className={cn(
+                        "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
+                        electricityAmperage === 10
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "hover:bg-muted/50",
+                        !canChoose10A && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <span className="font-medium">{tr.book.amperage_10a}</span>
+                      <span className="block text-muted-foreground mt-0.5 text-xs">
+                        {translate(locale, "book.amperage_10a_hint", { amount: amperage10SurchargeLabel })}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <label className="flex items-start gap-3 cursor-pointer rounded-lg border px-4 py-3 hover:bg-muted/40">
                 <input

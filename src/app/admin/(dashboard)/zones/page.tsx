@@ -1,12 +1,15 @@
 import { PricingManager } from "@/components/admin/pricing-manager";
+import { PricingSupplementsManager } from "@/components/admin/pricing-supplements-manager";
 import { ZonesManager } from "@/components/admin/zones-manager";
 import { adminT } from "@/lib/admin-i18n";
+import { getPricingSupplements, type PricingSupplement } from "@/lib/pricing-supplements";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function ZonesPage() {
   const supabase = createAdminClient();
 
-  const [zonesRes, ratesRes, servicesRes] = await Promise.all([
+  const [supplementsRes, zonesRes, ratesRes, servicesRes] = await Promise.all([
+    supabase.from("pricing_supplements").select("*").order("sort_order"),
     supabase.from("zones").select("*").order("sort_order"),
     supabase.from("zone_rates").select("*, zone:zones(name)").order("start_date"),
     supabase.from("service_items").select("*").order("sort_order"),
@@ -25,6 +28,8 @@ export default async function ZonesPage() {
       </div>
 
       <ZonesManager initialZones={zones} />
+
+      <PricingSupplementsManager initialSupplements={supplementsRes.data ?? []} />
 
       <PricingManager
         zones={zones}
