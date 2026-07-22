@@ -206,7 +206,7 @@ const fr = {
     gate_entry_eyebrow: "Entrée via QR code",
     gate_entry_title: "Réservation obligatoire pour entrer",
     gate_entry_message:
-      "Complétez la réservation ci-dessous pour entrer au parc. Choisissez l'emplacement, payez 50 % via Stripe et recevez la confirmation par e-mail.",
+      "Complétez la réservation ci-dessous pour entrer au parc. Choisissez l'emplacement, payez via Stripe et recevez la confirmation par e-mail.",
     gate_entry_required:
       "Vous avez scanné le QR code du portail : une réservation est obligatoire pour entrer, même si les réservations en ligne sont fermées sur le site.",
     hero_description:
@@ -240,6 +240,7 @@ const fr = {
     per_night: "par nuit",
     total: "Total",
     deposit: "Acompte (50 %)",
+    pay_full: "Payer le total (100 %)",
     balance_on_arrival: "Solde à l'arrivée",
     nights: "nuits",
     min_nights: "Minimum de {n} nuits",
@@ -287,6 +288,14 @@ const fr = {
   gate: {
     eyebrow: "Arrivée au parc",
     qr_eyebrow: "QR code du portail",
+    landing_eyebrow: "Entrée via QR code",
+    landing_title: "Réservation obligatoire pour entrer",
+    landing_message:
+      "Complétez la réservation ci-dessous pour entrer au parc. Choisissez l'emplacement, payez via Stripe et recevez la confirmation par e-mail.",
+    landing_hint:
+      "Réservation et paiement intégral obligatoires pour entrer, même si les réservations en ligne du site sont fermées.",
+    url_hint: "Pas de lecteur QR code ? Ouvrez ou copiez ce lien :",
+    open_link: "Ouvrir le lien de réservation",
     title_open: "Réception ouverte",
     title_closed: "Réception fermée",
     desc_open:
@@ -307,9 +316,9 @@ const fr = {
     view_site: "Voir le site",
     poster: {
       headline: "Bienvenue au parc",
-      instructions: "Scannez le QR code pour les contacts et la réservation en ligne.",
+      instructions: "Scannez le QR code pour réserver l'entrée au parc.",
       required:
-        "Réservation obligatoire pour entrer. Finalisez sur votre téléphone et payez 50% d'acompte.",
+        "Réservation obligatoire pour entrer. Finalisez sur votre téléphone et payez le total (100 %).",
     },
   },
   stay: {

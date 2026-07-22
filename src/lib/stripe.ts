@@ -39,6 +39,7 @@ export async function createCheckoutSession({
   checkIn,
   checkOut,
   locale = "pt",
+  gateEntry = false,
 }: {
   reservationId: string;
   depositCents: number;
@@ -50,9 +51,21 @@ export async function createCheckoutSession({
   checkIn: string;
   checkOut: string;
   locale?: Locale;
+  gateEntry?: boolean;
 }) {
   const stripe = await getStripe();
   const balanceCents = Math.max(0, totalCents - depositCents);
+  const fullPayment = gateEntry || balanceCents === 0;
+  const productName = fullPayment
+    ? `${SITE_NAME} — Paiement intégral · ${zoneName} · ${pitchCode}`
+    : `${SITE_NAME} — Sinal 50% · ${zoneName} · ${pitchCode}`;
+  const productDescription = fullPayment
+    ? `Check-in: ${checkIn} | Check-out: ${checkOut} | Total payé: ${(totalCents / 100).toFixed(2)} €`
+    : `Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} € | Restante na chegada: ${(balanceCents / 100).toFixed(2)} €`;
+  const cancelPath = gateEntry
+    ? `${localePath(locale, "/book")}?from=qr&cancelled=1`
+    : `${localePath(locale, "/book")}?cancelled=1`;
+
   return stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: guestEmail,
@@ -62,8 +75,8 @@ export async function createCheckoutSession({
         price_data: {
           currency: "eur",
           product_data: {
-            name: `${SITE_NAME} — Sinal 50% · ${zoneName} · ${pitchCode}`,
-            description: `Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} € | Restante na chegada: ${(balanceCents / 100).toFixed(2)} €`,
+            name: productName,
+            description: productDescription,
           },
           unit_amount: depositCents,
         },
@@ -73,14 +86,15 @@ export async function createCheckoutSession({
     metadata: {
       reservation_id: reservationId,
       guest_name: guestName,
-      type: "booking_deposit",
+      type: fullPayment ? "booking_full" : "booking_deposit",
       deposit_cents: String(depositCents),
       total_cents: String(totalCents),
       pitch_code: pitchCode,
+      gate_entry: gateEntry ? "1" : "0",
       locale,
     },
-    success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE_URL}${localePath(locale, "/book")}?cancelled=1`,
+    success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}${gateEntry ? "&from=qr" : ""}`,
+    cancel_url: `${SITE_URL}${cancelPath}`,
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
   });
 }

@@ -2,9 +2,11 @@ import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { BookingDisabledView } from "@/components/booking/booking-disabled-view";
 import { PageHero } from "@/components/marketing/sections";
+import { Toaster } from "@/components/ui/sonner";
 import type { Locale } from "@/lib/constants";
 import { isGateQrEntry, allowsPublicBooking } from "@/lib/gate-entry";
 import { getTranslations } from "@/lib/i18n";
+import { getTermsContent } from "@/lib/legal/terms-content";
 import { getPitchMapSpotByCode } from "@/lib/pitch-map";
 import { getParkSettings } from "@/lib/park-settings";
 import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
@@ -26,12 +28,13 @@ export default async function BookPageContent({
   }
 
   const t = getTranslations(locale);
+  const termsContent = getTermsContent(locale, parkSettings);
   const preferredSpot: PitchMapSpot | null = params.pitch
     ? await getPitchMapSpotByCode(params.pitch.toUpperCase())
     : null;
 
-  return (
-    <MarketingLayout locale={locale}>
+  const content = (
+    <>
       <PageHero
         eyebrow={gateEntry ? t.book.gate_entry_eyebrow : "ASA · Algarve"}
         title={gateEntry ? t.book.gate_entry_title : t.book.title}
@@ -55,8 +58,20 @@ export default async function BookPageContent({
           preferredSpot={preferredSpot}
           parkSettings={parkSettings}
           gateEntry={gateEntry}
+          termsContent={termsContent}
         />
       </div>
-    </MarketingLayout>
+    </>
   );
+
+  if (gateEntry) {
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex flex-col">
+        <main className="flex-1">{content}</main>
+        <Toaster />
+      </div>
+    );
+  }
+
+  return <MarketingLayout locale={locale}>{content}</MarketingLayout>;
 }

@@ -206,7 +206,7 @@ const es = {
     gate_entry_eyebrow: "Entrada por código QR",
     gate_entry_title: "Reserva obligatoria para entrar",
     gate_entry_message:
-      "Complete la reserva abajo para entrar al parque. Elija la plaza, pague el 50 % con Stripe y recibirá confirmación por email.",
+      "Complete la reserva abajo para entrar al parque. Elija la plaza, pague con Stripe y recibirá confirmación por email.",
     gate_entry_required:
       "Ha escaneado el código QR de la puerta: la reserva es obligatoria para entrar, aunque las reservas online estén cerradas en la web.",
     hero_description:
@@ -240,6 +240,7 @@ const es = {
     per_night: "por noche",
     total: "Total",
     deposit: "Señal (50 %)",
+    pay_full: "Pagar el total (100 %)",
     balance_on_arrival: "Resto a la llegada",
     nights: "noches",
     min_nights: "Mínimo de {n} noches",
@@ -287,6 +288,14 @@ const es = {
   gate: {
     eyebrow: "Llegada al parque",
     qr_eyebrow: "Código QR de la puerta",
+    landing_eyebrow: "Entrada por código QR",
+    landing_title: "Reserva obligatoria para entrar",
+    landing_message:
+      "Complete la reserva abajo para entrar al parque. Elija la plaza, pague con Stripe y recibirá confirmación por email.",
+    landing_hint:
+      "Reserva y pago íntegro obligatorios para entrar, aunque las reservas online de la web estén cerradas.",
+    url_hint: "¿Sin lector QR? Abra o copie este enlace:",
+    open_link: "Abrir el enlace de reserva",
     title_open: "Recepción abierta",
     title_closed: "Recepción cerrada",
     desc_open:
@@ -307,9 +316,9 @@ const es = {
     view_site: "Ver sitio web",
     poster: {
       headline: "Bienvenido al parque",
-      instructions: "Escanee el código QR para contacto y reserva online.",
+      instructions: "Escanee el código QR para reservar la entrada al parque.",
       required:
-        "Reserva obligatoria para entrar. Complete la reserva en el móvil y pague el 50% de señal.",
+        "Reserva obligatoria para entrar. Complete la reserva en el móvil y pague el total (100 %).",
     },
   },
   stay: {

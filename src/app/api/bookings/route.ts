@@ -5,8 +5,8 @@ import { getPricingSupplements } from "@/lib/pricing-supplements";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createCheckoutSession } from "@/lib/stripe";
 import {
-  ONLINE_BOOKING_DEPOSIT_RATIO,
   PENDING_PAYMENT_EXPIRY_MINUTES,
+  bookingDepositRatio,
 } from "@/lib/constants";
 import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
 import { normalizeVehiclePlate } from "@/lib/admin-reservation-payments";
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const depositCents = Math.round(pricing.totalCents * ONLINE_BOOKING_DEPOSIT_RATIO);
+    const depositCents = Math.round(pricing.totalCents * bookingDepositRatio(gateEntry));
     if (depositCents < 50) {
       return NextResponse.json({ error: "Valor de reserva inválido" }, { status: 400 });
     }
@@ -157,6 +157,7 @@ export async function POST(request: Request) {
       checkIn: data.check_in,
       checkOut: data.check_out,
       locale: data.locale,
+      gateEntry,
     });
 
     await supabase
@@ -169,7 +170,9 @@ export async function POST(request: Request) {
       stripe_session_id: session.id,
       amount_cents: depositCents,
       status: "pending",
-      notes: "Sinal 50% (reserva online)",
+      notes: gateEntry
+        ? "Paiement intégral (entrée QR portail)"
+        : "Sinal 50% (reserva online)",
     });
 
     return NextResponse.json({ checkout_url: session.url });

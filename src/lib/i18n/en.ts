@@ -204,7 +204,7 @@ const en = {
     gate_entry_eyebrow: "Gate QR entry",
     gate_entry_title: "Booking required to enter",
     gate_entry_message:
-      "Complete your booking below to enter the park. Choose a pitch, pay 50% via Stripe, and you will receive email confirmation.",
+      "Complete your booking below to enter the park. Choose a pitch, pay via Stripe, and you will receive email confirmation.",
     gate_entry_required:
       "You scanned the gate QR code: a booking is required to enter the park, even when online booking is closed on the website.",
     hero_description:
@@ -238,6 +238,7 @@ const en = {
     per_night: "per night",
     total: "Total",
     deposit: "Deposit (50%)",
+    pay_full: "Pay total (100%)",
     balance_on_arrival: "Balance on arrival",
     nights: "nights",
     min_nights: "Minimum {n} nights",
@@ -285,6 +286,14 @@ const en = {
   gate: {
     eyebrow: "Arrival at the park",
     qr_eyebrow: "Gate QR code",
+    landing_eyebrow: "Gate QR entry",
+    landing_title: "Booking required to enter",
+    landing_message:
+      "Complete your booking below to enter the park. Choose a pitch, pay via Stripe, and you will receive email confirmation.",
+    landing_hint:
+      "Full booking and payment are required to enter, even when online booking is closed on the website.",
+    url_hint: "No QR reader? Open or copy this link:",
+    open_link: "Open booking link",
     title_open: "Reception open",
     title_closed: "Reception closed",
     desc_open:
@@ -305,9 +314,9 @@ const en = {
     view_site: "View website",
     poster: {
       headline: "Welcome to the park",
-      instructions: "Scan the QR code for contact details and online booking.",
+      instructions: "Scan the QR code to book park entry.",
       required:
-        "Booking is required to enter. Complete your booking on your phone and pay a 50% deposit.",
+        "Booking is required to enter. Complete your booking on your phone and pay the full amount (100%).",
     },
   },
   stay: {

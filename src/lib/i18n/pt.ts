@@ -205,7 +205,7 @@ const pt = {
     gate_entry_eyebrow: "Entrada via QR code",
     gate_entry_title: "Reserva obrigatória para entrar",
     gate_entry_message:
-      "Complete a reserva abaixo para entrar no parque. Escolha o lugar, pague 50% via Stripe e receberá confirmação por email.",
+      "Complete a reserva abaixo para entrar no parque. Escolha o lugar, pague via Stripe e receberá confirmação por email.",
     gate_entry_required:
       "Leu o QR code no portão: a reserva é obrigatória para entrar no parque, mesmo quando as reservas online estão fechadas no site.",
     hero_description:
@@ -239,6 +239,7 @@ const pt = {
     per_night: "por noite",
     total: "Total",
     deposit: "Sinal (50%)",
+    pay_full: "Pagar o total (100%)",
     balance_on_arrival: "Restante na chegada",
     nights: "noites",
     min_nights: "Mínimo de {n} noites",
@@ -286,6 +287,14 @@ const pt = {
   gate: {
     eyebrow: "Chegada ao parque",
     qr_eyebrow: "QR code do portão",
+    landing_eyebrow: "Entrada via QR code",
+    landing_title: "Reserva obrigatória para entrar",
+    landing_message:
+      "Complete a reserva abaixo para entrar no parque. Escolha o lugar, pague via Stripe e receberá confirmação por email.",
+    landing_hint:
+      "Reserva e pagamento integral necessários para entrar, mesmo quando as reservas online do site estão fechadas.",
+    url_hint: "Sem leitor de QR code? Abra ou copie este link:",
+    open_link: "Abrir o link de reserva",
     title_open: "Receção aberta",
     title_closed: "Receção fechada",
     desc_open:
@@ -306,9 +315,9 @@ const pt = {
     view_site: "Ver website",
     poster: {
       headline: "Bem-vindo ao parque",
-      instructions: "Escaneie o QR Code para contacto e reserva online.",
+      instructions: "Escaneie o QR Code para reservar a entrada no parque.",
       required:
-        "Reserva obrigatória para entrar. Complete a reserva no telemóvel e pague 50% de sinal.",
+        "Reserva obrigatória para entrar. Complete a reserva no telemóvel e pague o total (100%).",
     },
   },
   stay: {

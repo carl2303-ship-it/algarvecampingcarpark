@@ -3,6 +3,7 @@ import { CheckCircle } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import type { Locale } from "@/lib/constants";
+import { isGateQrEntry } from "@/lib/gate-entry";
 import { getTranslations } from "@/lib/i18n";
 import { localePath } from "@/lib/locale-path";
 
@@ -11,29 +12,40 @@ export default async function BookSuccessPageContent({
   searchParams,
 }: {
   locale: Locale;
-  searchParams: Promise<{ extended?: string }>;
+  searchParams: Promise<{ extended?: string; from?: string }>;
 }) {
   const params = await searchParams;
   const t = getTranslations(locale);
   const extended = params.extended === "1";
+  const gateEntry = isGateQrEntry(params.from);
 
-  return (
-    <MarketingLayout locale={locale}>
-      <div className="container mx-auto px-4 py-20 text-center max-w-lg">
-        <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-6" />
-        <h1 className="text-3xl font-bold mb-4">
-          {extended ? t.book.success_extended_title : t.book.success_title}
-        </h1>
-        <p className="text-muted-foreground mb-8">
-          {extended ? t.book.success_extended_message : t.book.success_message}
-        </p>
-        {!extended && (
-          <p className="text-sm text-muted-foreground mb-8">{t.book.pre_arrival_alert}</p>
-        )}
+  const content = (
+    <div className="container mx-auto px-4 py-20 text-center max-w-lg">
+      <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-6" />
+      <h1 className="text-3xl font-bold mb-4">
+        {extended ? t.book.success_extended_title : t.book.success_title}
+      </h1>
+      <p className="text-muted-foreground mb-8">
+        {extended ? t.book.success_extended_message : t.book.success_message}
+      </p>
+      {!extended && (
+        <p className="text-sm text-muted-foreground mb-8">{t.book.pre_arrival_alert}</p>
+      )}
+      {!gateEntry && (
         <Link href={localePath(locale, "/")} className={buttonVariants()}>
           {t.book.unavailable_back}
         </Link>
-      </div>
-    </MarketingLayout>
+      )}
+    </div>
   );
+
+  if (gateEntry) {
+    return (
+      <div className="min-h-dvh bg-background text-foreground flex flex-col">
+        <main className="flex-1 flex items-center justify-center">{content}</main>
+      </div>
+    );
+  }
+
+  return <MarketingLayout locale={locale}>{content}</MarketingLayout>;
 }

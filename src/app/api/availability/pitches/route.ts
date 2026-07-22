@@ -4,6 +4,7 @@ import { getActiveZones, getAvailablePitchesForZone } from "@/lib/availability";
 import { isPricingZoneSlug, type PricingZoneSlug } from "@/lib/park-pitch-map-defaults";
 import { getPublicPricingSupplements } from "@/lib/pricing-supplements";
 import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
+import { bookingDepositRatio } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +85,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       zone,
       total_price_cents: result.pricing.totalCents,
-      deposit_cents: Math.round(result.pricing.totalCents * 0.5),
+      deposit_cents: Math.round(result.pricing.totalCents * bookingDepositRatio(gateEntry)),
       nights: result.pricing.nights,
       price_per_night_cents: result.pricing.pricePerNightCents,
       min_nights: result.pricing.minNights,

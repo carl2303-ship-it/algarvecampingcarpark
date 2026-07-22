@@ -54,6 +54,9 @@ function buildPosterHtml({
   const logoUrl = `${PUBLIC_SITE_URL}/logo.png`;
   const siteName = escapeHtml(SITE_NAME);
   const safeGateUrl = escapeHtml(gateUrl);
+  const bookUrl = `${PUBLIC_SITE_URL}/book`;
+  const safeBookUrl = escapeHtml(bookUrl);
+  const noQrHint = escapeHtml(adminT.gateAccess.poster.noQrHint);
   const languageBlocks = buildLanguageBlocks();
 
   return `<!DOCTYPE html>
@@ -107,8 +110,8 @@ function buildPosterHtml({
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8mm 0;
-      min-height: 108mm;
+      padding: 6mm 0;
+      min-height: 100mm;
     }
     .qr-wrap {
       padding: 6mm;
@@ -178,14 +181,36 @@ function buildPosterHtml({
       font-weight: 600;
       color: #334155;
     }
-    .footer-url {
+    .book-link {
       width: 100%;
       margin-top: 5mm;
-      padding-top: 3mm;
-      border-top: 1px dashed #cbd5e1;
+      padding: 4mm 3mm;
+      border: 2px solid #0e7a8c;
+      border-radius: 3mm;
+      background: #f0fdfa;
       text-align: center;
+    }
+    .book-link-hint {
+      margin: 0;
       font-size: 8pt;
-      color: #64748b;
+      color: #0f766e;
+      font-weight: 600;
+    }
+    .book-link-url {
+      margin: 2mm 0 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13pt;
+      font-weight: 700;
+      color: #0e4a56;
+      word-break: break-all;
+      line-height: 1.3;
+    }
+    .footer-url {
+      width: 100%;
+      margin-top: 3mm;
+      text-align: center;
+      font-size: 7pt;
+      color: #94a3b8;
       word-break: break-all;
     }
   </style>
@@ -207,7 +232,11 @@ function buildPosterHtml({
       ${languageBlocks}
     </section>
 
-    <p class="footer-url">${safeGateUrl}</p>
+    <div class="book-link">
+      <p class="book-link-hint">${noQrHint}</p>
+      <p class="book-link-url">${safeBookUrl}</p>
+    </div>
+    <p class="footer-url">QR → ${safeGateUrl}</p>
   </div>
   <script>
     function printWhenReady() {

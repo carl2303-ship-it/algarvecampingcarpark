@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { format, addDays, startOfToday } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,13 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TermsDialog } from "@/components/legal/terms-dialog";
 import { appendGateEntryQuery } from "@/lib/gate-entry";
 import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
 import { formatPrice, ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT, type ElectricityAmperage } from "@/lib/pricing";
-import type { Locale, ParkSettings } from "@/lib/constants";
+import { bookingDepositRatio, type Locale, type ParkSettings } from "@/lib/constants";
 import { getTranslations, t as translate } from "@/lib/i18n";
 import { dateFnsLocale } from "@/lib/locale-format";
-import { localePath } from "@/lib/locale-path";
+import type { TermsContent } from "@/lib/legal/terms-content";
 import type { ZoneAvailability } from "@/types/database";
 import {
   getSpotZoneSlug,
@@ -42,15 +42,16 @@ export function BookingWizard({
   preferredSpot = null,
   parkSettings,
   gateEntry = false,
+  termsContent,
 }: {
   locale: Locale;
   preferredSpot?: PitchMapSpot | null;
   parkSettings: ParkSettings;
   gateEntry?: boolean;
+  termsContent: TermsContent;
 }) {
   const tr = getTranslations(locale);
   const dateLocale = dateFnsLocale(locale);
-  const termsPath = localePath(locale, "/terms");
 
   const preferredSlug = preferredSpot ? getSpotZoneSlug(preferredSpot) : null;
 
@@ -191,7 +192,9 @@ export function BookingWizard({
       setTotalCents(pitchData.total_price_cents ?? zone.total_price_cents);
       setDepositCents(
         pitchData.deposit_cents ??
-          Math.round((pitchData.total_price_cents ?? zone.total_price_cents) * 0.5)
+          Math.round(
+            (pitchData.total_price_cents ?? zone.total_price_cents) * bookingDepositRatio(gateEntry)
+          )
       );
 
       if (list.length === 0) {
@@ -515,9 +518,7 @@ export function BookingWizard({
                 />
                 <span>
                   {tr.book.terms_accept_before}{" "}
-                  <Link href={termsPath} className="text-primary underline underline-offset-2">
-                    {tr.book.terms_link}
-                  </Link>{" "}
+                  <TermsDialog label={tr.book.terms_link} content={termsContent} />{" "}
                   {tr.book.terms_accept_after}
                 </span>
               </label>
@@ -543,8 +544,10 @@ export function BookingWizard({
           <div>
             <h2 className="text-lg font-semibold">{tr.book.select_pitch}</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {typeSummary} · {formatPrice(totalCents)} · {tr.book.deposit}:{" "}
-              {formatPrice(depositCents)}
+              {typeSummary} · {formatPrice(totalCents)}
+              {gateEntry
+                ? ` · ${tr.book.pay_full}: ${formatPrice(depositCents)}`
+                : ` · ${tr.book.deposit}: ${formatPrice(depositCents)}`}
             </p>
           </div>
 
@@ -605,14 +608,23 @@ export function BookingWizard({
                 <span>{tr.book.total}</span>
                 <span className="font-semibold">{formatPrice(totalCents)}</span>
               </div>
-              <div className="flex justify-between text-primary">
-                <span>{tr.book.deposit}</span>
-                <span className="font-semibold">{formatPrice(depositCents)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>{tr.book.balance_on_arrival}</span>
-                <span>{formatPrice(totalCents - depositCents)}</span>
-              </div>
+              {gateEntry ? (
+                <div className="flex justify-between text-primary">
+                  <span>{tr.book.pay_full}</span>
+                  <span className="font-semibold">{formatPrice(depositCents)}</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between text-primary">
+                    <span>{tr.book.deposit}</span>
+                    <span className="font-semibold">{formatPrice(depositCents)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>{tr.book.balance_on_arrival}</span>
+                    <span>{formatPrice(totalCents - depositCents)}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -621,7 +633,7 @@ export function BookingWizard({
 
             <Button onClick={submitBooking} disabled={loading} className="w-full" size="lg">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {tr.book.pay} — {formatPrice(depositCents)}
+              {gateEntry ? tr.book.pay_full : tr.book.pay} — {formatPrice(depositCents)}
             </Button>
           </CardContent>
         </Card>

@@ -206,7 +206,7 @@ const de = {
     gate_entry_eyebrow: "Eintritt per QR-Code",
     gate_entry_title: "Buchung zum Eintritt erforderlich",
     gate_entry_message:
-      "Schließen Sie die Buchung unten ab, um den Park zu betreten. Wählen Sie den Stellplatz, zahlen Sie 50 % per Stripe und erhalten Sie die Bestätigung per E-Mail.",
+      "Schließen Sie die Buchung unten ab, um den Park zu betreten. Wählen Sie den Stellplatz, zahlen Sie per Stripe und erhalten Sie die Bestätigung per E-Mail.",
     gate_entry_required:
       "Sie haben den QR-Code am Tor gescannt: Eine Buchung ist zum Eintritt erforderlich, auch wenn Online-Buchungen auf der Website geschlossen sind.",
     hero_description:
@@ -240,6 +240,7 @@ const de = {
     per_night: "pro Nacht",
     total: "Gesamt",
     deposit: "Anzahlung (50 %)",
+    pay_full: "Gesamtbetrag zahlen (100 %)",
     balance_on_arrival: "Restbetrag bei Anreise",
     nights: "Nächte",
     min_nights: "Mindestens {n} Nächte",
@@ -287,6 +288,14 @@ const de = {
   gate: {
     eyebrow: "Ankunft im Park",
     qr_eyebrow: "QR-Code am Tor",
+    landing_eyebrow: "Eintritt per QR-Code",
+    landing_title: "Buchung zum Eintritt erforderlich",
+    landing_message:
+      "Schließen Sie die Buchung unten ab, um den Park zu betreten. Wählen Sie den Stellplatz, zahlen Sie per Stripe und erhalten Sie die Bestätigung per E-Mail.",
+    landing_hint:
+      "Vollständige Buchung und Zahlung sind zum Eintritt erforderlich, auch wenn Online-Buchungen auf der Website geschlossen sind.",
+    url_hint: "Kein QR-Leser? Öffnen oder kopieren Sie diesen Link:",
+    open_link: "Buchungslink öffnen",
     title_open: "Rezeption geöffnet",
     title_closed: "Rezeption geschlossen",
     desc_open:
@@ -307,9 +316,9 @@ const de = {
     view_site: "Website ansehen",
     poster: {
       headline: "Willkommen im Park",
-      instructions: "QR-Code scannen für Kontakt und Online-Buchung.",
+      instructions: "QR-Code scannen, um die Einfahrt zu buchen.",
       required:
-        "Buchung erforderlich zum Einfahren. Reservierung am Handy abschließen und 50% Anzahlung leisten.",
+        "Buchung erforderlich zum Einfahren. Reservierung am Handy abschließen und den Gesamtbetrag (100 %) zahlen.",
     },
   },
   stay: {
