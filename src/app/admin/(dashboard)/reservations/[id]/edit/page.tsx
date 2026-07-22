@@ -70,6 +70,7 @@ export default async function EditReservationPage({
     manual_supplement_ids: Array.isArray(reservation.manual_supplement_ids)
       ? reservation.manual_supplement_ids.map(String)
       : [],
+    pre_arrival_email_sent_at: reservation.pre_arrival_email_sent_at ?? null,
   };
 
   return (

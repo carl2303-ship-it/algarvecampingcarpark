@@ -315,6 +315,12 @@ export const adminT = {
     sendConfirmation: "Envoyer l'e-mail de confirmation",
     sendConfirmationSuccess: "E-mail de confirmation envoyé à {email}.",
     sendConfirmationError: "Erreur lors de l'envoi de l'e-mail de confirmation.",
+    sendPreArrival: "Envoyer lieu + code barrière",
+    sendPreArrivalSuccess: "E-mail pré-arrivée (lieu + code) envoyé à {email}.",
+    sendPreArrivalError: "Erreur lors de l'envoi de l'e-mail pré-arrivée.",
+    sendPreArrivalAlready: "Déjà envoyé — renvoyer ?",
+    preArrivalSentAt: "Pré-arrivée envoyée le {date}",
+    preArrivalNotSent: "E-mail lieu + code pas encore envoyé",
     extendTitle: "Prolonger le séjour",
     extendDescription:
       "Allonge la date de départ sur la même réservation et calcule le supplément selon les tarifs.",
@@ -598,6 +604,11 @@ export const adminT = {
     save: "Enregistrer le code",
     saved: "Code d'accès enregistré.",
     saveError: "Erreur lors de l'enregistrement du code.",
+    runPreArrival: "Envoyer maintenant les e-mails pré-arrivée",
+    runPreArrivalHint:
+      "Envoie lieu + code aux réservations confirmées (arrivée hier → demain) qui n'ont pas encore reçu l'e-mail et ont un emplacement.",
+    runPreArrivalSuccess: "Envoyés : {sent} · Échecs : {failed} · Candidats : {candidates}",
+    runPreArrivalError: "Erreur lors de l'envoi groupé.",
     qrTitle: "QR code portail",
     qrDescription:
       "Le QR code ouvre la page /gate (réservation obligatoire, paiement intégral), même si les réservations en ligne sont fermées sur le site.",
@@ -710,12 +721,15 @@ export const adminT = {
     apiKey: "Clé API Resend (RESEND_API_KEY)",
     apiKeyHint: "Envoi des confirmations, prolongations et reçus",
     from: "Adresse d'envoi (EMAIL_FROM)",
-    fromHint: "Doit être un domaine vérifié dans Resend",
+    fromHint:
+      "Obligatoire : domaine vérifié dans Resend (ex. reservas@algarvecampingcarpark.pt). Gmail/Hotmail sont refusés et bloquent tous les e-mails.",
     newApiKey: "Nouvelle clé API",
     newFrom: "Nouvelle adresse d'envoi",
     save: "Enregistrer les identifiants e-mail",
     fillOneField: "Remplissez au moins un champ pour mettre à jour.",
     saved: "Identifiants e-mail enregistrés dans l'app.",
     saveError: "Erreur lors de l'enregistrement des identifiants e-mail.",
+    gmailWarning:
+      "L'expéditeur actuel semble être une adresse grand public (Gmail, etc.). Les e-mails échouent tant qu'un domaine Resend n'est pas configuré.",
   },
 } as const;

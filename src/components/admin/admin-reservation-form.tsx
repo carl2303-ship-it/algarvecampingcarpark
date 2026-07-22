@@ -65,6 +65,7 @@ export type AdminReservationInitial = {
   motorhome_over_9m?: boolean;
   electricity_amperage?: 6 | 10 | null;
   manual_supplement_ids?: string[];
+  pre_arrival_email_sent_at?: string | null;
 };
 
 function eurosToCents(value: string): number {
@@ -142,7 +143,11 @@ export function AdminReservationForm({
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendingPreArrival, setSendingPreArrival] = useState(false);
   const [emailMessage, setEmailMessage] = useState<string | null>(null);
+  const [preArrivalSentAt, setPreArrivalSentAt] = useState(
+    initialReservation?.pre_arrival_email_sent_at ?? null
+  );
   const [error, setError] = useState<string | null>(null);
   const [extendCheckOut, setExtendCheckOut] = useState("");
   const [extendSendLink, setExtendSendLink] = useState(true);
@@ -552,6 +557,35 @@ export function AdminReservationForm({
 
     setEmailMessage(
       adminT.reservationForm.sendConfirmationSuccess.replace("{email}", data.sent_to ?? guestEmail)
+    );
+  }
+
+  async function handleSendPreArrival(force = false) {
+    if (!isEdit || !initialReservation?.id) return;
+
+    if (preArrivalSentAt && !force) {
+      const ok = window.confirm(adminT.reservationForm.sendPreArrivalAlready);
+      if (!ok) return;
+      force = true;
+    }
+
+    setSendingPreArrival(true);
+    setEmailMessage(null);
+    setError(null);
+
+    const url = `/api/admin/reservations/${initialReservation.id}/send-pre-arrival${force ? "?force=1" : ""}`;
+    const res = await fetch(url, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    setSendingPreArrival(false);
+
+    if (!res.ok) {
+      setError(typeof data.error === "string" ? data.error : adminT.reservationForm.sendPreArrivalError);
+      return;
+    }
+
+    setPreArrivalSentAt(new Date().toISOString());
+    setEmailMessage(
+      adminT.reservationForm.sendPreArrivalSuccess.replace("{email}", data.sent_to ?? guestEmail)
     );
   }
 
@@ -1203,7 +1237,7 @@ export function AdminReservationForm({
         <Button
           type="submit"
           size="lg"
-          disabled={submitting || sendingEmail || addingPayment || plateBlocked}
+          disabled={submitting || sendingEmail || sendingPreArrival || addingPayment || plateBlocked}
         >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isEdit ? adminT.reservationForm.saveChanges : adminT.reservationForm.create}
@@ -1214,7 +1248,7 @@ export function AdminReservationForm({
             type="button"
             size="lg"
             variant="outline"
-            disabled={submitting || sendingEmail || addingPayment}
+            disabled={submitting || sendingEmail || sendingPreArrival || addingPayment}
             onClick={handleSendConfirmation}
           >
             {sendingEmail ? (
@@ -1223,6 +1257,23 @@ export function AdminReservationForm({
               <Mail className="mr-2 h-4 w-4" />
             )}
             {adminT.reservationForm.sendConfirmation}
+          </Button>
+        )}
+
+        {isEdit && (
+          <Button
+            type="button"
+            size="lg"
+            variant="secondary"
+            disabled={submitting || sendingEmail || sendingPreArrival || addingPayment || !pitchCode}
+            onClick={() => handleSendPreArrival(false)}
+          >
+            {sendingPreArrival ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="mr-2 h-4 w-4" />
+            )}
+            {adminT.reservationForm.sendPreArrival}
           </Button>
         )}
 
@@ -1243,6 +1294,17 @@ export function AdminReservationForm({
           />
         )}
       </div>
+
+      {isEdit && (
+        <p className="text-xs text-muted-foreground">
+          {preArrivalSentAt
+            ? adminT.reservationForm.preArrivalSentAt.replace(
+                "{date}",
+                new Date(preArrivalSentAt).toLocaleString("fr-FR")
+              )
+            : adminT.reservationForm.preArrivalNotSent}
+        </p>
+      )}
 
       {emailMessage && <p className="text-sm text-muted-foreground">{emailMessage}</p>}
     </form>

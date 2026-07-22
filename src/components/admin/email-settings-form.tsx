@@ -103,6 +103,11 @@ export function EmailSettingsForm({ initial }: { initial: EmailSettingsView }) {
               <SourceBadge source={view.email_from_source} />
             </div>
           </div>
+          {/@(gmail|googlemail|hotmail|outlook|yahoo)\./i.test(view.email_from) && (
+            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              {adminT.email.gmailWarning}
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSave} className="space-y-4">

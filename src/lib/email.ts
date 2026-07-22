@@ -3,6 +3,7 @@ import type { Locale } from "./constants";
 import { getEmailSecrets } from "./email-settings";
 import { fillTemplate, getEmailCopy, resolveLocale } from "./email-i18n";
 import { formatPrice } from "./pricing";
+import { assertResendSent } from "./resend-assert";
 import { stayManageUrl } from "./stay-token";
 
 function buildStayLinkBlock(reservationId: string, locale: Locale): string {
@@ -33,6 +34,11 @@ async function getResendClient(): Promise<{
 } | null> {
   const { resendApiKey, emailFrom } = await getEmailSecrets();
   if (!resendApiKey) return null;
+  if (/@(gmail|googlemail|hotmail|outlook|yahoo)\./i.test(emailFrom)) {
+    throw new Error(
+      "L'expéditeur e-mail doit être un domaine vérifié Resend (ex. reservas@algarvecampingcarpark.pt). Configurez-le dans Paramètres → E-mail — Gmail/Hotmail ne sont pas acceptés."
+    );
+  }
   return { resend: new Resend(resendApiKey), from: emailFrom };
 }
 
@@ -80,7 +86,7 @@ export async function sendBookingConfirmation({
     : "";
   const stayLink = buildStayLinkBlock(reservationId, lang);
 
-  await client.resend.emails.send({
+  const result = await client.resend.emails.send({
     from: client.from,
     to: guestEmail,
     subject: t.subject,
@@ -107,6 +113,7 @@ export async function sendBookingConfirmation({
       <p>${fillTemplate(t.questions, { from: client.from })}</p>
     `,
   });
+  assertResendSent(result, "Confirmation e-mail");
 }
 
 export async function sendPreArrivalAccess({
@@ -159,7 +166,7 @@ export async function sendPreArrivalAccess({
 
   const stayLink = buildStayLinkBlock(reservationId, lang);
 
-  await client.resend.emails.send({
+  const result = await client.resend.emails.send({
     from: client.from,
     to: guestEmail,
     subject: t.subject,
@@ -180,6 +187,7 @@ export async function sendPreArrivalAccess({
       <p>${fillTemplate(t.questions, { from: client.from })}</p>
     `,
   });
+  assertResendSent(result, "Pré-arrivée e-mail");
 }
 
 export async function sendExtensionPaymentLink({
@@ -210,7 +218,7 @@ export async function sendExtensionPaymentLink({
   const lang = resolveLocale(locale);
   const t = getEmailCopy(lang).extension;
 
-  await client.resend.emails.send({
+  const result = await client.resend.emails.send({
     from: client.from,
     to: guestEmail,
     subject: t.subject,
@@ -228,6 +236,7 @@ export async function sendExtensionPaymentLink({
       <p>${fillTemplate(t.questions, { from: client.from })}</p>
     `,
   });
+  assertResendSent(result, "Extension e-mail");
 }
 
 export async function sendPaymentReceipt({
@@ -258,7 +267,7 @@ export async function sendPaymentReceipt({
     ? `<p><a href="${receiptUrl}">${t.viewReceipt}</a></p>`
     : `<p>${t.receiptLater}</p>`;
 
-  await client.resend.emails.send({
+  const result = await client.resend.emails.send({
     from: client.from,
     to: guestEmail,
     subject: t.subject,
@@ -271,6 +280,7 @@ export async function sendPaymentReceipt({
       <p>${t.thanks}</p>
     `,
   });
+  assertResendSent(result, "Reçu e-mail");
 }
 
 /** Build localized receipt description helpers for callers. */

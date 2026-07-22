@@ -47,7 +47,7 @@ export async function PATCH(
 
     const { data: existing, error: fetchError } = await supabase
       .from("reservations")
-      .select("*")
+      .select("*, zone:zones(name)")
       .eq("id", id)
       .single();
 
@@ -178,6 +178,41 @@ export async function PATCH(
       await supabase.from("reservations").update({ guest_id: guestId }).eq("id", id);
     }
 
+    let preArrivalSent = false;
+    let preArrivalError: string | null = null;
+    const shouldTryPreArrival =
+      Boolean(pitch_code) &&
+      ["confirmed", "checked_in"].includes(
+        confirmWithoutPayment ? "confirmed" : (existing.status as string)
+      ) &&
+      !existing.pre_arrival_email_sent_at &&
+      body.guest_email;
+
+    if (shouldTryPreArrival) {
+      const lisbonToday = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Lisbon",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+      const checkIn = body.check_in;
+      const dayMs = 24 * 60 * 60 * 1000;
+      const today = new Date(`${lisbonToday}T12:00:00Z`).getTime();
+      const arrival = new Date(`${checkIn}T12:00:00Z`).getTime();
+      const daysUntil = Math.round((arrival - today) / dayMs);
+      // Auto-send if arrival is yesterday…tomorrow (catch-up + standard window)
+      if (daysUntil >= -1 && daysUntil <= 1) {
+        try {
+          const { sendPreArrivalByReservationId } = await import("@/lib/pre-arrival");
+          await sendPreArrivalByReservationId(id, { force: false });
+          preArrivalSent = true;
+        } catch (err) {
+          preArrivalError = err instanceof Error ? err.message : "Pré-arrivée non envoyée";
+          console.error("Auto pre-arrival after save failed:", id, err);
+        }
+      }
+    }
+
     const { data: updated } = await supabase
       .from("reservations")
       .select("status, total_cents")
@@ -191,6 +226,8 @@ export async function PATCH(
       paid_cents: totals.paid_cents,
       balance_cents: Math.max(0, (updated?.total_cents ?? body.total_cents) - totals.paid_cents),
       status: updated?.status ?? existing.status,
+      pre_arrival_sent: preArrivalSent,
+      pre_arrival_error: preArrivalError,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
