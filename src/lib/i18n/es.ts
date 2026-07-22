@@ -209,6 +209,12 @@ const es = {
       "Complete la reserva abajo para entrar al parque. Elija la plaza, pague con Stripe y recibirá confirmación por email.",
     gate_entry_required:
       "Ha escaneado el código QR de la puerta: la reserva es obligatoria para entrar, aunque las reservas online estén cerradas en la web.",
+    reception_entry_eyebrow: "Recepción",
+    reception_entry_title: "Rellene sus datos",
+    reception_entry_message:
+      "Complete la reserva abajo. El pago se realiza en recepción — no necesita pagar online.",
+    reception_entry_required:
+      "QR de recepción: rellene sus datos y elija la plaza. Luego acuda al mostrador para pagar.",
     hero_description:
       "Indique sus datos, elija el tipo de plaza, selecciónela en el mapa y pague el 50 % para garantizar la reserva.",
     step_dates: "Fechas y datos",
@@ -241,6 +247,10 @@ const es = {
     total: "Total",
     deposit: "Señal (50 %)",
     pay_full: "Pagar el total (100 %)",
+    pay_at_reception: "A pagar en recepción",
+    confirm_reception: "Confirmar reserva",
+    reception_pay_hint:
+      "Tras confirmar, muestre el código o la matrícula en recepción para completar el pago.",
     balance_on_arrival: "Resto a la llegada",
     nights: "noches",
     min_nights: "Mínimo de {n} noches",
@@ -275,6 +285,10 @@ const es = {
       success_title: "¡Reserva confirmada!",
     success_message:
       "Recibirá un email de confirmación en breve. La señal del 50 % está pagada; el resto se abona a la llegada.",
+    success_reception_title: "¡Datos registrados!",
+    success_reception_message:
+      "Su reserva está lista. Acuda a recepción para pagar y finalizar el check-in.",
+    success_reception_ref_label: "Código de reserva",
     success_extended_title: "¡Extensión pagada!",
     success_extended_message:
       "El pago de la extensión ha sido recibido. Su nueva fecha de salida ya está actualizada.",
@@ -319,6 +333,20 @@ const es = {
       instructions: "Escanee el código QR para reservar la entrada al parque.",
       required:
         "Reserva obligatoria para entrar. Complete la reserva en el móvil y pague el total (100 %).",
+    },
+  },
+  reception: {
+    landing_eyebrow: "Recepción",
+    landing_title: "Rellene sus datos",
+    landing_message:
+      "Escanee el QR y complete la reserva en el móvil. El pago se realiza en recepción.",
+    landing_hint:
+      "No necesita pagar online. Tras confirmar, muestre el código o la matrícula en el mostrador.",
+    cta: "Rellenar mis datos",
+    poster: {
+      headline: "Bienvenido a recepción",
+      instructions: "Escanee el código QR para introducir sus datos de reserva.",
+      required: "El pago se realiza en recepción tras confirmar la reserva en el móvil.",
     },
   },
   stay: {

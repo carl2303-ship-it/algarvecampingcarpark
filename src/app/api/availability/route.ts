@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
 import { getZoneAvailability } from "@/lib/availability";
 import { getPublicPricingSupplements } from "@/lib/pricing-supplements";
+import { isPublicEntryRequest } from "@/lib/gate-entry";
 import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
-
-function isGateEntryRequest(searchParams: URLSearchParams): boolean {
-  return searchParams.get("gate_entry") === "1";
-}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const gateEntry = isGateEntryRequest(searchParams);
+  const deskEntry = isPublicEntryRequest(searchParams);
   const parkSettings = await getParkSettings();
 
-  if (!isOnlineBookingOpen(parkSettings) && !gateEntry) {
+  if (!isOnlineBookingOpen(parkSettings) && !deskEntry) {
     return NextResponse.json(
       { error: "As reservas online estão temporariamente indisponíveis." },
       { status: 503 }

@@ -5,6 +5,7 @@ import { isPricingZoneSlug, type PricingZoneSlug } from "@/lib/park-pitch-map-de
 import { getPublicPricingSupplements } from "@/lib/pricing-supplements";
 import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
 import { bookingDepositRatio } from "@/lib/constants";
+import { isPublicEntryRequest } from "@/lib/gate-entry";
 
 export const dynamic = "force-dynamic";
 
@@ -30,16 +31,13 @@ const querySchema = z.object({
   electricity_amperage: z.coerce.number().int().pipe(z.union([z.literal(6), z.literal(10)])).optional(),
 });
 
-function isGateEntryRequest(searchParams: URLSearchParams): boolean {
-  return searchParams.get("gate_entry") === "1";
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const gateEntry = isGateEntryRequest(searchParams);
+  const deskEntry = isPublicEntryRequest(searchParams);
+  const gateEntry = searchParams.get("gate_entry") === "1";
   const parkSettings = await getParkSettings();
 
-  if (!isOnlineBookingOpen(parkSettings) && !gateEntry) {
+  if (!isOnlineBookingOpen(parkSettings) && !deskEntry) {
     return NextResponse.json(
       { error: "As reservas online estão temporariamente indisponíveis." },
       { status: 503 }

@@ -207,6 +207,12 @@ const en = {
       "Complete your booking below to enter the park. Choose a pitch, pay via Stripe, and you will receive email confirmation.",
     gate_entry_required:
       "You scanned the gate QR code: a booking is required to enter the park, even when online booking is closed on the website.",
+    reception_entry_eyebrow: "Reception",
+    reception_entry_title: "Enter your details",
+    reception_entry_message:
+      "Complete the booking below. Payment is made at reception — you do not need to pay online.",
+    reception_entry_required:
+      "Reception QR: fill in your details and choose a pitch. Then go to the desk to pay.",
     hero_description:
       "Enter your details, choose pitch type, select on the map and pay a 50% deposit to secure your stay.",
     step_dates: "Dates & details",
@@ -239,6 +245,10 @@ const en = {
     total: "Total",
     deposit: "Deposit (50%)",
     pay_full: "Pay total (100%)",
+    pay_at_reception: "Pay at reception",
+    confirm_reception: "Confirm booking",
+    reception_pay_hint:
+      "After confirming, show your code or vehicle plate at reception to complete payment.",
     balance_on_arrival: "Balance on arrival",
     nights: "nights",
     min_nights: "Minimum {n} nights",
@@ -273,6 +283,10 @@ const en = {
       success_title: "Booking confirmed!",
     success_message:
       "You will receive a confirmation email shortly. The 50% deposit is paid; the balance is due on arrival.",
+    success_reception_title: "Details saved!",
+    success_reception_message:
+      "Your booking is ready. Please go to reception to pay and finish check-in.",
+    success_reception_ref_label: "Booking code",
     success_extended_title: "Extension paid!",
     success_extended_message:
       "Your extension payment was received. Your new departure date is now updated.",
@@ -317,6 +331,20 @@ const en = {
       instructions: "Scan the QR code to book park entry.",
       required:
         "Booking is required to enter. Complete your booking on your phone and pay the full amount (100%).",
+    },
+  },
+  reception: {
+    landing_eyebrow: "Reception",
+    landing_title: "Enter your details",
+    landing_message:
+      "Scan the QR and complete your booking on your phone. Payment is made at reception.",
+    landing_hint:
+      "You do not need to pay online. After confirming, show your code or plate at the desk.",
+    cta: "Fill in my details",
+    poster: {
+      headline: "Welcome to reception",
+      instructions: "Scan the QR code to enter your booking details.",
+      required: "Payment is made at reception after you confirm the booking on your phone.",
     },
   },
   stay: {

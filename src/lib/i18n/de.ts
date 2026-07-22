@@ -209,6 +209,12 @@ const de = {
       "Schließen Sie die Buchung unten ab, um den Park zu betreten. Wählen Sie den Stellplatz, zahlen Sie per Stripe und erhalten Sie die Bestätigung per E-Mail.",
     gate_entry_required:
       "Sie haben den QR-Code am Tor gescannt: Eine Buchung ist zum Eintritt erforderlich, auch wenn Online-Buchungen auf der Website geschlossen sind.",
+    reception_entry_eyebrow: "Rezeption",
+    reception_entry_title: "Ihre Daten eingeben",
+    reception_entry_message:
+      "Schließen Sie die Buchung unten ab. Die Zahlung erfolgt an der Rezeption — Sie müssen nicht online zahlen.",
+    reception_entry_required:
+      "Rezeptions-QR: Geben Sie Ihre Daten ein und wählen Sie den Stellplatz. Bezahlen Sie danach am Schalter.",
     hero_description:
       "Geben Sie Ihre Daten ein, wählen Sie den Stellplatztyp, markieren Sie auf der Karte und zahlen Sie 50 % als Anzahlung zur Sicherung der Reservierung.",
     step_dates: "Daten & Angaben",
@@ -241,6 +247,10 @@ const de = {
     total: "Gesamt",
     deposit: "Anzahlung (50 %)",
     pay_full: "Gesamtbetrag zahlen (100 %)",
+    pay_at_reception: "An der Rezeption zu zahlen",
+    confirm_reception: "Buchung bestätigen",
+    reception_pay_hint:
+      "Zeigen Sie nach der Bestätigung den Code oder das Kennzeichen an der Rezeption, um die Zahlung abzuschließen.",
     balance_on_arrival: "Restbetrag bei Anreise",
     nights: "Nächte",
     min_nights: "Mindestens {n} Nächte",
@@ -275,6 +285,10 @@ const de = {
       success_title: "Buchung bestätigt!",
     success_message:
       "Sie erhalten in Kürze eine Bestätigungs-E-Mail. Die Anzahlung von 50 % ist bezahlt; der Restbetrag ist bei Anreise fällig.",
+    success_reception_title: "Daten gespeichert!",
+    success_reception_message:
+      "Ihre Buchung ist bereit. Gehen Sie zur Rezeption, um zu bezahlen und den Check-in abzuschließen.",
+    success_reception_ref_label: "Buchungscode",
     success_extended_title: "Verlängerung bezahlt!",
     success_extended_message:
       "Ihre Verlängerungszahlung wurde erhalten. Ihr neues Abreisedatum ist jetzt aktualisiert.",
@@ -319,6 +333,20 @@ const de = {
       instructions: "QR-Code scannen, um die Einfahrt zu buchen.",
       required:
         "Buchung erforderlich zum Einfahren. Reservierung am Handy abschließen und den Gesamtbetrag (100 %) zahlen.",
+    },
+  },
+  reception: {
+    landing_eyebrow: "Rezeption",
+    landing_title: "Ihre Daten eingeben",
+    landing_message:
+      "Scannen Sie den QR und schließen Sie die Buchung am Handy ab. Die Zahlung erfolgt an der Rezeption.",
+    landing_hint:
+      "Keine Online-Zahlung nötig. Zeigen Sie danach den Code oder das Kennzeichen am Schalter.",
+    cta: "Meine Daten eingeben",
+    poster: {
+      headline: "Willkommen an der Rezeption",
+      instructions: "QR-Code scannen, um Ihre Buchungsdaten einzugeben.",
+      required: "Die Zahlung erfolgt an der Rezeption nach Bestätigung am Handy.",
     },
   },
   stay: {

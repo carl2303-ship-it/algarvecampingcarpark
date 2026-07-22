@@ -617,6 +617,17 @@ export const adminT = {
         "Réservation obligatoire pour entrer. Finalisez sur le téléphone et payez le total (100 %).",
       noQrHint: "Sans lecteur QR code, ouvrez :",
     },
+    receptionQrTitle: "QR code réception",
+    receptionQrDescription:
+      "Le QR code ouvre /reception : le client remplit ses données et choisit l'emplacement. La réservation est confirmée sans paiement Stripe ; le solde se règle au comptoir.",
+    receptionQrAlt: "QR code pour remplir une réservation à la réception",
+    receptionQrUrlLabel: "Lien encodé dans le QR code",
+    receptionQrPrintHint:
+      "Affiche A4 pour le comptoir de réception. Le client scanne, remplit le formulaire et paie ensuite à la réception.",
+    receptionPoster: {
+      docTitle: "Algarve Camping — QR code réception",
+      noQrHint: "Sans lecteur QR code, ouvrez :",
+    },
   },
   onlineBooking: {
     title: "Réservations en ligne",

@@ -86,6 +86,8 @@ export const ONLINE_BOOKING_DEPOSIT_RATIO = 0.5;
 export const GATE_BOOKING_DEPOSIT_RATIO = 1;
 /** Public gate QR landing (scan → mandatory full-payment booking). */
 export const GATE_QR_PATH = "/gate";
+/** Reception desk QR (scan → client fills data; pay at reception). */
+export const RECEPTION_QR_PATH = "/reception";
 
 export function bookingDepositRatio(gateEntry: boolean): number {
   return gateEntry ? GATE_BOOKING_DEPOSIT_RATIO : ONLINE_BOOKING_DEPOSIT_RATIO;
@@ -93,4 +95,8 @@ export function bookingDepositRatio(gateEntry: boolean): number {
 
 export function gateQrUrl(): string {
   return `${PUBLIC_SITE_URL}${GATE_QR_PATH}`;
+}
+
+export function receptionQrUrl(): string {
+  return `${PUBLIC_SITE_URL}${RECEPTION_QR_PATH}`;
 }

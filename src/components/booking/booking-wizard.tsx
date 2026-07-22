@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TermsDialog } from "@/components/legal/terms-dialog";
-import { appendGateEntryQuery } from "@/lib/gate-entry";
+import { appendPublicEntryQuery } from "@/lib/gate-entry";
 import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
 import { formatPrice, ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT, type ElectricityAmperage } from "@/lib/pricing";
 import { bookingDepositRatio, type Locale, type ParkSettings } from "@/lib/constants";
@@ -42,12 +42,14 @@ export function BookingWizard({
   preferredSpot = null,
   parkSettings,
   gateEntry = false,
+  receptionEntry = false,
   termsContent,
 }: {
   locale: Locale;
   preferredSpot?: PitchMapSpot | null;
   parkSettings: ParkSettings;
   gateEntry?: boolean;
+  receptionEntry?: boolean;
   termsContent: TermsContent;
 }) {
   const tr = getTranslations(locale);
@@ -157,9 +159,9 @@ export function BookingWizard({
 
     try {
       const availRes = await fetch(
-        appendGateEntryQuery(
+        appendPublicEntryQuery(
           `/api/availability?check_in=${checkInStr}&check_out=${checkOutStr}&num_guests=${numGuests}`,
-          gateEntry
+          { gateEntry, receptionEntry }
         )
       );
       const availData = await availRes.json();
@@ -176,9 +178,9 @@ export function BookingWizard({
 
       const amperageParam = withElectricity ? `&electricity_amperage=${electricityAmperage}` : "";
       const pitchRes = await fetch(
-        appendGateEntryQuery(
+        appendPublicEntryQuery(
           `/api/availability/pitches?check_in=${checkInStr}&check_out=${checkOutStr}&zone_id=${zone.zone.id}&num_guests=${numGuests}&electric=${withElectricity ? "true" : "false"}&over_9m=${over9m ? "true" : "false"}${amperageParam}`,
-          gateEntry
+          { gateEntry, receptionEntry }
         )
       );
       const pitchData = await pitchRes.json();
@@ -189,12 +191,12 @@ export function BookingWizard({
       const list = (pitchData.pitches ?? []) as AvailablePitch[];
       setSelectedZone(zone);
       setPitches(list);
-      setTotalCents(pitchData.total_price_cents ?? zone.total_price_cents);
+      const total = pitchData.total_price_cents ?? zone.total_price_cents;
+      setTotalCents(total);
       setDepositCents(
-        pitchData.deposit_cents ??
-          Math.round(
-            (pitchData.total_price_cents ?? zone.total_price_cents) * bookingDepositRatio(gateEntry)
-          )
+        receptionEntry
+          ? total
+          : (pitchData.deposit_cents ?? Math.round(total * bookingDepositRatio(gateEntry)))
       );
 
       if (list.length === 0) {
@@ -236,12 +238,17 @@ export function BookingWizard({
           notes: notes || undefined,
           locale,
           gate_entry: gateEntry || undefined,
+          reception_entry: receptionEntry || undefined,
           over_9m: over9m || undefined,
           electricity_amperage: withElectricity ? electricityAmperage : undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Erro");
+      if (typeof data.redirect_url === "string") {
+        window.location.href = data.redirect_url;
+        return;
+      }
       window.location.href = data.checkout_url;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao criar reserva");
@@ -545,9 +552,11 @@ export function BookingWizard({
             <h2 className="text-lg font-semibold">{tr.book.select_pitch}</h2>
             <p className="text-sm text-muted-foreground mt-1">
               {typeSummary} · {formatPrice(totalCents)}
-              {gateEntry
-                ? ` · ${tr.book.pay_full}: ${formatPrice(depositCents)}`
-                : ` · ${tr.book.deposit}: ${formatPrice(depositCents)}`}
+              {receptionEntry
+                ? ` · ${tr.book.pay_at_reception}: ${formatPrice(depositCents)}`
+                : gateEntry
+                  ? ` · ${tr.book.pay_full}: ${formatPrice(depositCents)}`
+                  : ` · ${tr.book.deposit}: ${formatPrice(depositCents)}`}
             </p>
           </div>
 
@@ -608,7 +617,12 @@ export function BookingWizard({
                 <span>{tr.book.total}</span>
                 <span className="font-semibold">{formatPrice(totalCents)}</span>
               </div>
-              {gateEntry ? (
+              {receptionEntry ? (
+                <div className="flex justify-between text-primary">
+                  <span>{tr.book.pay_at_reception}</span>
+                  <span className="font-semibold">{formatPrice(totalCents)}</span>
+                </div>
+              ) : gateEntry ? (
                 <div className="flex justify-between text-primary">
                   <span>{tr.book.pay_full}</span>
                   <span className="font-semibold">{formatPrice(depositCents)}</span>
@@ -627,13 +641,23 @@ export function BookingWizard({
               )}
             </div>
 
-            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-              {tr.book.pre_arrival_alert}
+            <div
+              className={
+                receptionEntry
+                  ? "rounded-xl border border-primary/25 bg-primary/5 p-4 text-sm text-primary"
+                  : "rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+              }
+            >
+              {receptionEntry ? tr.book.reception_pay_hint : tr.book.pre_arrival_alert}
             </div>
 
             <Button onClick={submitBooking} disabled={loading} className="w-full" size="lg">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {gateEntry ? tr.book.pay_full : tr.book.pay} — {formatPrice(depositCents)}
+              {receptionEntry
+                ? tr.book.confirm_reception
+                : gateEntry
+                  ? `${tr.book.pay_full} — ${formatPrice(depositCents)}`
+                  : `${tr.book.pay} — ${formatPrice(depositCents)}`}
             </Button>
           </CardContent>
         </Card>

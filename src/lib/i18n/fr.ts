@@ -209,6 +209,12 @@ const fr = {
       "Complétez la réservation ci-dessous pour entrer au parc. Choisissez l'emplacement, payez via Stripe et recevez la confirmation par e-mail.",
     gate_entry_required:
       "Vous avez scanné le QR code du portail : une réservation est obligatoire pour entrer, même si les réservations en ligne sont fermées sur le site.",
+    reception_entry_eyebrow: "Réception",
+    reception_entry_title: "Renseignez vos coordonnées",
+    reception_entry_message:
+      "Complétez la réservation ci-dessous. Le paiement se fait à la réception — pas besoin de payer en ligne.",
+    reception_entry_required:
+      "QR réception : renseignez vos données et choisissez l'emplacement. Puis présentez-vous au comptoir pour payer.",
     hero_description:
       "Indiquez vos coordonnées, choisissez le type de place, sélectionnez sur le plan et payez 50 % pour garantir la réservation.",
     step_dates: "Dates et coordonnées",
@@ -241,6 +247,10 @@ const fr = {
     total: "Total",
     deposit: "Acompte (50 %)",
     pay_full: "Payer le total (100 %)",
+    pay_at_reception: "À payer à la réception",
+    confirm_reception: "Confirmer la réservation",
+    reception_pay_hint:
+      "Après confirmation, présentez le code ou la plaque à la réception pour finaliser le paiement.",
     balance_on_arrival: "Solde à l'arrivée",
     nights: "nuits",
     min_nights: "Minimum de {n} nuits",
@@ -275,6 +285,10 @@ const fr = {
       success_title: "Réservation confirmée !",
     success_message:
       "Vous recevrez un email de confirmation sous peu. L'acompte de 50 % est payé ; le solde est dû à l'arrivée.",
+    success_reception_title: "Coordonnées enregistrées !",
+    success_reception_message:
+      "Votre réservation est prête. Rendez-vous à la réception pour payer et finaliser le check-in.",
+    success_reception_ref_label: "Code de réservation",
     success_extended_title: "Prolongation payée !",
     success_extended_message:
       "Le paiement de la prolongation a été reçu. Votre nouvelle date de départ est maintenant mise à jour.",
@@ -319,6 +333,20 @@ const fr = {
       instructions: "Scannez le QR code pour réserver l'entrée au parc.",
       required:
         "Réservation obligatoire pour entrer. Finalisez sur votre téléphone et payez le total (100 %).",
+    },
+  },
+  reception: {
+    landing_eyebrow: "Réception",
+    landing_title: "Renseignez vos coordonnées",
+    landing_message:
+      "Scannez le QR et complétez la réservation sur votre téléphone. Le paiement se fait à la réception.",
+    landing_hint:
+      "Pas besoin de payer en ligne. Après confirmation, présentez le code ou la plaque au comptoir.",
+    cta: "Remplir mes coordonnées",
+    poster: {
+      headline: "Bienvenue à la réception",
+      instructions: "Scannez le QR code pour renseigner vos données de réservation.",
+      required: "Le paiement se fait à la réception après confirmation sur le téléphone.",
     },
   },
   stay: {
