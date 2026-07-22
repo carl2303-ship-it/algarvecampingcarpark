@@ -250,6 +250,10 @@ const de = {
     guest_email: "E-Mail",
     guest_phone: "Telefon",
     vehicle_plate: "Kennzeichen",
+    vehicle_plate_required: "Das Kennzeichen ist erforderlich.",
+    vehicle_plate_autofilled: "Wiederkehrender Gast — Daten automatisch ausgefüllt.",
+    vehicle_plate_active:
+      "Für dieses Kennzeichen besteht bereits eine aktive Reservierung ({dates}). Eine weitere ist nicht möglich.",
     num_guests: "Anzahl der Personen",
     notes: "Anmerkungen (optional)",
     preferred_pitch: "Ausgewählter Stellplatz: {code}",

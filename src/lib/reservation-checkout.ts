@@ -3,8 +3,10 @@ import { getParkSettings } from "@/lib/park-settings";
 
 export type AutoCheckoutResult = {
   processed: number;
+  deleted: number;
   released_pitches: string[];
   reservation_ids: string[];
+  deleted_ids: string[];
 };
 
 function getLisbonNow() {
@@ -34,6 +36,29 @@ function isPastCheckoutTime(time: string, checkOutTime: string) {
   return false;
 }
 
+/** Reservations paid only with "autre" (other) are deleted at checkout, not archived. */
+async function shouldDeleteOnCheckout(
+  supabase: ReturnType<typeof createAdminClient>,
+  reservationId: string,
+  paymentMethod: string | null
+): Promise<boolean> {
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("payment_method")
+    .eq("reservation_id", reservationId)
+    .eq("status", "succeeded");
+
+  const methods = (payments ?? [])
+    .map((payment) => payment.payment_method)
+    .filter((method): method is string => Boolean(method));
+
+  if (methods.length > 0) {
+    return methods.every((method) => method === "other");
+  }
+
+  return paymentMethod === "other";
+}
+
 export async function releaseReservationPitch(reservation: {
   pitch_id: string | null;
   pitch_code: string | null;
@@ -56,28 +81,51 @@ export async function runAutoCheckout(force = false): Promise<AutoCheckoutResult
   const supabase = createAdminClient();
   const settings = await getParkSettings();
   const { date: today, time } = getLisbonNow();
-
-  if (!force && !isPastCheckoutTime(time, settings.check_out_time)) {
-    return { processed: 0, released_pitches: [], reservation_ids: [] };
-  }
+  const pastCheckoutTime = force || isPastCheckoutTime(time, settings.check_out_time);
 
   const { data: reservations, error } = await supabase
     .from("reservations")
-    .select("id, pitch_id, pitch_code, check_out, status")
+    .select("id, pitch_id, pitch_code, check_out, status, payment_method")
     .in("status", ["checked_in", "confirmed"])
     .lte("check_out", today);
 
   if (error) throw error;
 
+  // Days already past always close; same-day waits until check-out time (unless forced).
   const due = (reservations ?? []).filter((reservation) => {
     if (reservation.check_out < today) return true;
-    return reservation.check_out === today && (force || isPastCheckoutTime(time, settings.check_out_time));
+    return reservation.check_out === today && pastCheckoutTime;
   });
 
   const released_pitches: string[] = [];
   const reservation_ids: string[] = [];
+  const deleted_ids: string[] = [];
 
   for (const reservation of due) {
+    const deleteInstead = await shouldDeleteOnCheckout(
+      supabase,
+      reservation.id,
+      reservation.payment_method ?? null
+    );
+
+    if (deleteInstead) {
+      const { error: deleteError } = await supabase
+        .from("reservations")
+        .delete()
+        .eq("id", reservation.id)
+        .in("status", ["checked_in", "confirmed"]);
+
+      if (deleteError) {
+        console.error("Auto delete (other payment) failed for", reservation.id, deleteError);
+        continue;
+      }
+
+      await releaseReservationPitch(reservation);
+      deleted_ids.push(reservation.id);
+      if (reservation.pitch_code) released_pitches.push(reservation.pitch_code);
+      continue;
+    }
+
     const { error: updateError } = await supabase
       .from("reservations")
       .update({
@@ -98,8 +146,10 @@ export async function runAutoCheckout(force = false): Promise<AutoCheckoutResult
   }
 
   return {
-    processed: reservation_ids.length,
+    processed: reservation_ids.length + deleted_ids.length,
+    deleted: deleted_ids.length,
     released_pitches,
     reservation_ids,
+    deleted_ids,
   };
 }

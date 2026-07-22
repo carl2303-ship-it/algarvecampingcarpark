@@ -136,8 +136,9 @@ export async function sendPreArrivalAccess({
 }) {
   const client = await getResendClient();
   if (!client) {
-    console.log("[email] Resend not configured — skipping pre-arrival email");
-    return;
+    throw new Error(
+      "Resend non configuré — impossible d'envoyer l'e-mail pré-arrivée"
+    );
   }
 
   const lang = resolveLocale(locale);

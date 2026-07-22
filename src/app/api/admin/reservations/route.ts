@@ -10,6 +10,7 @@ import {
   normalizeVehiclePlate,
   upsertGuestForReservation,
 } from "@/lib/admin-reservation-payments";
+import { findActiveReservationByPlate } from "@/lib/vehicle-plate-lookup";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ const createSchema = z.object({
   total_cents: z.number().int().min(0),
   initial_payment_cents: z.number().int().min(0).default(0),
   initial_payment_method: paymentMethodSchema.nullable().optional(),
+  confirm_without_payment: z.boolean().optional().default(false),
   motorhome_over_9m: z.boolean().optional().default(false),
   electricity_amperage: z.union([z.literal(6), z.literal(10)]).nullable().optional(),
   manual_supplement_ids: z.array(z.string().uuid()).optional().default([]),
@@ -50,6 +52,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Sélectionnez le mode de paiement." }, { status: 400 });
     }
 
+    if (body.confirm_without_payment && body.initial_payment_cents > 0) {
+      return NextResponse.json(
+        { error: "Impossible d'enregistrer un paiement initial avec une réservation sans paiement." },
+        { status: 400 }
+      );
+    }
+
     if (body.initial_payment_cents > body.total_cents) {
       return NextResponse.json(
         { error: "Le paiement initial ne peut pas dépasser le total." },
@@ -59,6 +68,23 @@ export async function POST(request: Request) {
 
     const plate = normalizeVehiclePlate(body.vehicle_plate);
 
+    const activeForPlate = await findActiveReservationByPlate(supabase, plate);
+    if (activeForPlate) {
+      const pitch = activeForPlate.pitch_code ? ` · ${activeForPlate.pitch_code}` : "";
+      return NextResponse.json(
+        {
+          error: `Cette immatriculation a déjà une réservation active (${activeForPlate.check_in} → ${activeForPlate.check_out}${pitch}).`,
+          active_reservation: activeForPlate,
+        },
+        { status: 409 }
+      );
+    }
+
+    const status =
+      body.confirm_without_payment || body.initial_payment_cents > 0
+        ? "confirmed"
+        : "pending_payment";
+
     const { data: reservation, error } = await supabase
       .from("reservations")
       .insert({
@@ -66,7 +92,7 @@ export async function POST(request: Request) {
         pitch_code: body.pitch_code.toUpperCase(),
         check_in: body.check_in,
         check_out: body.check_out,
-        status: body.initial_payment_cents > 0 ? "confirmed" : "pending_payment",
+        status,
         guest_name: body.guest_name,
         guest_email: body.guest_email,
         guest_phone: body.guest_phone,
@@ -78,7 +104,9 @@ export async function POST(request: Request) {
         paid_cents: 0,
         partial_payment_cents: 0,
         partial_payment_method: null,
-        payment_method: body.initial_payment_method ?? null,
+        payment_method: body.confirm_without_payment
+          ? null
+          : (body.initial_payment_method ?? null),
         payment_status: "pending",
         electricity: body.electricity_amperage != null,
         electricity_amperage: body.electricity_amperage ?? null,
@@ -95,7 +123,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error?.message ?? "Erreur" }, { status: 500 });
     }
 
-    if (body.initial_payment_cents > 0) {
+    if (!body.confirm_without_payment && body.initial_payment_cents > 0) {
       await supabase.from("payments").insert({
         reservation_id: reservation.id,
         amount_cents: body.initial_payment_cents,

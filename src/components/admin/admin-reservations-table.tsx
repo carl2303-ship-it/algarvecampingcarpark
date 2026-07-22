@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, Pencil } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ type SortKey =
   | "check_out"
   | "status"
   | "pitch"
+  | "vehicle_plate"
   | "total_cents";
 
 type SortDir = "asc" | "desc";
@@ -45,6 +47,19 @@ const statusColors: Record<string, "default" | "secondary" | "destructive" | "ou
   cancelled: "destructive",
   expired: "destructive",
 };
+
+function normalizeSearch(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function matchesNameOrPlate(name: string, plate: string | null | undefined, query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const qCompact = normalizeSearch(query);
+  const nameMatch = name.toLowerCase().includes(q);
+  const plateMatch = normalizeSearch(plate ?? "").includes(qCompact);
+  return nameMatch || plateMatch;
+}
 
 function getZoneName(row: ReservationRow) {
   return row.zone?.name ?? "";
@@ -82,6 +97,10 @@ function compareRows(a: ReservationRow, b: ReservationRow, key: SortKey, dir: So
     case "pitch":
       left = getPitchCode(a).toLowerCase();
       right = getPitchCode(b).toLowerCase();
+      break;
+    case "vehicle_plate":
+      left = (a.vehicle_plate ?? "").toLowerCase();
+      right = (b.vehicle_plate ?? "").toLowerCase();
       break;
     case "total_cents":
       left = a.total_cents;
@@ -139,6 +158,7 @@ export function AdminReservationsTable({
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("check_in");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [query, setQuery] = useState("");
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -149,108 +169,160 @@ export function AdminReservationsTable({
     setSortDir(key === "check_in" || key === "check_out" ? "desc" : "asc");
   }
 
-  const sorted = useMemo(
-    () => [...reservations].sort((a, b) => compareRows(a, b, sortKey, sortDir)),
-    [reservations, sortKey, sortDir]
+  const filtered = useMemo(
+    () =>
+      reservations.filter((row) =>
+        matchesNameOrPlate(row.guest_name, row.vehicle_plate, query)
+      ),
+    [reservations, query]
   );
 
+  const sorted = useMemo(
+    () => [...filtered].sort((a, b) => compareRows(a, b, sortKey, sortDir)),
+    [filtered, sortKey, sortDir]
+  );
+
+  const emptyMessage = query.trim()
+    ? adminT.reservations.searchNoResults
+    : variant === "completed"
+      ? adminT.reservations.emptyCompleted
+      : adminT.reservations.emptyActive;
+
   return (
-    <div className="rounded-lg border overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <SortableHead
-              label={adminT.reservations.pitch}
-              active={sortKey === "pitch"}
-              direction={sortDir}
-              onClick={() => toggleSort("pitch")}
-            />
-            <SortableHead
-              label={adminT.reservations.checkIn}
-              active={sortKey === "check_in"}
-              direction={sortDir}
-              onClick={() => toggleSort("check_in")}
-            />
-            <SortableHead
-              label={adminT.reservations.checkOut}
-              active={sortKey === "check_out"}
-              direction={sortDir}
-              onClick={() => toggleSort("check_out")}
-            />
-            <SortableHead
-              label={adminT.reservations.status}
-              active={sortKey === "status"}
-              direction={sortDir}
-              onClick={() => toggleSort("status")}
-            />
-            <SortableHead
-              label={adminT.reservations.zone}
-              active={sortKey === "zone"}
-              direction={sortDir}
-              onClick={() => toggleSort("zone")}
-            />
-            <SortableHead
-              label={adminT.reservations.client}
-              active={sortKey === "guest_name"}
-              direction={sortDir}
-              onClick={() => toggleSort("guest_name")}
-            />
-            <SortableHead
-              label={adminT.reservations.total}
-              active={sortKey === "total_cents"}
-              direction={sortDir}
-              onClick={() => toggleSort("total_cents")}
-              className="text-right"
-            />
-            <TableHead>{adminT.reservations.actions}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.length === 0 ? (
+    <div className="space-y-3">
+      <div className="relative max-w-md">
+        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={adminT.reservations.searchPlaceholder}
+          className="pl-8"
+        />
+      </div>
+
+      <div className="rounded-lg border overflow-x-auto">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
-                {variant === "completed"
-                  ? adminT.reservations.emptyCompleted
-                  : adminT.reservations.emptyActive}
-              </TableCell>
+              <SortableHead
+                label={adminT.reservations.pitch}
+                active={sortKey === "pitch"}
+                direction={sortDir}
+                onClick={() => toggleSort("pitch")}
+              />
+              <SortableHead
+                label={adminT.common.plate}
+                active={sortKey === "vehicle_plate"}
+                direction={sortDir}
+                onClick={() => toggleSort("vehicle_plate")}
+              />
+              <SortableHead
+                label={adminT.reservations.checkIn}
+                active={sortKey === "check_in"}
+                direction={sortDir}
+                onClick={() => toggleSort("check_in")}
+              />
+              <SortableHead
+                label={adminT.reservations.checkOut}
+                active={sortKey === "check_out"}
+                direction={sortDir}
+                onClick={() => toggleSort("check_out")}
+              />
+              <SortableHead
+                label={adminT.reservations.status}
+                active={sortKey === "status"}
+                direction={sortDir}
+                onClick={() => toggleSort("status")}
+              />
+              <SortableHead
+                label={adminT.reservations.zone}
+                active={sortKey === "zone"}
+                direction={sortDir}
+                onClick={() => toggleSort("zone")}
+              />
+              <SortableHead
+                label={adminT.reservations.client}
+                active={sortKey === "guest_name"}
+                direction={sortDir}
+                onClick={() => toggleSort("guest_name")}
+              />
+              <SortableHead
+                label={adminT.reservations.total}
+                active={sortKey === "total_cents"}
+                direction={sortDir}
+                onClick={() => toggleSort("total_cents")}
+                className="text-right"
+              />
+              <TableHead>{adminT.reservations.actions}</TableHead>
             </TableRow>
-          ) : (
-            sorted.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell>
-                  <div className="flex flex-col gap-1">
-                    <span>{getPitchCode(r) || "—"}</span>
-                    {r.electricity_amperage === 10 && (
-                      <Badge variant="outline" className="w-fit text-xs py-0 px-1.5">
-                        10A ⚡
-                      </Badge>
-                    )}
-                    {r.motorhome_over_9m && (
-                      <Badge variant="outline" className="w-fit text-xs py-0 px-1.5">
-                        +9 m
-                      </Badge>
-                    )}
-                  </div>
+          </TableHeader>
+          <TableBody>
+            {sorted.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
+                  {emptyMessage}
                 </TableCell>
-                <TableCell className="text-sm whitespace-nowrap">{r.check_in}</TableCell>
-                <TableCell className="text-sm whitespace-nowrap">{r.check_out}</TableCell>
-                <TableCell>
-                  <Badge variant={statusColors[r.status] ?? "outline"}>
-                    {formatAdminReservationStatus(r.status)}
-                  </Badge>
-                </TableCell>
-                <TableCell>{getZoneName(r) || "—"}</TableCell>
-                <TableCell>
-                  <div>
-                    <p className="font-medium">{r.guest_name}</p>
-                    <p className="text-xs text-muted-foreground">{r.guest_email}</p>
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">{formatPrice(r.total_cents)}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-2">
-                    {variant === "active" && (
-                      <>
+              </TableRow>
+            ) : (
+              sorted.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <span>{getPitchCode(r) || "—"}</span>
+                      {r.electricity_amperage === 10 && (
+                        <Badge variant="outline" className="w-fit text-xs py-0 px-1.5">
+                          10A ⚡
+                        </Badge>
+                      )}
+                      {r.motorhome_over_9m && (
+                        <Badge variant="outline" className="w-fit text-xs py-0 px-1.5">
+                          +9 m
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">
+                    {r.vehicle_plate || "—"}
+                  </TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">{r.check_in}</TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">{r.check_out}</TableCell>
+                  <TableCell>
+                    <Badge variant={statusColors[r.status] ?? "outline"}>
+                      {formatAdminReservationStatus(r.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{getZoneName(r) || "—"}</TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{r.guest_name}</p>
+                      <p className="text-xs text-muted-foreground">{r.guest_email}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">{formatPrice(r.total_cents)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-2">
+                      {variant === "active" && (
+                        <>
+                          <Link
+                            href={`/admin/reservations/${r.id}/edit`}
+                            className={buttonVariants({ size: "sm", variant: "outline" })}
+                          >
+                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                            {adminT.reservations.edit}
+                          </Link>
+                          {r.status === "confirmed" && (
+                            <CheckInDialog reservation={r} pitches={pitches} />
+                          )}
+                          {r.status === "checked_in" && (
+                            <CheckOutButton
+                              reservationId={r.id}
+                              pitchId={r.pitch_id}
+                              pitchCode={r.pitch_code ?? null}
+                            />
+                          )}
+                        </>
+                      )}
+                      {variant === "completed" && r.status === "checked_out" && (
                         <Link
                           href={`/admin/reservations/${r.id}/edit`}
                           className={buttonVariants({ size: "sm", variant: "outline" })}
@@ -258,35 +330,16 @@ export function AdminReservationsTable({
                           <Pencil className="h-3.5 w-3.5 mr-1" />
                           {adminT.reservations.edit}
                         </Link>
-                        {r.status === "confirmed" && (
-                          <CheckInDialog reservation={r} pitches={pitches} />
-                        )}
-                        {r.status === "checked_in" && (
-                          <CheckOutButton
-                            reservationId={r.id}
-                            pitchId={r.pitch_id}
-                            pitchCode={r.pitch_code ?? null}
-                          />
-                        )}
-                      </>
-                    )}
-                    {variant === "completed" && r.status === "checked_out" && (
-                      <Link
-                        href={`/admin/reservations/${r.id}/edit`}
-                        className={buttonVariants({ size: "sm", variant: "outline" })}
-                      >
-                        <Pencil className="h-3.5 w-3.5 mr-1" />
-                        {adminT.reservations.edit}
-                      </Link>
-                    )}
-                    <DeleteReservationButton reservationId={r.id} guestName={r.guest_name} />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+                      )}
+                      <DeleteReservationButton reservationId={r.id} guestName={r.guest_name} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

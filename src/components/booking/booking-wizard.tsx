@@ -69,6 +69,8 @@ export function BookingWizard({
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [vehiclePlate, setVehiclePlate] = useState("");
+  const [plateBlocked, setPlateBlocked] = useState(false);
+  const [plateLookupMessage, setPlateLookupMessage] = useState<string | null>(null);
   const [numGuests, setNumGuests] = useState(2);
   const [notes, setNotes] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -91,10 +93,59 @@ export function BookingWizard({
     setNotes((current) => current || label);
   }, [preferredSpot, locale]);
 
+  useEffect(() => {
+    const plate = vehiclePlate.trim();
+    if (plate.length < 3) {
+      setPlateBlocked(false);
+      setPlateLookupMessage(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/bookings/plate-lookup?vehicle_plate=${encodeURIComponent(plate)}`, {
+        signal: controller.signal,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.activeReservation) {
+            setPlateBlocked(true);
+            setPlateLookupMessage(
+              tr.book.vehicle_plate_active.replace(
+                "{dates}",
+                `${data.activeReservation.check_in} → ${data.activeReservation.check_out}`
+              )
+            );
+            return;
+          }
+
+          setPlateBlocked(false);
+          if (data.guest) {
+            setGuestName(data.guest.name || "");
+            setGuestEmail(data.guest.email || "");
+            setGuestPhone(data.guest.phone || "");
+            setPlateLookupMessage(tr.book.vehicle_plate_autofilled);
+          } else {
+            setPlateLookupMessage(null);
+          }
+        })
+        .catch(() => {});
+    }, 450);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [vehiclePlate, tr.book.vehicle_plate_active, tr.book.vehicle_plate_autofilled]);
+
   async function continueToPitches() {
     if (!checkInStr || !checkOutStr) return;
-    if (!guestName || !guestEmail || !guestPhone || !acceptedTerms) {
+    if (!guestName || !guestEmail || !guestPhone || !vehiclePlate.trim() || !acceptedTerms) {
       setError(tr.book.terms_fill_required);
+      return;
+    }
+    if (plateBlocked) {
+      setError(plateLookupMessage || tr.book.vehicle_plate_active);
       return;
     }
 
@@ -177,7 +228,7 @@ export function BookingWizard({
           guest_name: guestName,
           guest_email: guestEmail,
           guest_phone: guestPhone,
-          vehicle_plate: vehiclePlate || undefined,
+          vehicle_plate: vehiclePlate.trim(),
           num_guests: numGuests,
           notes: notes || undefined,
           locale,
@@ -281,6 +332,26 @@ export function BookingWizard({
             )}
 
             <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="plate">{tr.book.vehicle_plate}</Label>
+                <Input
+                  id="plate"
+                  value={vehiclePlate}
+                  onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
+                  required
+                />
+                {plateLookupMessage && (
+                  <p
+                    className={
+                      plateBlocked
+                        ? "text-sm text-destructive"
+                        : "text-sm text-emerald-700"
+                    }
+                  >
+                    {plateLookupMessage}
+                  </p>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="name">{tr.book.guest_name}</Label>
                 <Input
@@ -308,14 +379,6 @@ export function BookingWizard({
                   value={guestPhone}
                   onChange={(e) => setGuestPhone(e.target.value)}
                   required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="plate">{tr.book.vehicle_plate}</Label>
-                <Input
-                  id="plate"
-                  value={vehiclePlate}
-                  onChange={(e) => setVehiclePlate(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -462,7 +525,7 @@ export function BookingWizard({
 
             <Button
               onClick={continueToPitches}
-              disabled={!checkIn || !checkOut || loading}
+              disabled={!checkIn || !checkOut || loading || plateBlocked || !vehiclePlate.trim()}
               className="w-full"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

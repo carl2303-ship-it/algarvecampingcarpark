@@ -250,6 +250,10 @@ const fr = {
     guest_email: "Email",
     guest_phone: "Téléphone",
     vehicle_plate: "Immatriculation",
+    vehicle_plate_required: "L'immatriculation est obligatoire.",
+    vehicle_plate_autofilled: "Client reconnu — données préremplies automatiquement.",
+    vehicle_plate_active:
+      "Cette immatriculation a déjà une réservation active ({dates}). Impossible d'en créer une autre.",
     num_guests: "Nombre de personnes",
     notes: "Notes (facultatif)",
     preferred_pitch: "Place sélectionnée : {code}",

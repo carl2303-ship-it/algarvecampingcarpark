@@ -3,6 +3,7 @@
   publish = ".next"
 
 [functions]
+  directory = "netlify/functions"
   external_node_modules = ["sharp"]
   included_files = ["node_modules/sharp/**", "node_modules/@img/**"]
 

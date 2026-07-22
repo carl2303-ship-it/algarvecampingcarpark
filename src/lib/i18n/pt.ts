@@ -249,6 +249,10 @@ const pt = {
     guest_email: "Email",
     guest_phone: "Telefone",
     vehicle_plate: "Matrícula",
+    vehicle_plate_required: "A matrícula é obrigatória.",
+    vehicle_plate_autofilled: "Cliente reconhecido — dados preenchidos automaticamente.",
+    vehicle_plate_active:
+      "Já existe uma reserva activa para esta matrícula ({dates}). Não é possível criar outra.",
     num_guests: "Número de pessoas",
     notes: "Notas (opcional)",
     preferred_pitch: "Lugar selecionado: {code}",

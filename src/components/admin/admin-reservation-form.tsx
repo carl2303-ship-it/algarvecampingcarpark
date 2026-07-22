@@ -99,6 +99,8 @@ export function AdminReservationForm({
   );
 
   const isEdit = mode === "edit" && initialReservation;
+  const isPendingPayment = isEdit && initialReservation?.status === "pending_payment";
+  const showReserveWithoutPayment = !isEdit || isPendingPayment;
 
   const [pitchCode, setPitchCode] = useState(() => {
     if (initialReservation?.pitch_code && spots.some((s) => s.code === initialReservation.pitch_code)) {
@@ -128,6 +130,9 @@ export function AdminReservationForm({
   );
   const [initialPaymentEuros, setInitialPaymentEuros] = useState("");
   const [initialPaymentMethod, setInitialPaymentMethod] = useState("");
+  const [reserveWithoutPayment, setReserveWithoutPayment] = useState(false);
+  const [plateLookupMessage, setPlateLookupMessage] = useState<string | null>(null);
+  const [plateBlocked, setPlateBlocked] = useState(false);
   const [payments, setPayments] = useState(initialPayments);
   const [paidCents, setPaidCents] = useState(initialReservation?.paid_cents ?? 0);
   const [newPaymentEuros, setNewPaymentEuros] = useState("");
@@ -232,18 +237,61 @@ export function AdminReservationForm({
     const plate = vehiclePlate.trim();
     if (!plate) {
       setPayments([]);
+      setPlateLookupMessage(null);
+      setPlateBlocked(false);
       return;
     }
 
     const controller = new AbortController();
     const timer = setTimeout(() => {
       setLoadingClientPayments(true);
-      fetch(`/api/admin/client-payments?vehicle_plate=${encodeURIComponent(plate)}`, {
-        signal: controller.signal,
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setPayments(data.payments ?? []);
+      const excludeParam =
+        isEdit && initialReservation?.id
+          ? `&exclude_id=${encodeURIComponent(initialReservation.id)}`
+          : "";
+
+      Promise.all([
+        fetch(`/api/admin/client-payments?vehicle_plate=${encodeURIComponent(plate)}`, {
+          signal: controller.signal,
+        }).then((res) => res.json()),
+        fetch(
+          `/api/admin/clients/by-plate?vehicle_plate=${encodeURIComponent(plate)}${excludeParam}`,
+          { signal: controller.signal }
+        ).then((res) => res.json()),
+      ])
+        .then(([paymentsData, lookupData]) => {
+          setPayments(paymentsData.payments ?? []);
+
+          const active = lookupData.activeReservation;
+          if (active) {
+            const pitch = active.pitch_code ? ` · ${active.pitch_code}` : "";
+            setPlateBlocked(true);
+            setPlateLookupMessage(
+              adminT.reservationForm.plateActiveReservation
+                .replace("{dates}", `${active.check_in} → ${active.check_out}`)
+                .replace("{pitch}", pitch)
+            );
+          } else {
+            setPlateBlocked(false);
+            if (lookupData.guest && !isEdit) {
+              setGuestName(lookupData.guest.name || "");
+              setGuestEmail(lookupData.guest.email || "");
+              setGuestPhone(lookupData.guest.phone || "");
+              setGuestCountry(lookupData.guest.country || "");
+              setPlateLookupMessage(adminT.reservationForm.plateAutofilled);
+            } else if (lookupData.guest && isEdit) {
+              // Only fill empty fields when editing
+              if (!guestName.trim()) setGuestName(lookupData.guest.name || "");
+              if (!guestEmail.trim()) setGuestEmail(lookupData.guest.email || "");
+              if (!guestPhone.trim()) setGuestPhone(lookupData.guest.phone || "");
+              if (!guestCountry.trim() && lookupData.guest.country) {
+                setGuestCountry(lookupData.guest.country);
+              }
+              setPlateLookupMessage(null);
+            } else {
+              setPlateLookupMessage(null);
+            }
+          }
         })
         .catch(() => {})
         .finally(() => setLoadingClientPayments(false));
@@ -253,7 +301,8 @@ export function AdminReservationForm({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [vehiclePlate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- autofill only when plate changes
+  }, [vehiclePlate, isEdit, initialReservation?.id]);
 
   useEffect(() => {
     if (!canExtend || !initialReservation || !extendCheckOut || !zoneId) {
@@ -390,13 +439,18 @@ export function AdminReservationForm({
       setError(adminT.reservationForm.plateRequired);
       return;
     }
+    if (plateBlocked) {
+      setError(plateLookupMessage || adminT.reservationForm.plateActiveReservation);
+      return;
+    }
 
-    const initialPaymentCents = isEdit ? 0 : eurosToCents(initialPaymentEuros);
-    if (!isEdit && initialPaymentCents > 0 && !initialPaymentMethod) {
+    const initialPaymentCents =
+      isEdit || reserveWithoutPayment ? 0 : eurosToCents(initialPaymentEuros);
+    if (!isEdit && !reserveWithoutPayment && initialPaymentCents > 0 && !initialPaymentMethod) {
       setError(adminT.reservationForm.selectPaymentMethod);
       return;
     }
-    if (!isEdit && initialPaymentCents > totalCents) {
+    if (!isEdit && !reserveWithoutPayment && initialPaymentCents > totalCents) {
       setError(adminT.reservationForm.paymentExceedsBalance);
       return;
     }
@@ -429,11 +483,19 @@ export function AdminReservationForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           isEdit
-            ? basePayload
+            ? {
+                ...basePayload,
+                ...(isPendingPayment
+                  ? { confirm_without_payment: reserveWithoutPayment }
+                  : {}),
+              }
             : {
                 ...basePayload,
                 initial_payment_cents: initialPaymentCents,
-                initial_payment_method: initialPaymentMethod || null,
+                initial_payment_method: reserveWithoutPayment
+                  ? null
+                  : initialPaymentMethod || null,
+                confirm_without_payment: reserveWithoutPayment,
               }
         ),
       }
@@ -829,6 +891,27 @@ export function AdminReservationForm({
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
+            <Label htmlFor="vehicle_plate">{adminT.common.plateClientId}</Label>
+            <Input
+              id="vehicle_plate"
+              value={vehiclePlate}
+              onChange={(event) => setVehiclePlate(event.target.value.toUpperCase())}
+              required
+              className="mt-1"
+            />
+            {plateLookupMessage && (
+              <p
+                className={
+                  plateBlocked
+                    ? "mt-1 text-sm text-destructive"
+                    : "mt-1 text-sm text-emerald-700"
+                }
+              >
+                {plateLookupMessage}
+              </p>
+            )}
+          </div>
+          <div className="sm:col-span-2">
             <Label htmlFor="guest_name">{adminT.reservationForm.name}</Label>
             <Input
               id="guest_name"
@@ -866,16 +949,6 @@ export function AdminReservationForm({
               value={guestCountry}
               onChange={(event) => setGuestCountry(event.target.value)}
               placeholder={adminT.reservationForm.countryPlaceholder}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label htmlFor="vehicle_plate">{adminT.common.plateClientId}</Label>
-            <Input
-              id="vehicle_plate"
-              value={vehiclePlate}
-              onChange={(event) => setVehiclePlate(event.target.value.toUpperCase())}
-              required
               className="mt-1"
             />
           </div>
@@ -978,82 +1051,134 @@ export function AdminReservationForm({
           )}
 
           {isEdit ? (
-            <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <div>
-                <Label htmlFor="new_payment">{adminT.reservationForm.addPaymentAmount}</Label>
-                <Input
-                  id="new_payment"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  max={balanceCents / 100}
-                  value={newPaymentEuros}
-                  onChange={(event) => setNewPaymentEuros(event.target.value)}
-                  placeholder="0,00"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new_payment_method">{adminT.reservationForm.paymentMethod}</Label>
-                <select
-                  id="new_payment_method"
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                  value={newPaymentMethod}
-                  onChange={(event) => setNewPaymentMethod(event.target.value)}
+            <div className="space-y-4">
+              {isPendingPayment && (
+                <label className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={reserveWithoutPayment}
+                    onChange={(event) => setReserveWithoutPayment(event.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-input"
+                  />
+                  <span>
+                    <span className="block font-medium">
+                      {adminT.reservationForm.reserveWithoutPayment}
+                    </span>
+                    <span className="block text-sm text-muted-foreground mt-0.5">
+                      {adminT.reservationForm.reserveWithoutPaymentHint}
+                    </span>
+                  </span>
+                </label>
+              )}
+              <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                <div>
+                  <Label htmlFor="new_payment">{adminT.reservationForm.addPaymentAmount}</Label>
+                  <Input
+                    id="new_payment"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    max={balanceCents / 100}
+                    value={newPaymentEuros}
+                    onChange={(event) => setNewPaymentEuros(event.target.value)}
+                    placeholder="0,00"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new_payment_method">{adminT.reservationForm.paymentMethod}</Label>
+                  <select
+                    id="new_payment_method"
+                    className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                    value={newPaymentMethod}
+                    onChange={(event) => setNewPaymentMethod(event.target.value)}
+                  >
+                    <option value="">{adminT.common.select}</option>
+                    {ADMIN_PAYMENT_METHODS.map((method) => (
+                      <option key={method.value} value={method.value}>
+                        {method.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={addingPayment || submitting}
+                  onClick={handleAddPayment}
                 >
-                  <option value="">{adminT.common.select}</option>
-                  {ADMIN_PAYMENT_METHODS.map((method) => (
-                    <option key={method.value} value={method.value}>
-                      {method.label}
-                    </option>
-                  ))}
-                </select>
+                  {addingPayment ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  {adminT.reservationForm.addPayment}
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={addingPayment || submitting}
-                onClick={handleAddPayment}
-              >
-                {addingPayment ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="mr-2 h-4 w-4" />
-                )}
-                {adminT.reservationForm.addPayment}
-              </Button>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="initial_payment">{adminT.reservationForm.initialPayment}</Label>
-                <Input
-                  id="initial_payment"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={initialPaymentEuros}
-                  onChange={(event) => setInitialPaymentEuros(event.target.value)}
-                  placeholder="0,00"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="initial_payment_method">{adminT.reservationForm.paymentMethod}</Label>
-                <select
-                  id="initial_payment_method"
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
-                  value={initialPaymentMethod}
-                  onChange={(event) => setInitialPaymentMethod(event.target.value)}
-                >
-                  <option value="">{adminT.common.select}</option>
-                  {ADMIN_PAYMENT_METHODS.map((method) => (
-                    <option key={method.value} value={method.value}>
-                      {method.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-4">
+              {showReserveWithoutPayment && (
+                <label className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={reserveWithoutPayment}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setReserveWithoutPayment(checked);
+                      if (checked) {
+                        setInitialPaymentEuros("");
+                        setInitialPaymentMethod("");
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 rounded border-input"
+                  />
+                  <span>
+                    <span className="block font-medium">
+                      {adminT.reservationForm.reserveWithoutPayment}
+                    </span>
+                    <span className="block text-sm text-muted-foreground mt-0.5">
+                      {adminT.reservationForm.reserveWithoutPaymentHint}
+                    </span>
+                  </span>
+                </label>
+              )}
+
+              {!reserveWithoutPayment && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="initial_payment">{adminT.reservationForm.initialPayment}</Label>
+                    <Input
+                      id="initial_payment"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={initialPaymentEuros}
+                      onChange={(event) => setInitialPaymentEuros(event.target.value)}
+                      placeholder="0,00"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="initial_payment_method">
+                      {adminT.reservationForm.paymentMethod}
+                    </Label>
+                    <select
+                      id="initial_payment_method"
+                      className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+                      value={initialPaymentMethod}
+                      onChange={(event) => setInitialPaymentMethod(event.target.value)}
+                    >
+                      <option value="">{adminT.common.select}</option>
+                      {ADMIN_PAYMENT_METHODS.map((method) => (
+                        <option key={method.value} value={method.value}>
+                          {method.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1075,7 +1200,11 @@ export function AdminReservationForm({
       </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="submit" size="lg" disabled={submitting || sendingEmail || addingPayment}>
+        <Button
+          type="submit"
+          size="lg"
+          disabled={submitting || sendingEmail || addingPayment || plateBlocked}
+        >
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isEdit ? adminT.reservationForm.saveChanges : adminT.reservationForm.create}
         </Button>

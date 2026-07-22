@@ -8,6 +8,7 @@ import {
   normalizeVehiclePlate,
   upsertGuestForReservation,
 } from "@/lib/admin-reservation-payments";
+import { findActiveReservationByPlate } from "@/lib/vehicle-plate-lookup";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ const updateSchema = z.object({
   motorhome_over_9m: z.boolean().optional().default(false),
   electricity_amperage: z.union([z.literal(6), z.literal(10)]).nullable().optional(),
   manual_supplement_ids: z.array(z.string().uuid()).optional().default([]),
+  confirm_without_payment: z.boolean().optional().default(false),
 });
 
 export async function PATCH(
@@ -93,6 +95,25 @@ export async function PATCH(
     const oldPitchCode = existing.pitch_code as string | null;
     const pitchChanged = oldPitchCode !== pitch_code;
 
+    if (["pending_payment", "confirmed", "checked_in"].includes(existing.status)) {
+      const activeForPlate = await findActiveReservationByPlate(supabase, plate, {
+        excludeReservationId: id,
+      });
+      if (activeForPlate) {
+        const pitch = activeForPlate.pitch_code ? ` · ${activeForPlate.pitch_code}` : "";
+        return NextResponse.json(
+          {
+            error: `Cette immatriculation a déjà une réservation active (${activeForPlate.check_in} → ${activeForPlate.check_out}${pitch}).`,
+            active_reservation: activeForPlate,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    const confirmWithoutPayment =
+      body.confirm_without_payment && existing.status === "pending_payment";
+
     const { error: updateError } = await supabase
       .from("reservations")
       .update({
@@ -112,6 +133,9 @@ export async function PATCH(
         electricity_amperage: body.electricity_amperage ?? null,
         motorhome_over_9m: body.motorhome_over_9m ?? false,
         manual_supplement_ids: body.manual_supplement_ids ?? [],
+        ...(confirmWithoutPayment
+          ? { status: "confirmed", expires_at: null }
+          : {}),
       })
       .eq("id", id);
 

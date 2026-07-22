@@ -248,6 +248,10 @@ const en = {
     guest_email: "Email",
     guest_phone: "Phone",
     vehicle_plate: "License plate",
+    vehicle_plate_required: "License plate is required.",
+    vehicle_plate_autofilled: "Returning guest — details filled automatically.",
+    vehicle_plate_active:
+      "This license plate already has an active booking ({dates}). Another booking cannot be created.",
     num_guests: "Number of guests",
     notes: "Notes (optional)",
     preferred_pitch: "Selected pitch: {code}",

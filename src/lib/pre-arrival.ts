@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPreArrivalAccess } from "@/lib/email";
 import { getParkSettings } from "@/lib/park-settings";
 
-function tomorrowInLisbon(): string {
+function lisbonDateOffset(daysFromToday: number): string {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Lisbon",
     year: "numeric",
@@ -13,23 +13,25 @@ function tomorrowInLisbon(): string {
   const year = Number(todayParts.find((p) => p.type === "year")?.value);
   const month = Number(todayParts.find((p) => p.type === "month")?.value);
   const day = Number(todayParts.find((p) => p.type === "day")?.value);
-  const tomorrow = new Date(Date.UTC(year, month - 1, day + 1));
-  const y = tomorrow.getUTCFullYear();
-  const m = String(tomorrow.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(tomorrow.getUTCDate()).padStart(2, "0");
+  const target = new Date(Date.UTC(year, month - 1, day + daysFromToday));
+  const y = target.getUTCFullYear();
+  const m = String(target.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(target.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
 export async function runPreArrivalEmails() {
   const supabase = createAdminClient();
   const parkSettings = await getParkSettings();
-  const checkInDate = tomorrowInLisbon();
+  const today = lisbonDateOffset(0);
+  const tomorrow = lisbonDateOffset(1);
 
+  // Tomorrow = standard 24h-before; today = catch-up if cron/booking was late.
   const { data: reservations, error } = await supabase
     .from("reservations")
     .select("id, guest_email, guest_name, pitch_code, check_in, check_out, locale, zone:zones(name)")
     .eq("status", "confirmed")
-    .eq("check_in", checkInDate)
+    .in("check_in", [today, tomorrow])
     .is("pre_arrival_email_sent_at", null);
 
   if (error) throw error;
@@ -79,7 +81,9 @@ export async function runPreArrivalEmails() {
   }
 
   return {
-    check_in: checkInDate,
+    today,
+    tomorrow,
+    check_in_dates: [today, tomorrow],
     candidates: reservations?.length ?? 0,
     sent: sent.length,
     failed: failed.length,

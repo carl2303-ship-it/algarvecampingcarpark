@@ -4,10 +4,14 @@ import { AdminReservationsTable } from "@/components/admin/admin-reservations-ta
 import { buttonVariants } from "@/components/ui/button";
 import { adminT } from "@/lib/admin-i18n";
 import { ACTIVE_RESERVATION_STATUSES } from "@/lib/admin-reservation-status";
+import { runAutoCheckout } from "@/lib/reservation-checkout";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Pitch, Reservation } from "@/types/database";
 
 export default async function ReservationsPage() {
+  // Close overdue stays before listing actives (covers missed cron runs).
+  await runAutoCheckout();
+
   const supabase = createAdminClient();
 
   const [{ data: reservations }, { data: pitches }] = await Promise.all([

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   BarChart3,
+  ChartColumn,
   Images,
   LayoutDashboard,
   LogOut,
@@ -14,6 +15,7 @@ import {
   Menu,
   Settings,
   Tent,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -30,6 +32,8 @@ const nav = [
   { href: "/admin/zones", label: adminT.nav.zones, icon: Map },
   { href: "/admin/gallery", label: adminT.nav.gallery, icon: Images },
   { href: "/admin/pitch-map", label: adminT.nav.pitchMap, icon: MapPinned },
+  { href: "/admin/clients", label: adminT.nav.clients, icon: Users },
+  { href: "/admin/metrics", label: adminT.nav.metrics, icon: ChartColumn },
   { href: "/admin/settings", label: adminT.nav.settings, icon: Settings },
 ];
 

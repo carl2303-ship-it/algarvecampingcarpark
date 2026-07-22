@@ -99,6 +99,18 @@ export interface Pitch {
   created_at: string;
 }
 
+export interface Guest {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  vehicle_plate: string | null;
+  country: string | null;
+  is_habitual: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Reservation {
   id: string;
   zone_id: string;

@@ -9,6 +9,8 @@ import {
   PENDING_PAYMENT_EXPIRY_MINUTES,
 } from "@/lib/constants";
 import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
+import { normalizeVehiclePlate } from "@/lib/admin-reservation-payments";
+import { findActiveReservationByPlate } from "@/lib/vehicle-plate-lookup";
 
 const bookingSchema = z.object({
   zone_id: z.string().uuid(),
@@ -18,7 +20,7 @@ const bookingSchema = z.object({
   guest_name: z.string().min(2).max(100),
   guest_email: z.string().email(),
   guest_phone: z.string().min(6).max(20),
-  vehicle_plate: z.string().max(20).optional(),
+  vehicle_plate: z.string().min(1).max(20),
   num_guests: z.number().int().min(1).max(10),
   notes: z.string().max(500).optional(),
   locale: z.enum(["pt", "en", "fr", "de", "es"]).optional().default("pt"),
@@ -75,6 +77,27 @@ export async function POST(request: Request) {
     }
 
     const supabase = createAdminClient();
+    const plate = normalizeVehiclePlate(data.vehicle_plate);
+
+    if (!plate) {
+      return NextResponse.json({ error: "Indique a matrícula do veículo" }, { status: 400 });
+    }
+
+    const activeForPlate = await findActiveReservationByPlate(supabase, plate);
+    if (activeForPlate) {
+      return NextResponse.json(
+        {
+          error:
+            "Já existe uma reserva activa para esta matrícula. Não é possível criar outra até terminar a actual.",
+          active_reservation: {
+            check_in: activeForPlate.check_in,
+            check_out: activeForPlate.check_out,
+            pitch_code: activeForPlate.pitch_code,
+          },
+        },
+        { status: 409 }
+      );
+    }
 
     const { data: pitchRow } = await supabase
       .from("pitches")
@@ -99,7 +122,7 @@ export async function POST(request: Request) {
         guest_name: data.guest_name,
         guest_email: data.guest_email,
         guest_phone: data.guest_phone,
-        vehicle_plate: data.vehicle_plate ?? null,
+        vehicle_plate: plate,
         num_guests: data.num_guests,
         notes: gateEntry
           ? [data.notes, "[Entrada QR portão]"].filter(Boolean).join("\n")

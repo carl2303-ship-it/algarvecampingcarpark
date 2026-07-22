@@ -250,6 +250,10 @@ const es = {
     guest_email: "Email",
     guest_phone: "Teléfono",
     vehicle_plate: "Matrícula",
+    vehicle_plate_required: "La matrícula es obligatoria.",
+    vehicle_plate_autofilled: "Cliente reconocido — datos rellenados automáticamente.",
+    vehicle_plate_active:
+      "Esta matrícula ya tiene una reserva activa ({dates}). No se puede crear otra.",
     num_guests: "Número de personas",
     notes: "Notas (opcional)",
     preferred_pitch: "Plaza seleccionada: {code}",
