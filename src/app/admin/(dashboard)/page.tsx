@@ -31,12 +31,13 @@ function ReservationList({ rows }: { rows: DashboardReservationRow[] }) {
       {rows.map((row) => {
         const pitchLabel = row.pitch_code ?? row.pitch?.code ?? "—";
         return (
-          <div
+          <Link
             key={row.id}
-            className="flex justify-between items-center border-b pb-3 last:border-0 gap-4"
+            href={`/admin/reservations/${row.id}/edit`}
+            className="flex justify-between items-center border-b pb-3 last:border-0 gap-4 rounded-md -mx-1 px-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <div className="min-w-0">
-              <p className="font-medium truncate">{row.guest_name}</p>
+              <p className="font-medium truncate text-primary hover:underline">{row.guest_name}</p>
               <p className="text-sm text-muted-foreground">
                 {row.zone?.name} · {adminT.dashboard.pitchLabel.replace("{code}", pitchLabel)}
               </p>
@@ -51,7 +52,7 @@ function ReservationList({ rows }: { rows: DashboardReservationRow[] }) {
                 {formatAdminReservationStatus(row.status)}
               </p>
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>
