@@ -210,9 +210,12 @@ const en = {
     reception_entry_eyebrow: "Reception",
     reception_entry_title: "Enter your details",
     reception_entry_message:
-      "Complete the booking below. Payment is made at reception — you do not need to pay online.",
+      "Enter your dates and personal details. Reception assigns the pitch and handles payment.",
     reception_entry_required:
-      "Reception QR: fill in your details and choose a pitch. Then go to the desk to pay.",
+      "Just fill in your details. Then give your plate number at reception to finish.",
+    reception_form_title: "Your details",
+    reception_submit_hint:
+      "After submitting, reception finds your booking by plate number to assign a pitch and take payment.",
     hero_description:
       "Enter your details, choose pitch type, select on the map and pay a 50% deposit to secure your stay.",
     step_dates: "Dates & details",
@@ -246,9 +249,9 @@ const en = {
     deposit: "Deposit (50%)",
     pay_full: "Pay total (100%)",
     pay_at_reception: "Pay at reception",
-    confirm_reception: "Confirm booking",
-    reception_pay_hint:
-      "After confirming, show your code or vehicle plate at reception to complete payment.",
+    confirm_reception: "Submit my details",
+    guest_country: "Country",
+    guest_country_placeholder: "E.g. Portugal, France, Germany…",
     balance_on_arrival: "Balance on arrival",
     nights: "nights",
     min_nights: "Minimum {n} nights",
@@ -283,10 +286,9 @@ const en = {
       success_title: "Booking confirmed!",
     success_message:
       "You will receive a confirmation email shortly. The 50% deposit is paid; the balance is due on arrival.",
-    success_reception_title: "Details saved!",
+    success_reception_title: "Details submitted!",
     success_reception_message:
-      "Your booking is ready. Please go to reception to pay and finish check-in.",
-    success_reception_ref_label: "Booking code",
+      "Please go to reception and give your vehicle plate. Staff will assign a pitch and take payment.",
     success_extended_title: "Extension paid!",
     success_extended_message:
       "Your extension payment was received. Your new departure date is now updated.",
@@ -337,14 +339,14 @@ const en = {
     landing_eyebrow: "Reception",
     landing_title: "Enter your details",
     landing_message:
-      "Scan the QR and complete your booking on your phone. Payment is made at reception.",
+      "Scan the QR and enter your dates and personal details. Reception handles the rest.",
     landing_hint:
-      "You do not need to pay online. After confirming, show your code or plate at the desk.",
+      "You do not choose a pitch or pay on your phone. Then give your plate number at the desk.",
     cta: "Fill in my details",
     poster: {
       headline: "Welcome to reception",
-      instructions: "Scan the QR code to enter your booking details.",
-      required: "Payment is made at reception after you confirm the booking on your phone.",
+      instructions: "Scan the QR code to enter your details.",
+      required: "Reception assigns the pitch and takes payment using your plate number.",
     },
   },
   stay: {

@@ -27,6 +27,7 @@ export async function GET(request: Request) {
             name: result.guest.name,
             email: result.guest.email,
             phone: result.guest.phone,
+            country: result.guest.country,
           }
         : null,
       activeReservation: result.activeReservation

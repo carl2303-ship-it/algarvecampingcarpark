@@ -211,9 +211,12 @@ const pt = {
     reception_entry_eyebrow: "Receção",
     reception_entry_title: "Preencha os seus dados",
     reception_entry_message:
-      "Complete a reserva abaixo. O pagamento é feito na receção — não precisa de pagar online.",
+      "Indique datas e dados pessoais. A receção atribui o lugar e trata do pagamento.",
     reception_entry_required:
-      "QR da receção: preencha os seus dados e escolha o lugar. Depois dirija-se ao balcão para pagar.",
+      "Só precisa de preencher os seus dados. Depois indique a matrícula na receção para concluir.",
+    reception_form_title: "Os seus dados",
+    reception_submit_hint:
+      "Ao confirmar, a receção encontra a sua reserva pela matrícula para atribuir o lugar e receber o pagamento.",
     hero_description:
       "Indique os seus dados, escolha o tipo de lugar, selecione no mapa e pague 50% para garantir a reserva.",
     step_dates: "Datas e dados",
@@ -247,9 +250,9 @@ const pt = {
     deposit: "Sinal (50%)",
     pay_full: "Pagar o total (100%)",
     pay_at_reception: "A pagar na receção",
-    confirm_reception: "Confirmar reserva",
-    reception_pay_hint:
-      "Após confirmar, mostre o código ou a matrícula na receção para concluir o pagamento.",
+    confirm_reception: "Enviar os meus dados",
+    guest_country: "País",
+    guest_country_placeholder: "Ex.: Portugal, França, Alemanha…",
     balance_on_arrival: "Restante na chegada",
     nights: "noites",
     min_nights: "Mínimo de {n} noites",
@@ -284,10 +287,9 @@ const pt = {
       success_title: "Reserva confirmada!",
     success_message:
       "Receberá um email de confirmação em breve. O sinal de 50% está pago; o restante é na chegada.",
-    success_reception_title: "Dados registados!",
+    success_reception_title: "Dados enviados!",
     success_reception_message:
-      "A sua reserva está pronta. Dirija-se à receção para pagar e finalizar o check-in.",
-    success_reception_ref_label: "Código da reserva",
+      "Dirija-se à receção e indique a sua matrícula. A equipa atribui o lugar e trata do pagamento.",
     success_extended_title: "Extensão paga!",
     success_extended_message:
       "O pagamento da extensão foi recebido. A sua nova data de partida já está atualizada.",
@@ -338,14 +340,14 @@ const pt = {
     landing_eyebrow: "Receção",
     landing_title: "Preencha os seus dados",
     landing_message:
-      "Digitalize o QR e complete a reserva no telemóvel. O pagamento é feito na receção.",
+      "Digitalize o QR e indique datas e dados pessoais. A receção faz o resto.",
     landing_hint:
-      "Não precisa de pagar online. Depois de confirmar, mostre o código ou a matrícula no balcão.",
+      "Não escolhe lugar nem paga no telemóvel. Depois indique a matrícula no balcão.",
     cta: "Preencher os meus dados",
     poster: {
       headline: "Bem-vindo à receção",
-      instructions: "Escaneie o QR Code para preencher os seus dados de reserva.",
-      required: "O pagamento é feito na receção após confirmar a reserva no telemóvel.",
+      instructions: "Escaneie o QR Code para preencher os seus dados.",
+      required: "A receção atribui o lugar e trata do pagamento com a sua matrícula.",
     },
   },
   stay: {

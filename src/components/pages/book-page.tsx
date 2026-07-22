@@ -1,5 +1,6 @@
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { BookingWizard } from "@/components/booking/booking-wizard";
+import { ReceptionIntakeForm } from "@/components/booking/reception-intake-form";
 import { BookingDisabledView } from "@/components/booking/booking-disabled-view";
 import { PageHero } from "@/components/marketing/sections";
 import { Toaster } from "@/components/ui/sonner";
@@ -36,9 +37,10 @@ export default async function BookPageContent({
 
   const t = getTranslations(locale);
   const termsContent = getTermsContent(locale, parkSettings);
-  const preferredSpot: PitchMapSpot | null = params.pitch
-    ? await getPitchMapSpotByCode(params.pitch.toUpperCase())
-    : null;
+  const preferredSpot: PitchMapSpot | null =
+    !receptionEntry && params.pitch
+      ? await getPitchMapSpotByCode(params.pitch.toUpperCase())
+      : null;
 
   const eyebrow = gateEntry
     ? t.book.gate_entry_eyebrow
@@ -77,14 +79,21 @@ export default async function BookPageContent({
             {t.book.cancelled}
           </div>
         )}
-        <BookingWizard
-          locale={locale}
-          preferredSpot={preferredSpot}
-          parkSettings={parkSettings}
-          gateEntry={gateEntry}
-          receptionEntry={receptionEntry}
-          termsContent={termsContent}
-        />
+        {receptionEntry ? (
+          <ReceptionIntakeForm
+            locale={locale}
+            parkSettings={parkSettings}
+            termsContent={termsContent}
+          />
+        ) : (
+          <BookingWizard
+            locale={locale}
+            preferredSpot={preferredSpot}
+            parkSettings={parkSettings}
+            gateEntry={gateEntry}
+            termsContent={termsContent}
+          />
+        )}
       </div>
     </>
   );

@@ -212,9 +212,12 @@ const fr = {
     reception_entry_eyebrow: "Réception",
     reception_entry_title: "Renseignez vos coordonnées",
     reception_entry_message:
-      "Complétez la réservation ci-dessous. Le paiement se fait à la réception — pas besoin de payer en ligne.",
+      "Indiquez vos dates et vos coordonnées. La réception attribue l'emplacement et gère le paiement.",
     reception_entry_required:
-      "QR réception : renseignez vos données et choisissez l'emplacement. Puis présentez-vous au comptoir pour payer.",
+      "Remplissez uniquement vos données. Indiquez ensuite votre plaque à la réception pour finaliser.",
+    reception_form_title: "Vos coordonnées",
+    reception_submit_hint:
+      "Après envoi, la réception retrouve votre réservation par la plaque pour attribuer la place et encaisser.",
     hero_description:
       "Indiquez vos coordonnées, choisissez le type de place, sélectionnez sur le plan et payez 50 % pour garantir la réservation.",
     step_dates: "Dates et coordonnées",
@@ -248,9 +251,9 @@ const fr = {
     deposit: "Acompte (50 %)",
     pay_full: "Payer le total (100 %)",
     pay_at_reception: "À payer à la réception",
-    confirm_reception: "Confirmer la réservation",
-    reception_pay_hint:
-      "Après confirmation, présentez le code ou la plaque à la réception pour finaliser le paiement.",
+    confirm_reception: "Envoyer mes coordonnées",
+    guest_country: "Pays",
+    guest_country_placeholder: "Ex. : Portugal, France, Allemagne…",
     balance_on_arrival: "Solde à l'arrivée",
     nights: "nuits",
     min_nights: "Minimum de {n} nuits",
@@ -285,10 +288,9 @@ const fr = {
       success_title: "Réservation confirmée !",
     success_message:
       "Vous recevrez un email de confirmation sous peu. L'acompte de 50 % est payé ; le solde est dû à l'arrivée.",
-    success_reception_title: "Coordonnées enregistrées !",
+    success_reception_title: "Coordonnées envoyées !",
     success_reception_message:
-      "Votre réservation est prête. Rendez-vous à la réception pour payer et finaliser le check-in.",
-    success_reception_ref_label: "Code de réservation",
+      "Présentez-vous à la réception avec votre plaque. L'équipe attribue l'emplacement et encaisse le paiement.",
     success_extended_title: "Prolongation payée !",
     success_extended_message:
       "Le paiement de la prolongation a été reçu. Votre nouvelle date de départ est maintenant mise à jour.",
@@ -339,14 +341,14 @@ const fr = {
     landing_eyebrow: "Réception",
     landing_title: "Renseignez vos coordonnées",
     landing_message:
-      "Scannez le QR et complétez la réservation sur votre téléphone. Le paiement se fait à la réception.",
+      "Scannez le QR et indiquez dates et coordonnées. La réception s'occupe du reste.",
     landing_hint:
-      "Pas besoin de payer en ligne. Après confirmation, présentez le code ou la plaque au comptoir.",
+      "Pas de choix d'emplacement ni de paiement sur le téléphone. Indiquez ensuite votre plaque au comptoir.",
     cta: "Remplir mes coordonnées",
     poster: {
       headline: "Bienvenue à la réception",
-      instructions: "Scannez le QR code pour renseigner vos données de réservation.",
-      required: "Le paiement se fait à la réception après confirmation sur le téléphone.",
+      instructions: "Scannez le QR code pour renseigner vos données.",
+      required: "La réception attribue l'emplacement et encaisse avec votre plaque.",
     },
   },
   stay: {

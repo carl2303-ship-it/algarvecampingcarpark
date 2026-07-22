@@ -268,7 +268,9 @@ export function AdminReservationsTable({
                 <TableRow key={r.id}>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <span>{getPitchCode(r) || "—"}</span>
+                      <span>
+                        {getPitchCode(r) || adminT.reservations.pitchUnassigned}
+                      </span>
                       {r.electricity_amperage === 10 && (
                         <Badge variant="outline" className="w-fit text-xs py-0 px-1.5">
                           10A ⚡

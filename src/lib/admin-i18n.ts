@@ -168,6 +168,7 @@ export const adminT = {
     total: "Total",
     status: "État",
     pitch: "Emplacement",
+    pitchUnassigned: "À attribuer",
     actions: "Actions",
     checkOut: "Départ",
     checkIn: "Arrivée",
@@ -619,11 +620,11 @@ export const adminT = {
     },
     receptionQrTitle: "QR code réception",
     receptionQrDescription:
-      "Le QR code ouvre /reception : le client remplit ses données et choisit l'emplacement. La réservation est confirmée sans paiement Stripe ; le solde se règle au comptoir.",
+      "Le QR code ouvre /reception : le client remplit dates et coordonnées (sans choisir d'emplacement ni payer). La réception retrouve la réservation par l'immatriculation.",
     receptionQrAlt: "QR code pour remplir une réservation à la réception",
     receptionQrUrlLabel: "Lien encodé dans le QR code",
     receptionQrPrintHint:
-      "Affiche A4 pour le comptoir de réception. Le client scanne, remplit le formulaire et paie ensuite à la réception.",
+      "Affiche A4 pour le comptoir. Le client scanne, envoie ses données, puis présente sa plaque à la réception.",
     receptionPoster: {
       docTitle: "Algarve Camping — QR code réception",
       noQrHint: "Sans lecteur QR code, ouvrez :",

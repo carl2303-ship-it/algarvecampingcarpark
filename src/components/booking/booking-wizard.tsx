@@ -42,14 +42,12 @@ export function BookingWizard({
   preferredSpot = null,
   parkSettings,
   gateEntry = false,
-  receptionEntry = false,
   termsContent,
 }: {
   locale: Locale;
   preferredSpot?: PitchMapSpot | null;
   parkSettings: ParkSettings;
   gateEntry?: boolean;
-  receptionEntry?: boolean;
   termsContent: TermsContent;
 }) {
   const tr = getTranslations(locale);
@@ -161,7 +159,7 @@ export function BookingWizard({
       const availRes = await fetch(
         appendPublicEntryQuery(
           `/api/availability?check_in=${checkInStr}&check_out=${checkOutStr}&num_guests=${numGuests}`,
-          { gateEntry, receptionEntry }
+          { gateEntry }
         )
       );
       const availData = await availRes.json();
@@ -180,7 +178,7 @@ export function BookingWizard({
       const pitchRes = await fetch(
         appendPublicEntryQuery(
           `/api/availability/pitches?check_in=${checkInStr}&check_out=${checkOutStr}&zone_id=${zone.zone.id}&num_guests=${numGuests}&electric=${withElectricity ? "true" : "false"}&over_9m=${over9m ? "true" : "false"}${amperageParam}`,
-          { gateEntry, receptionEntry }
+          { gateEntry }
         )
       );
       const pitchData = await pitchRes.json();
@@ -194,9 +192,7 @@ export function BookingWizard({
       const total = pitchData.total_price_cents ?? zone.total_price_cents;
       setTotalCents(total);
       setDepositCents(
-        receptionEntry
-          ? total
-          : (pitchData.deposit_cents ?? Math.round(total * bookingDepositRatio(gateEntry)))
+        pitchData.deposit_cents ?? Math.round(total * bookingDepositRatio(gateEntry))
       );
 
       if (list.length === 0) {
@@ -238,17 +234,12 @@ export function BookingWizard({
           notes: notes || undefined,
           locale,
           gate_entry: gateEntry || undefined,
-          reception_entry: receptionEntry || undefined,
           over_9m: over9m || undefined,
           electricity_amperage: withElectricity ? electricityAmperage : undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Erro");
-      if (typeof data.redirect_url === "string") {
-        window.location.href = data.redirect_url;
-        return;
-      }
       window.location.href = data.checkout_url;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao criar reserva");
@@ -552,11 +543,9 @@ export function BookingWizard({
             <h2 className="text-lg font-semibold">{tr.book.select_pitch}</h2>
             <p className="text-sm text-muted-foreground mt-1">
               {typeSummary} · {formatPrice(totalCents)}
-              {receptionEntry
-                ? ` · ${tr.book.pay_at_reception}: ${formatPrice(depositCents)}`
-                : gateEntry
-                  ? ` · ${tr.book.pay_full}: ${formatPrice(depositCents)}`
-                  : ` · ${tr.book.deposit}: ${formatPrice(depositCents)}`}
+              {gateEntry
+                ? ` · ${tr.book.pay_full}: ${formatPrice(depositCents)}`
+                : ` · ${tr.book.deposit}: ${formatPrice(depositCents)}`}
             </p>
           </div>
 
@@ -617,12 +606,7 @@ export function BookingWizard({
                 <span>{tr.book.total}</span>
                 <span className="font-semibold">{formatPrice(totalCents)}</span>
               </div>
-              {receptionEntry ? (
-                <div className="flex justify-between text-primary">
-                  <span>{tr.book.pay_at_reception}</span>
-                  <span className="font-semibold">{formatPrice(totalCents)}</span>
-                </div>
-              ) : gateEntry ? (
+              {gateEntry ? (
                 <div className="flex justify-between text-primary">
                   <span>{tr.book.pay_full}</span>
                   <span className="font-semibold">{formatPrice(depositCents)}</span>
@@ -641,23 +625,13 @@ export function BookingWizard({
               )}
             </div>
 
-            <div
-              className={
-                receptionEntry
-                  ? "rounded-xl border border-primary/25 bg-primary/5 p-4 text-sm text-primary"
-                  : "rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
-              }
-            >
-              {receptionEntry ? tr.book.reception_pay_hint : tr.book.pre_arrival_alert}
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+              {tr.book.pre_arrival_alert}
             </div>
 
             <Button onClick={submitBooking} disabled={loading} className="w-full" size="lg">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {receptionEntry
-                ? tr.book.confirm_reception
-                : gateEntry
-                  ? `${tr.book.pay_full} — ${formatPrice(depositCents)}`
-                  : `${tr.book.pay} — ${formatPrice(depositCents)}`}
+              {gateEntry ? tr.book.pay_full : tr.book.pay} — {formatPrice(depositCents)}
             </Button>
           </CardContent>
         </Card>

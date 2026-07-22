@@ -19,7 +19,6 @@ export default async function BookSuccessPageContent({
   const extended = params.extended === "1";
   const receptionEntry = isReceptionQrEntry(params.from);
   const deskEntry = isDeskQrEntry(params.from);
-  const reference = params.ref?.trim().toUpperCase() || null;
 
   const title = extended
     ? t.book.success_extended_title
@@ -38,14 +37,6 @@ export default async function BookSuccessPageContent({
       <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-6" />
       <h1 className="text-3xl font-bold mb-4">{title}</h1>
       <p className="text-muted-foreground mb-8">{message}</p>
-      {receptionEntry && reference ? (
-        <div className="mb-8 rounded-2xl border bg-muted/40 px-5 py-4">
-          <p className="text-sm text-muted-foreground mb-1">{t.book.success_reception_ref_label}</p>
-          <p className="font-mono text-2xl font-semibold tracking-wider text-foreground">
-            {reference}
-          </p>
-        </div>
-      ) : null}
       {!extended && !receptionEntry && (
         <p className="text-sm text-muted-foreground mb-8">{t.book.pre_arrival_alert}</p>
       )}
