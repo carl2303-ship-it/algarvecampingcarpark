@@ -73,8 +73,9 @@ export async function sendBookingConfirmation({
 }) {
   const client = await getResendClient();
   if (!client) {
-    console.log("[email] Resend not configured — skipping confirmation email");
-    return;
+    throw new Error(
+      "Resend non configuré — impossible d'envoyer l'e-mail de confirmation"
+    );
   }
 
   const lang = resolveLocale(locale);

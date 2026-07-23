@@ -21,6 +21,7 @@ import {
 import { findActiveReservationByPlate } from "@/lib/vehicle-plate-lookup";
 import { localePath } from "@/lib/locale-path";
 import { isPricingZoneSlug } from "@/lib/park-pitch-map-defaults";
+import { sendBookingConfirmation } from "@/lib/email";
 
 const bookingSchema = z.object({
   zone_id: z.string().uuid(),
@@ -169,6 +170,26 @@ export async function POST(request: Request) {
       });
       if (guestId) {
         await supabase.from("reservations").update({ guest_id: guestId }).eq("id", reservation.id);
+      }
+
+      try {
+        await sendBookingConfirmation({
+          guestEmail: data.guest_email,
+          guestName: data.guest_name,
+          zoneName: zone.name,
+          pitchCode: null,
+          checkIn: data.check_in,
+          checkOut: data.check_out,
+          checkInTime: parkSettings.check_in_time,
+          checkOutTime: parkSettings.check_out_time,
+          totalCents: pricing.totalCents,
+          paidCents: 0,
+          balanceCents: pricing.totalCents,
+          reservationId: reservation.id,
+          locale: data.locale,
+        });
+      } catch (emailError) {
+        console.error("Reception booking: confirmation email failed:", emailError);
       }
 
       const redirectPath = `${localePath(data.locale, "/book/success")}?from=reception`;

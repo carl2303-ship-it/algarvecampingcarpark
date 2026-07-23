@@ -213,6 +213,36 @@ export async function PATCH(
       }
     }
 
+    let confirmationEmailError: string | null = null;
+    if (confirmWithoutPayment && existing.status === "pending_payment" && body.guest_email) {
+      try {
+        const { sendBookingConfirmation } = await import("@/lib/email");
+        const { getParkSettings } = await import("@/lib/park-settings");
+        const parkSettings = await getParkSettings();
+        const zoneRaw = existing.zone as { name: string } | { name: string }[] | null;
+        const zoneName =
+          (Array.isArray(zoneRaw) ? zoneRaw[0]?.name : zoneRaw?.name) ?? "Reserva";
+        await sendBookingConfirmation({
+          guestEmail: body.guest_email,
+          guestName: body.guest_name,
+          zoneName,
+          pitchCode: pitch_code,
+          checkIn: body.check_in,
+          checkOut: body.check_out,
+          checkInTime: parkSettings.check_in_time,
+          checkOutTime: parkSettings.check_out_time,
+          totalCents: body.total_cents,
+          paidCents: totals.paid_cents,
+          balanceCents: Math.max(0, body.total_cents - totals.paid_cents),
+          reservationId: id,
+          locale: existing.locale ?? "fr",
+        });
+      } catch (err) {
+        confirmationEmailError = err instanceof Error ? err.message : "Confirmation non envoyée";
+        console.error("Admin confirm without payment: confirmation email failed:", err);
+      }
+    }
+
     const { data: updated } = await supabase
       .from("reservations")
       .select("status, total_cents")
@@ -228,6 +258,7 @@ export async function PATCH(
       status: updated?.status ?? existing.status,
       pre_arrival_sent: preArrivalSent,
       pre_arrival_error: preArrivalError,
+      confirmation_email_error: confirmationEmailError,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

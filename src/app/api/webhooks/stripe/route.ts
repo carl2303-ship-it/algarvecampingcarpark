@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      const { data: reservation } = await supabase
+      const { data: updatedReservation } = await supabase
         .from("reservations")
         .update({
           status: "confirmed",
@@ -150,57 +150,101 @@ export async function POST(request: Request) {
         .eq("id", reservationId)
         .eq("status", "pending_payment")
         .select("*, zone:zones(name)")
-        .single();
+        .maybeSingle();
+
+      let reservation = updatedReservation;
+
+      await supabase
+        .from("payments")
+        .update({
+          status: "succeeded",
+          stripe_payment_intent_id:
+            typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : session.payment_intent?.id ?? null,
+          payment_method: "stripe",
+        })
+        .eq("stripe_session_id", session.id);
+
+      // Webhook retry: payment already confirmed → still send emails if first attempt failed.
+      if (!reservation) {
+        const { data: existing } = await supabase
+          .from("reservations")
+          .select("*, zone:zones(name)")
+          .eq("id", reservationId)
+          .in("status", ["confirmed", "checked_in"])
+          .maybeSingle();
+        reservation = existing;
+
+        if (reservation) {
+          await supabase
+            .from("payments")
+            .update({
+              status: "succeeded",
+              stripe_payment_intent_id:
+                typeof session.payment_intent === "string"
+                  ? session.payment_intent
+                  : session.payment_intent?.id ?? null,
+              payment_method: "stripe",
+            })
+            .eq("reservation_id", reservationId)
+            .eq("status", "pending");
+        }
+      }
 
       if (reservation) {
-        await supabase
-          .from("payments")
-          .update({
-            status: "succeeded",
-            stripe_payment_intent_id:
-              typeof session.payment_intent === "string"
-                ? session.payment_intent
-                : session.payment_intent?.id ?? null,
-            payment_method: "stripe",
-          })
-          .eq("reservation_id", reservationId);
-
+        const zoneRaw = reservation.zone as { name: string } | { name: string }[] | null;
         const zoneName =
-          (reservation.zone as { name: string } | null)?.name ?? "Reserva";
+          (Array.isArray(zoneRaw) ? zoneRaw[0]?.name : zoneRaw?.name) ?? "Reserva";
 
         const parkSettings = await getParkSettings();
         const totalCents = reservation.total_cents ?? amountCents;
         const balanceCents = Math.max(0, totalCents - amountCents);
         const locale = resolveLocale(reservation.locale ?? session.metadata?.locale);
 
-        await sendBookingConfirmation({
-          guestEmail: reservation.guest_email,
-          guestName: reservation.guest_name,
-          zoneName,
-          pitchCode: reservation.pitch_code,
-          checkIn: reservation.check_in,
-          checkOut: reservation.check_out,
-          checkInTime: parkSettings.check_in_time,
-          checkOutTime: parkSettings.check_out_time,
-          totalCents,
-          paidCents: amountCents,
-          balanceCents,
-          reservationId: reservation.id,
-          locale,
-        });
-
-        await sendPaymentReceipt({
-          guestEmail: reservation.guest_email,
-          guestName: reservation.guest_name,
-          amountCents: amountCents,
-          receiptUrl,
-          description: receiptDepositDescription(
-            locale,
+        try {
+          await sendBookingConfirmation({
+            guestEmail: reservation.guest_email,
+            guestName: reservation.guest_name,
             zoneName,
-            reservation.pitch_code
-          ),
-          locale,
-        });
+            pitchCode: reservation.pitch_code,
+            checkIn: reservation.check_in,
+            checkOut: reservation.check_out,
+            checkInTime: parkSettings.check_in_time,
+            checkOutTime: parkSettings.check_out_time,
+            totalCents,
+            paidCents: reservation.paid_cents ?? amountCents,
+            balanceCents,
+            reservationId: reservation.id,
+            locale,
+          });
+        } catch (emailError) {
+          console.error("Stripe webhook: confirmation email failed:", emailError);
+          return NextResponse.json(
+            {
+              error: "Confirmation email failed",
+              detail: emailError instanceof Error ? emailError.message : String(emailError),
+            },
+            { status: 500 }
+          );
+        }
+
+        try {
+          await sendPaymentReceipt({
+            guestEmail: reservation.guest_email,
+            guestName: reservation.guest_name,
+            amountCents: amountCents,
+            receiptUrl,
+            description: receiptDepositDescription(
+              locale,
+              zoneName,
+              reservation.pitch_code
+            ),
+            locale,
+          });
+        } catch (receiptError) {
+          console.error("Stripe webhook: receipt email failed:", receiptError);
+        }
       }
     }
   }

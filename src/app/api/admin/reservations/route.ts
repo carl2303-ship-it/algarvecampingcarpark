@@ -11,6 +11,8 @@ import {
   upsertGuestForReservation,
 } from "@/lib/admin-reservation-payments";
 import { findActiveReservationByPlate } from "@/lib/vehicle-plate-lookup";
+import { sendBookingConfirmation } from "@/lib/email";
+import { getParkSettings } from "@/lib/park-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -154,13 +156,50 @@ export async function POST(request: Request) {
       .eq("id", reservation.id)
       .single();
 
+    const finalStatus = updated?.status ?? reservation.status;
+    let confirmationEmailError: string | null = null;
+
+    if (finalStatus === "confirmed" && body.guest_email) {
+      try {
+        const parkSettings = await getParkSettings();
+        const { data: zoneRow } = await supabase
+          .from("zones")
+          .select("name")
+          .eq("id", body.zone_id)
+          .maybeSingle();
+        await sendBookingConfirmation({
+          guestEmail: body.guest_email,
+          guestName: body.guest_name,
+          zoneName: zoneRow?.name ?? "Reserva",
+          pitchCode: body.pitch_code.toUpperCase(),
+          checkIn: body.check_in,
+          checkOut: body.check_out,
+          checkInTime: parkSettings.check_in_time,
+          checkOutTime: parkSettings.check_out_time,
+          totalCents: updated?.total_cents ?? reservation.total_cents,
+          paidCents: totals.paid_cents,
+          balanceCents: Math.max(
+            0,
+            (updated?.total_cents ?? reservation.total_cents) - totals.paid_cents
+          ),
+          reservationId: reservation.id,
+          locale: "fr",
+        });
+      } catch (emailError) {
+        confirmationEmailError =
+          emailError instanceof Error ? emailError.message : "E-mail de confirmation non envoyé";
+        console.error("Admin create: confirmation email failed:", emailError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       reservation_id: reservation.id,
       total_cents: updated?.total_cents ?? reservation.total_cents,
       paid_cents: totals.paid_cents,
       balance_cents: Math.max(0, (updated?.total_cents ?? reservation.total_cents) - totals.paid_cents),
-      status: updated?.status ?? reservation.status,
+      status: finalStatus,
+      confirmation_email_error: confirmationEmailError,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
