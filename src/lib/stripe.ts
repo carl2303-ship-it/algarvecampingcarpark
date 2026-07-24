@@ -3,6 +3,13 @@ import { SITE_NAME, SITE_URL, type Locale } from "./constants";
 import { localePath } from "./locale-path";
 import { getStripeSecrets } from "./stripe-settings";
 
+/** Stripe Checkout: expires_at must be 30 min–24 h from session creation. */
+const CHECKOUT_EXPIRES_IN_SECONDS = {
+  bookingDeposit: 30 * 60,
+  /** Max allowed by Stripe (just under 24h). */
+  max: 24 * 60 * 60 - 60,
+} as const;
+
 let stripeInstance: Stripe | null = null;
 let cachedSecretKey: string | null = null;
 
@@ -95,7 +102,7 @@ export async function createCheckoutSession({
     },
     success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}${gateEntry ? "&from=qr" : ""}`,
     cancel_url: `${SITE_URL}${cancelPath}`,
-    expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+    expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_EXPIRES_IN_SECONDS.bookingDeposit,
   });
 }
 
@@ -150,7 +157,7 @@ export async function createBalanceCheckoutSession({
     },
     success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}&balance=1`,
     cancel_url: `${SITE_URL}${localePath(locale, "/book")}?cancelled=1`,
-    expires_at: Math.floor(Date.now() / 1000) + 2 * 24 * 60 * 60,
+    expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_EXPIRES_IN_SECONDS.max,
   });
 }
 
@@ -208,7 +215,7 @@ export async function createExtensionCheckoutSession({
     },
     success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}&extended=1`,
     cancel_url: cancelUrl ?? `${SITE_URL}${localePath(locale, "/book")}?cancelled=1`,
-    expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+    expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_EXPIRES_IN_SECONDS.max,
   });
 }
 
