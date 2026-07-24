@@ -2,7 +2,15 @@ export const SITE_NAME = "Elodie & Romy's Algarve Camping Car Park";
 export const SITE_SHORT_NAME = "Algarve Camping Car Park";
 /** Public production origin (QR codes, emails, Stripe redirects when env unset). */
 export const PUBLIC_SITE_URL = "https://algarvecampingcarpark.pt";
-export const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? PUBLIC_SITE_URL;
+
+/** Strip trailing slashes so `${SITE_URL}/path` never becomes `//path`. */
+export function normalizeSiteOrigin(url: string): string {
+  return url.trim().replace(/\/+$/, "");
+}
+
+export const SITE_URL = normalizeSiteOrigin(
+  process.env.NEXT_PUBLIC_APP_URL ?? PUBLIC_SITE_URL
+);
 export const CONTACT_EMAIL = "algarvecampingcarpark@gmail.com";
 export const CONTACT_PHONE = "+351 961 376 584";
 export const CONTACT_PHONE_RAW = "+351961376584";

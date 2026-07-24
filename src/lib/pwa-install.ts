@@ -14,6 +14,17 @@ declare global {
 export const EARLY_PWA_CAPTURE_SCRIPT = `
 (function () {
   if (typeof window === "undefined") return;
+  // Fix email links built as origin + "/path" when origin already had a trailing slash
+  // (pathname "//stay/..." → History.replaceState throws SecurityError).
+  try {
+    var path = location.pathname;
+    if (path.indexOf("//") !== -1) {
+      location.replace(
+        location.origin + path.replace(/\\/{2,}/g, "/") + location.search + location.hash
+      );
+      return;
+    }
+  } catch (e) {}
   window.__accpDeferredInstall = null;
   window.__accpInstallReady = false;
   window.addEventListener("beforeinstallprompt", function (event) {

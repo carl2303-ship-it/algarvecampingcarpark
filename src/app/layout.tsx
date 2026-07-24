@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import { SITE_NAME } from "@/lib/constants";
+import { SITE_NAME, SITE_URL } from "@/lib/constants";
 import { EARLY_PWA_CAPTURE_SCRIPT } from "@/lib/pwa-install";
 
 const dmSans = DM_Sans({
@@ -24,9 +24,7 @@ export const metadata: Metadata = {
   },
   description:
     "Área de Serviço para Autocaravanas em Armação de Pêra, Algarve. 57 lugares, vista mar, ambiente natural. Reserve online.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://algarvecampingcarpark.pt"
-  ),
+  metadataBase: new URL(SITE_URL),
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

@@ -65,5 +65,6 @@ export function verifyStayToken(token: string): StayTokenPayload | null {
 
 export function stayManageUrl(reservationId: string, locale: Locale = "pt"): string {
   const token = createStayToken(reservationId);
-  return `${SITE_URL}${localePath(locale, `/stay/${encodeURIComponent(token)}`)}`;
+  const path = localePath(locale, `/stay/${encodeURIComponent(token)}`);
+  return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
