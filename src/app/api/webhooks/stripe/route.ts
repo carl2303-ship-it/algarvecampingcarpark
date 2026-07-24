@@ -4,6 +4,7 @@ import { getStripe, getCheckoutReceiptUrl } from "@/lib/stripe";
 import { getStripeSecrets } from "@/lib/stripe-settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  receiptBalanceDescription,
   receiptDepositDescription,
   receiptExtensionDescription,
   sendBookingConfirmation,
@@ -11,6 +12,8 @@ import {
 } from "@/lib/email";
 import { resolveLocale } from "@/lib/email-i18n";
 import { getParkSettings } from "@/lib/park-settings";
+import { syncReservationPaymentState } from "@/lib/admin-reservation-payments";
+import { maybeSendPreArrivalAfterFullPayment } from "@/lib/balance-payment";
 import type Stripe from "stripe";
 
 export async function POST(request: Request) {
@@ -41,7 +44,6 @@ export async function POST(request: Request) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const reservationId = session.metadata?.reservation_id;
-    const isExtension = session.metadata?.type === "extension";
 
     if (!reservationId) {
       return NextResponse.json({ error: "Missing reservation_id" }, { status: 400 });
@@ -49,8 +51,9 @@ export async function POST(request: Request) {
 
     const receiptUrl = await getCheckoutReceiptUrl(session);
     const amountCents = session.amount_total ?? 0;
+    const paymentType = session.metadata?.type ?? "";
 
-    if (isExtension) {
+    if (paymentType === "extension") {
       const extensionCents = Number(session.metadata?.extension_cents ?? amountCents);
       const applyOnPayment = session.metadata?.apply_on_payment === "true";
       const newCheckOut = session.metadata?.new_check_out;
@@ -131,6 +134,70 @@ export async function POST(request: Request) {
           locale: resolveLocale(reservation.locale ?? session.metadata?.locale),
         });
       }
+    } else if (paymentType === "booking_balance") {
+      const { data: reservation } = await supabase
+        .from("reservations")
+        .select("*, zone:zones(name)")
+        .eq("id", reservationId)
+        .maybeSingle();
+
+      if (reservation) {
+        await supabase
+          .from("payments")
+          .update({
+            status: "succeeded",
+            stripe_payment_intent_id:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.payment_intent?.id ?? null,
+            payment_method: "stripe",
+          })
+          .eq("stripe_session_id", session.id);
+
+        const { data: existingPayment } = await supabase
+          .from("payments")
+          .select("id")
+          .eq("stripe_session_id", session.id)
+          .maybeSingle();
+
+        if (!existingPayment) {
+          await supabase.from("payments").insert({
+            reservation_id: reservationId,
+            stripe_session_id: session.id,
+            amount_cents: amountCents,
+            status: "succeeded",
+            stripe_payment_intent_id:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.payment_intent?.id ?? null,
+            payment_method: "stripe",
+            notes: "Solde 50% (48h avant arrivée)",
+          });
+        }
+
+        const totals = await syncReservationPaymentState(supabase, reservationId);
+        const locale = resolveLocale(reservation.locale ?? session.metadata?.locale);
+        const zoneRaw = reservation.zone as { name: string } | { name: string }[] | null;
+        const zoneName =
+          (Array.isArray(zoneRaw) ? zoneRaw[0]?.name : zoneRaw?.name) ?? "Reserva";
+
+        try {
+          await sendPaymentReceipt({
+            guestEmail: reservation.guest_email,
+            guestName: reservation.guest_name,
+            amountCents,
+            receiptUrl,
+            description: receiptBalanceDescription(locale, zoneName, reservation.pitch_code),
+            locale,
+          });
+        } catch (receiptError) {
+          console.error("Stripe webhook: balance receipt email failed:", receiptError);
+        }
+
+        if (totals.paid_cents >= reservation.total_cents) {
+          await maybeSendPreArrivalAfterFullPayment(reservationId);
+        }
+      }
     } else {
       const { data: updatedReservation } = await supabase
         .from("reservations")
@@ -199,7 +266,7 @@ export async function POST(request: Request) {
 
         const parkSettings = await getParkSettings();
         const totalCents = reservation.total_cents ?? amountCents;
-        const balanceCents = Math.max(0, totalCents - amountCents);
+        const balanceCents = Math.max(0, totalCents - (reservation.paid_cents ?? amountCents));
         const locale = resolveLocale(reservation.locale ?? session.metadata?.locale);
 
         try {
@@ -245,6 +312,10 @@ export async function POST(request: Request) {
         } catch (receiptError) {
           console.error("Stripe webhook: receipt email failed:", receiptError);
         }
+
+        if (balanceCents === 0) {
+          await maybeSendPreArrivalAfterFullPayment(reservation.id);
+        }
       }
     }
   }
@@ -252,9 +323,9 @@ export async function POST(request: Request) {
   if (event.type === "checkout.session.expired") {
     const session = event.data.object as Stripe.Checkout.Session;
     const reservationId = session.metadata?.reservation_id;
-    const isExtension = session.metadata?.type === "extension";
+    const paymentType = session.metadata?.type ?? "";
 
-    if (reservationId && !isExtension) {
+    if (reservationId && paymentType !== "extension" && paymentType !== "booking_balance") {
       await supabase
         .from("reservations")
         .update({ status: "expired" })
@@ -267,7 +338,7 @@ export async function POST(request: Request) {
         .eq("reservation_id", reservationId);
     }
 
-    if (reservationId && isExtension) {
+    if (reservationId && (paymentType === "extension" || paymentType === "booking_balance")) {
       await supabase
         .from("payments")
         .update({ status: "failed" })
@@ -277,3 +348,4 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ received: true });
 }
+

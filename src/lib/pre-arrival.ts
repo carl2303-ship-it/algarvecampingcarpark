@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPreArrivalAccess } from "@/lib/email";
 import { getParkSettings } from "@/lib/park-settings";
+import { isReservationFullyPaid } from "@/lib/booking-deposit";
 
 function lisbonDateOffset(daysFromToday: number): string {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -28,6 +29,8 @@ type PreArrivalReservation = {
   check_in: string;
   check_out: string;
   locale: string | null;
+  total_cents?: number;
+  paid_cents?: number | null;
   zone: { name: string } | { name: string }[] | null;
 };
 
@@ -48,6 +51,14 @@ export async function sendPreArrivalForReservation(
   if (!reservation.pitch_code?.trim()) {
     throw new Error(
       "Attribuez d'abord un emplacement — l'e-mail pré-arrivée inclut le lieu et le code barrière."
+    );
+  }
+
+  const paid = reservation.paid_cents ?? 0;
+  const total = reservation.total_cents ?? 0;
+  if (!options?.force && !isReservationFullyPaid(paid, total)) {
+    throw new Error(
+      "Paiement incomplet — le code barrière n'est envoyé qu'après règlement à 100 %."
     );
   }
 
@@ -93,7 +104,7 @@ export async function sendPreArrivalByReservationId(
   const { data: reservation, error } = await supabase
     .from("reservations")
     .select(
-      "id, guest_email, guest_name, pitch_code, check_in, check_out, locale, pre_arrival_email_sent_at, status, zone:zones(name)"
+      "id, guest_email, guest_name, pitch_code, check_in, check_out, locale, pre_arrival_email_sent_at, status, total_cents, paid_cents, zone:zones(name)"
     )
     .eq("id", reservationId)
     .single();
@@ -123,7 +134,9 @@ export async function runPreArrivalEmails() {
   // Yesterday = late catch-up; today/tomorrow = standard window.
   const { data: reservations, error } = await supabase
     .from("reservations")
-    .select("id, guest_email, guest_name, pitch_code, check_in, check_out, locale, zone:zones(name)")
+    .select(
+      "id, guest_email, guest_name, pitch_code, check_in, check_out, locale, total_cents, paid_cents, zone:zones(name)"
+    )
     .eq("status", "confirmed")
     .in("check_in", [yesterday, today, tomorrow])
     .is("pre_arrival_email_sent_at", null)
@@ -137,6 +150,10 @@ export async function runPreArrivalEmails() {
 
   for (const reservation of reservations ?? []) {
     if (!reservation.guest_email || !reservation.pitch_code) {
+      skipped.push(reservation.id);
+      continue;
+    }
+    if (!isReservationFullyPaid(reservation.paid_cents ?? 0, reservation.total_cents ?? 0)) {
       skipped.push(reservation.id);
       continue;
     }

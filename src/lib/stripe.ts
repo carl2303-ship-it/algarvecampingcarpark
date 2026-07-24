@@ -58,10 +58,10 @@ export async function createCheckoutSession({
   const fullPayment = gateEntry || balanceCents === 0;
   const productName = fullPayment
     ? `${SITE_NAME} — Paiement intégral · ${zoneName} · ${pitchCode}`
-    : `${SITE_NAME} — Sinal 50% · ${zoneName} · ${pitchCode}`;
+    : `${SITE_NAME} — Acompte 50% · ${zoneName} · ${pitchCode}`;
   const productDescription = fullPayment
     ? `Check-in: ${checkIn} | Check-out: ${checkOut} | Total payé: ${(totalCents / 100).toFixed(2)} €`
-    : `Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} € | Restante na chegada: ${(balanceCents / 100).toFixed(2)} €`;
+    : `Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} € | Solde à régler en ligne 48 h avant l'arrivée: ${(balanceCents / 100).toFixed(2)} €`;
   const cancelPath = gateEntry
     ? `${localePath(locale, "/book")}?from=qr&cancelled=1`
     : `${localePath(locale, "/book")}?cancelled=1`;
@@ -96,6 +96,61 @@ export async function createCheckoutSession({
     success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}${gateEntry ? "&from=qr" : ""}`,
     cancel_url: `${SITE_URL}${cancelPath}`,
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+  });
+}
+
+/** Remaining 50% balance — sent ~48h before arrival. */
+export async function createBalanceCheckoutSession({
+  reservationId,
+  balanceCents,
+  guestEmail,
+  guestName,
+  zoneName,
+  pitchCode,
+  checkIn,
+  checkOut,
+  locale = "pt",
+}: {
+  reservationId: string;
+  balanceCents: number;
+  guestEmail: string;
+  guestName: string;
+  zoneName: string;
+  pitchCode: string | null;
+  checkIn: string;
+  checkOut: string;
+  locale?: Locale;
+}) {
+  const stripe = await getStripe();
+  const pitch = pitchCode ? ` · ${pitchCode}` : "";
+  return stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: guestEmail,
+    invoice_creation: { enabled: true },
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: `${SITE_NAME} — Solde 50%${pitch}`,
+            description: `Check-in: ${checkIn} | Check-out: ${checkOut} | Zone: ${zoneName}`,
+          },
+          unit_amount: balanceCents,
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      reservation_id: reservationId,
+      guest_name: guestName,
+      type: "booking_balance",
+      balance_cents: String(balanceCents),
+      pitch_code: pitchCode ?? "",
+      locale,
+    },
+    success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}&balance=1`,
+    cancel_url: `${SITE_URL}${localePath(locale, "/book")}?cancelled=1`,
+    expires_at: Math.floor(Date.now() / 1000) + 2 * 24 * 60 * 60,
   });
 }
 

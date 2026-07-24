@@ -82,6 +82,12 @@ export async function sendBookingConfirmation({
   const t = getEmailCopy(lang).confirmation;
   const paid = paidCents ?? totalCents;
   const balance = balanceCents ?? Math.max(0, totalCents - paid);
+  const intro = balance > 0 ? t.introDeposit : t.introFull;
+  const paidLabel = balance > 0 ? t.depositPaid : t.amountPaid;
+  const balanceLine =
+    balance > 0
+      ? `<li><strong>${t.balanceDue}:</strong> ${formatPrice(balance)}</li>`
+      : "";
   const pitchLine = pitchCode
     ? `<li><strong>${t.pitch}:</strong> ${pitchCode}</li>`
     : "";
@@ -94,15 +100,15 @@ export async function sendBookingConfirmation({
     html: `
       <h1>${t.title}</h1>
       <p>${fillTemplate(t.greeting, { name: guestName })}</p>
-      <p>${t.intro}</p>
+      <p>${intro}</p>
       <ul>
         <li><strong>${t.zone}:</strong> ${zoneName}</li>
         ${pitchLine}
         <li><strong>${t.checkIn}:</strong> ${checkIn} (${fillTemplate(t.checkInFrom, { time: checkInTime })})</li>
         <li><strong>${t.checkOut}:</strong> ${checkOut} (${fillTemplate(t.checkOutUntil, { time: checkOutTime })})</li>
         <li><strong>${t.total}:</strong> ${formatPrice(totalCents)}</li>
-        <li><strong>${t.depositPaid}:</strong> ${formatPrice(paid)}</li>
-        <li><strong>${t.balanceDue}:</strong> ${formatPrice(balance)}</li>
+        <li><strong>${paidLabel}:</strong> ${formatPrice(paid)}</li>
+        ${balanceLine}
         <li><strong>${t.reference}:</strong> ${reservationId.slice(0, 8).toUpperCase()}</li>
       </ul>
       <div style="margin:24px 0;padding:16px 20px;background:#fff7ed;border:2px solid #ea580c;border-radius:12px;">
@@ -115,6 +121,74 @@ export async function sendBookingConfirmation({
     `,
   });
   assertResendSent(result, "Confirmation e-mail");
+}
+
+export async function sendBalancePaymentRequest({
+  guestEmail,
+  guestName,
+  zoneName,
+  pitchCode,
+  checkIn,
+  checkOut,
+  balanceCents,
+  totalCents,
+  paidCents,
+  checkoutUrl,
+  reservationId,
+  locale,
+}: {
+  guestEmail: string;
+  guestName: string;
+  zoneName: string;
+  pitchCode?: string | null;
+  checkIn: string;
+  checkOut: string;
+  balanceCents: number;
+  totalCents: number;
+  paidCents: number;
+  checkoutUrl: string;
+  reservationId: string;
+  locale?: string | null;
+}) {
+  const client = await getResendClient();
+  if (!client) {
+    throw new Error("Resend non configuré — impossible d'envoyer l'e-mail du solde");
+  }
+
+  const lang = resolveLocale(locale);
+  const t = getEmailCopy(lang).balancePayment;
+  const pitchLine = pitchCode
+    ? `<li><strong>${t.pitch}:</strong> ${pitchCode}</li>`
+    : "";
+
+  const result = await client.resend.emails.send({
+    from: client.from,
+    to: guestEmail,
+    subject: t.subject,
+    html: `
+      <h1>${t.title}</h1>
+      <p>${fillTemplate(t.greeting, { name: guestName })}</p>
+      <p>${t.intro}</p>
+      <ul>
+        <li><strong>${t.zone}:</strong> ${zoneName}</li>
+        ${pitchLine}
+        <li><strong>${t.checkIn}:</strong> ${checkIn} → ${checkOut}</li>
+        <li><strong>${t.total}:</strong> ${formatPrice(totalCents)}</li>
+        <li><strong>${t.paid}:</strong> ${formatPrice(paidCents)}</li>
+        <li><strong>${t.balance}:</strong> ${formatPrice(balanceCents)}</li>
+        <li><strong>Ref.:</strong> ${reservationId.slice(0, 8).toUpperCase()}</li>
+      </ul>
+      <p style="margin:24px 0;">
+        <a href="${checkoutUrl}" style="display:inline-block;padding:14px 28px;background:#0f766e;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">
+          ${t.payCta}
+        </a>
+      </p>
+      <p style="font-size:13px;color:#64748b;">${fillTemplate(t.copyLink, { url: checkoutUrl })}</p>
+      <p style="margin-top:16px;padding:12px 16px;background:#fef3c7;border-radius:8px;color:#92400e;">${t.note}</p>
+      <p>${fillTemplate(t.questions, { from: client.from })}</p>
+    `,
+  });
+  assertResendSent(result, "Balance payment e-mail");
 }
 
 export async function sendPreArrivalAccess({
@@ -293,6 +367,16 @@ export function receiptDepositDescription(
   const t = getEmailCopy(locale).receipt;
   const pitch = pitchCode ? ` (${pitchCode})` : "";
   return fillTemplate(t.depositDescription, { zone: zoneName, pitch });
+}
+
+export function receiptBalanceDescription(
+  locale: string | null | undefined,
+  zoneName: string,
+  pitchCode?: string | null
+): string {
+  const t = getEmailCopy(locale).receipt;
+  const pitch = pitchCode ? ` (${pitchCode})` : "";
+  return fillTemplate(t.balanceDescription, { zone: zoneName, pitch });
 }
 
 export function receiptExtensionDescription(

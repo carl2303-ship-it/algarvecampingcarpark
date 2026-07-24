@@ -219,7 +219,7 @@ const de = {
     reception_submit_hint:
       "Nach dem Absenden findet die Rezeption Ihre Buchung über das Kennzeichen, vergibt den Platz und kassiert.",
     hero_description:
-      "Geben Sie Ihre Daten ein, wählen Sie den Stellplatztyp, markieren Sie auf der Karte und zahlen Sie 50 % als Anzahlung zur Sicherung der Reservierung.",
+      "Geben Sie Ihre Daten ein, wählen Sie den Stellplatztyp, markieren Sie auf der Karte und zahlen Sie (50 % oder 100 % je nach Vorlauf).",
     step_dates: "Daten & Angaben",
     step_zone: "Stellplatztyp",
     step_pitch: "Stellplatz auf Karte",
@@ -257,6 +257,7 @@ const de = {
     email_confirm_alert:
       "Bitte prüfen Sie die E-Mail genau: ohne korrekte Adresse erhalten Sie den Einfahrtscode nicht.",
     balance_on_arrival: "Restbetrag bei Anreise",
+    balance_before_arrival: "Restbetrag online (~48 Std. vorher)",
     nights: "Nächte",
     min_nights: "Mindestens {n} Nächte",
     spots_left: "{n} Stellplätze verfügbar",
@@ -277,7 +278,7 @@ const de = {
     pitch_list_title: "Verfügbare Stellplätze",
     select_this_pitch: "Diesen Stellplatz wählen",
     pre_arrival_alert:
-      "Ihr endgültiger Stellplatz und der Schranken-Code werden 24 Stunden vor Anreise per E-Mail mitgeteilt.",
+      "Der Schrankencode wird erst nach 100 %-Zahlung gesendet. Mehr als 48 Std. Vorlauf: jetzt 50 % zahlen, Rest per Stripe-Link ~48 Std. vorher; weniger als 48 Std.: jetzt 100 % zahlen.",
     terms_notice_title: "Vor der Bestätigung",
     terms_refund_fees:
       "Im Falle einer Rückerstattung werden die Gebühren des Zahlungsdienstleisters (Stripe) abgezogen.",
@@ -289,7 +290,7 @@ const de = {
       terms_accept_after: "gelesen und akzeptiere sie, einschließlich der Rückerstattungsrichtlinie und der Datenprüfung.",
       success_title: "Buchung bestätigt!",
     success_message:
-      "Sie erhalten in Kürze eine Bestätigungs-E-Mail. Die Anzahlung von 50 % ist bezahlt; der Restbetrag ist bei Anreise fällig.",
+      "Sie erhalten in Kürze eine Bestätigungs-E-Mail. Bei 50 %-Zahlung kommt der Restbetrag per E-Mail mit Stripe-Link ca. 48 Std. vor Anreise. Einfahrtscode erst nach 100 %.",
     success_reception_title: "Daten gesendet!",
     success_reception_message:
       "Gehen Sie zur Rezeption und nennen Sie Ihr Kennzeichen. Das Team vergibt den Stellplatz und nimmt die Zahlung entgegen.",

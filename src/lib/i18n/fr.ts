@@ -219,7 +219,7 @@ const fr = {
     reception_submit_hint:
       "Après envoi, la réception retrouve votre réservation par la plaque pour attribuer la place et encaisser.",
     hero_description:
-      "Indiquez vos coordonnées, choisissez le type de place, sélectionnez sur le plan et payez 50 % pour garantir la réservation.",
+      "Indiquez vos coordonnées, choisissez le type de place, sélectionnez sur le plan et payez (50 % ou 100 % selon l'anticipation).",
     step_dates: "Dates et coordonnées",
     step_zone: "Type de place",
     step_pitch: "Place sur le plan",
@@ -257,6 +257,7 @@ const fr = {
     email_confirm_alert:
       "Vérifiez bien l'adresse e-mail : sans e-mail correct, vous ne recevrez pas le code d'entrée.",
     balance_on_arrival: "Solde à l'arrivée",
+    balance_before_arrival: "Solde en ligne (~48 h avant)",
     nights: "nuits",
     min_nights: "Minimum de {n} nuits",
     spots_left: "{n} places disponibles",
@@ -277,7 +278,7 @@ const fr = {
     pitch_list_title: "Places disponibles",
     select_this_pitch: "Choisir cette place",
     pre_arrival_alert:
-      "La place définitive et le code d'accès à la barrière vous seront communiqués par email 24 heures avant la date d'arrivée.",
+      "Le code barrière n'est envoyé qu'après paiement à 100 %. Plus de 48 h à l'avance : payez 50 % maintenant et le solde via lien Stripe ~48 h avant ; moins de 48 h : payez 100 % tout de suite.",
     terms_notice_title: "Avant de confirmer",
     terms_refund_fees:
       "En cas de remboursement, les frais de l'organisme de paiement (Stripe) seront déduits.",
@@ -289,7 +290,7 @@ const fr = {
       terms_accept_after: "de réservation, y compris la politique de remboursement et la vérification des données.",
       success_title: "Réservation confirmée !",
     success_message:
-      "Vous recevrez un email de confirmation sous peu. L'acompte de 50 % est payé ; le solde est dû à l'arrivée.",
+      "Vous recevrez un email de confirmation sous peu. Si vous avez payé 50 %, le solde arrive par email avec un lien Stripe environ 48 h avant l'arrivée. Code d'entrée uniquement après 100 %.",
     success_reception_title: "Coordonnées envoyées !",
     success_reception_message:
       "Présentez-vous à la réception avec votre plaque. L'équipe attribue l'emplacement et encaisse le paiement.",

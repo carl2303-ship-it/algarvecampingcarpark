@@ -80,7 +80,7 @@ export function formatReceptionHours(
 }
 
 export const PENDING_PAYMENT_EXPIRY_MINUTES = 30;
-/** Online deposit is 50% of the stay total; balance due on arrival. */
+/** @deprecated Prefer bookingChargeCents / requiresFullPaymentAtBooking from booking-deposit. */
 export const ONLINE_BOOKING_DEPOSIT_RATIO = 0.5;
 /** Gate / QR arrivals pay the full stay online. */
 export const GATE_BOOKING_DEPOSIT_RATIO = 1;

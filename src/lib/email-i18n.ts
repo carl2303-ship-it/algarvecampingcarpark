@@ -5,7 +5,8 @@ export type EmailCopy = {
     subject: string;
     title: string;
     greeting: string;
-    intro: string;
+    introDeposit: string;
+    introFull: string;
     zone: string;
     pitch: string;
     checkIn: string;
@@ -14,10 +15,27 @@ export type EmailCopy = {
     checkOutUntil: string;
     total: string;
     depositPaid: string;
+    amountPaid: string;
     balanceDue: string;
     reference: string;
     importantTitle: string;
     importantBody: string;
+    questions: string;
+  };
+  balancePayment: {
+    subject: string;
+    title: string;
+    greeting: string;
+    intro: string;
+    zone: string;
+    pitch: string;
+    checkIn: string;
+    total: string;
+    paid: string;
+    balance: string;
+    payCta: string;
+    copyLink: string;
+    note: string;
     questions: string;
   };
   preArrival: {
@@ -63,6 +81,7 @@ export type EmailCopy = {
     receiptLater: string;
     thanks: string;
     depositDescription: string;
+    balanceDescription: string;
     extensionDescription: string;
   };
 };
@@ -72,7 +91,8 @@ const pt: EmailCopy = {
     subject: `Reserva confirmada — ${SITE_NAME}`,
     title: "Reserva confirmada!",
     greeting: "Olá {name},",
-    intro: `A sua reserva no <strong>${SITE_NAME}</strong> foi confirmada com o pagamento do sinal de 50%.`,
+    introDeposit: `A sua reserva no <strong>${SITE_NAME}</strong> foi confirmada com o pagamento do sinal de 50%. O restante será pedido por email com link Stripe cerca de 48 horas antes da chegada.`,
+    introFull: `A sua reserva no <strong>${SITE_NAME}</strong> foi confirmada com o pagamento integral (obrigatório para chegadas a menos de 48 horas).`,
     zone: "Zona",
     pitch: "Lugar reservado",
     checkIn: "Check-in",
@@ -81,11 +101,29 @@ const pt: EmailCopy = {
     checkOutUntil: "até às {time}",
     total: "Total da estadia",
     depositPaid: "Sinal pago (50%)",
-    balanceDue: "Restante na chegada",
+    amountPaid: "Valor pago",
+    balanceDue: "Restante (link Stripe ~48h antes da chegada)",
     reference: "Referência",
     importantTitle: "Importante",
     importantBody:
-      "o lugar definitivo e o código de entrada da barreira serão comunicados por email <strong>24 horas antes da data de chegada</strong>.",
+      "o lugar e o código da barreira só são enviados por email após o pagamento a <strong>100%</strong>, tipicamente nas 24 horas antes da chegada.",
+    questions: "Questões? Contacte-nos: {from}",
+  },
+  balancePayment: {
+    subject: `Pagamento do restante — ${SITE_NAME}`,
+    title: "Complete o pagamento da sua reserva",
+    greeting: "Olá {name},",
+    intro:
+      "A sua chegada aproxima-se. Por favor pague os 50% restantes online para receber o código de entrada da barreira.",
+    zone: "Zona",
+    pitch: "Lugar",
+    checkIn: "Check-in",
+    total: "Total da estadia",
+    paid: "Já pago",
+    balance: "Valor a pagar agora",
+    payCta: "Pagar o restante",
+    copyLink: "Ou copie este link: {url}",
+    note: "Sem o pagamento a 100% não enviamos o código de entrada.",
     questions: "Questões? Contacte-nos: {from}",
   },
   preArrival: {
@@ -133,6 +171,7 @@ const pt: EmailCopy = {
     thanks: `Obrigado pela sua estadia no ${SITE_NAME}.`,
     depositDescription:
       "Sinal de 50% da reserva em {zone}{pitch}.",
+    balanceDescription: "Pagamento do restante (50%) da reserva em {zone}{pitch}.",
     extensionDescription: "Pagamento da extensão de estadia até {date}.",
   },
 };
@@ -142,7 +181,8 @@ const en: EmailCopy = {
     subject: `Booking confirmed — ${SITE_NAME}`,
     title: "Booking confirmed!",
     greeting: "Hello {name},",
-    intro: `Your booking at <strong>${SITE_NAME}</strong> has been confirmed with payment of the 50% deposit.`,
+    introDeposit: `Your booking at <strong>${SITE_NAME}</strong> has been confirmed with the 50% deposit. The remaining balance will be requested by email with a Stripe link about 48 hours before arrival.`,
+    introFull: `Your booking at <strong>${SITE_NAME}</strong> has been confirmed with full payment (required for arrivals within 48 hours).`,
     zone: "Zone",
     pitch: "Reserved pitch",
     checkIn: "Check-in",
@@ -151,11 +191,29 @@ const en: EmailCopy = {
     checkOutUntil: "by {time}",
     total: "Stay total",
     depositPaid: "Deposit paid (50%)",
-    balanceDue: "Balance due on arrival",
+    amountPaid: "Amount paid",
+    balanceDue: "Balance (Stripe link ~48h before arrival)",
     reference: "Reference",
     importantTitle: "Important",
     importantBody:
-      "your final pitch and the barrier access code will be emailed <strong>24 hours before your arrival date</strong>.",
+      "your pitch and barrier access code are only emailed after <strong>100%</strong> payment, typically within 24 hours before arrival.",
+    questions: "Questions? Contact us: {from}",
+  },
+  balancePayment: {
+    subject: `Pay the remaining balance — ${SITE_NAME}`,
+    title: "Complete your booking payment",
+    greeting: "Hello {name},",
+    intro:
+      "Your arrival is approaching. Please pay the remaining 50% online to receive the barrier access code.",
+    zone: "Zone",
+    pitch: "Pitch",
+    checkIn: "Check-in",
+    total: "Stay total",
+    paid: "Already paid",
+    balance: "Amount due now",
+    payCta: "Pay the balance",
+    copyLink: "Or copy this link: {url}",
+    note: "Without 100% payment we cannot send the entry code.",
     questions: "Questions? Contact us: {from}",
   },
   preArrival: {
@@ -202,6 +260,7 @@ const en: EmailCopy = {
     receiptLater: "The receipt will be available in your Stripe account.",
     thanks: `Thank you for staying at ${SITE_NAME}.`,
     depositDescription: "50% booking deposit for {zone}{pitch}.",
+    balanceDescription: "Remaining 50% balance for {zone}{pitch}.",
     extensionDescription: "Payment for stay extension until {date}.",
   },
 };
@@ -211,7 +270,8 @@ const fr: EmailCopy = {
     subject: `Réservation confirmée — ${SITE_NAME}`,
     title: "Réservation confirmée !",
     greeting: "Bonjour {name},",
-    intro: `Votre réservation au <strong>${SITE_NAME}</strong> a été confirmée avec le paiement de l'acompte de 50 %.`,
+    introDeposit: `Votre réservation au <strong>${SITE_NAME}</strong> a été confirmée avec l'acompte de 50 %. Le solde vous sera demandé par e-mail avec un lien Stripe environ 48 h avant l'arrivée.`,
+    introFull: `Votre réservation au <strong>${SITE_NAME}</strong> a été confirmée avec le paiement intégral (obligatoire pour une arrivée dans moins de 48 h).`,
     zone: "Zone",
     pitch: "Emplacement réservé",
     checkIn: "Check-in",
@@ -220,11 +280,29 @@ const fr: EmailCopy = {
     checkOutUntil: "jusqu'à {time}",
     total: "Total du séjour",
     depositPaid: "Acompte payé (50 %)",
-    balanceDue: "Solde à l'arrivée",
+    amountPaid: "Montant payé",
+    balanceDue: "Solde (lien Stripe ~48 h avant l'arrivée)",
     reference: "Référence",
     importantTitle: "Important",
     importantBody:
-      "l'emplacement définitif et le code d'accès à la barrière vous seront communiqués par e-mail <strong>24 heures avant la date d'arrivée</strong>.",
+      "l'emplacement et le code barrière ne sont envoyés par e-mail qu'après paiement à <strong>100 %</strong>, en général dans les 24 h avant l'arrivée.",
+    questions: "Des questions ? Contactez-nous : {from}",
+  },
+  balancePayment: {
+    subject: `Paiement du solde — ${SITE_NAME}`,
+    title: "Finalisez le paiement de votre réservation",
+    greeting: "Bonjour {name},",
+    intro:
+      "Votre arrivée approche. Merci de régler les 50 % restants en ligne pour recevoir le code d'accès à la barrière.",
+    zone: "Zone",
+    pitch: "Emplacement",
+    checkIn: "Check-in",
+    total: "Total du séjour",
+    paid: "Déjà payé",
+    balance: "Montant à payer maintenant",
+    payCta: "Payer le solde",
+    copyLink: "Ou copiez ce lien : {url}",
+    note: "Sans paiement à 100 %, nous n'envoyons pas le code d'entrée.",
     questions: "Des questions ? Contactez-nous : {from}",
   },
   preArrival: {
@@ -271,6 +349,7 @@ const fr: EmailCopy = {
     receiptLater: "Le reçu sera disponible dans votre compte Stripe.",
     thanks: `Merci pour votre séjour au ${SITE_NAME}.`,
     depositDescription: "Acompte de 50 % de la réservation pour {zone}{pitch}.",
+    balanceDescription: "Solde restant (50 %) pour {zone}{pitch}.",
     extensionDescription: "Paiement de la prolongation de séjour jusqu'au {date}.",
   },
 };
@@ -280,7 +359,8 @@ const de: EmailCopy = {
     subject: `Buchung bestätigt — ${SITE_NAME}`,
     title: "Buchung bestätigt!",
     greeting: "Hallo {name},",
-    intro: `Ihre Buchung im <strong>${SITE_NAME}</strong> wurde mit der Zahlung der 50 %-Anzahlung bestätigt.`,
+    introDeposit: `Ihre Buchung im <strong>${SITE_NAME}</strong> wurde mit der 50 %-Anzahlung bestätigt. Den Restbetrag fordern wir per E-Mail mit Stripe-Link ca. 48 Stunden vor Anreise an.`,
+    introFull: `Ihre Buchung im <strong>${SITE_NAME}</strong> wurde mit vollständiger Zahlung bestätigt (erforderlich bei Anreise innerhalb von 48 Stunden).`,
     zone: "Zone",
     pitch: "Reservierter Stellplatz",
     checkIn: "Check-in",
@@ -289,11 +369,29 @@ const de: EmailCopy = {
     checkOutUntil: "bis {time}",
     total: "Gesamtbetrag des Aufenthalts",
     depositPaid: "Anzahlung bezahlt (50 %)",
-    balanceDue: "Restbetrag bei Ankunft",
+    amountPaid: "Bezahlter Betrag",
+    balanceDue: "Restbetrag (Stripe-Link ~48 Std. vor Anreise)",
     reference: "Referenz",
     importantTitle: "Wichtig",
     importantBody:
-      "der endgültige Stellplatz und der Schrankencode werden per E-Mail <strong>24 Stunden vor dem Anreisedatum</strong> mitgeteilt.",
+      "Stellplatz und Schrankencode werden erst nach Zahlung von <strong>100 %</strong> per E-Mail gesendet, in der Regel innerhalb von 24 Stunden vor Anreise.",
+    questions: "Fragen? Kontaktieren Sie uns: {from}",
+  },
+  balancePayment: {
+    subject: `Restzahlung — ${SITE_NAME}`,
+    title: "Bitte Restbetrag bezahlen",
+    greeting: "Hallo {name},",
+    intro:
+      "Ihre Anreise rückt näher. Bitte zahlen Sie die restlichen 50 % online, um den Schrankencode zu erhalten.",
+    zone: "Zone",
+    pitch: "Stellplatz",
+    checkIn: "Check-in",
+    total: "Gesamtbetrag",
+    paid: "Bereits bezahlt",
+    balance: "Jetzt fällig",
+    payCta: "Restbetrag zahlen",
+    copyLink: "Oder kopieren Sie diesen Link: {url}",
+    note: "Ohne 100 %-Zahlung senden wir keinen Einfahrtscode.",
     questions: "Fragen? Kontaktieren Sie uns: {from}",
   },
   preArrival: {
@@ -340,6 +438,7 @@ const de: EmailCopy = {
     receiptLater: "Der Beleg wird in Ihrem Stripe-Konto verfügbar sein.",
     thanks: `Vielen Dank für Ihren Aufenthalt im ${SITE_NAME}.`,
     depositDescription: "50 %-Anzahlung der Buchung für {zone}{pitch}.",
+    balanceDescription: "Restbetrag (50 %) für {zone}{pitch}.",
     extensionDescription: "Zahlung der Aufenthaltsverlängerung bis {date}.",
   },
 };
@@ -349,7 +448,8 @@ const es: EmailCopy = {
     subject: `Reserva confirmada — ${SITE_NAME}`,
     title: "¡Reserva confirmada!",
     greeting: "Hola {name},",
-    intro: `Su reserva en <strong>${SITE_NAME}</strong> ha sido confirmada con el pago de la señal del 50 %.`,
+    introDeposit: `Su reserva en <strong>${SITE_NAME}</strong> ha sido confirmada con la señal del 50 %. El resto se solicitará por email con enlace Stripe unas 48 horas antes de la llegada.`,
+    introFull: `Su reserva en <strong>${SITE_NAME}</strong> ha sido confirmada con el pago íntegro (obligatorio si la llegada es en menos de 48 horas).`,
     zone: "Zona",
     pitch: "Plaza reservada",
     checkIn: "Check-in",
@@ -358,11 +458,29 @@ const es: EmailCopy = {
     checkOutUntil: "hasta las {time}",
     total: "Total de la estancia",
     depositPaid: "Señal pagada (50 %)",
-    balanceDue: "Resto a la llegada",
+    amountPaid: "Importe pagado",
+    balanceDue: "Resto (enlace Stripe ~48 h antes de la llegada)",
     reference: "Referencia",
     importantTitle: "Importante",
     importantBody:
-      "la plaza definitiva y el código de acceso de la barrera se comunicarán por correo electrónico <strong>24 horas antes de la fecha de llegada</strong>.",
+      "la plaza y el código de barrera solo se envían por email tras el pago al <strong>100 %</strong>, normalmente en las 24 horas antes de la llegada.",
+    questions: "¿Preguntas? Contáctenos: {from}",
+  },
+  balancePayment: {
+    subject: `Pago del resto — ${SITE_NAME}`,
+    title: "Complete el pago de su reserva",
+    greeting: "Hola {name},",
+    intro:
+      "Su llegada se acerca. Por favor pague el 50 % restante online para recibir el código de la barrera.",
+    zone: "Zona",
+    pitch: "Plaza",
+    checkIn: "Check-in",
+    total: "Total de la estancia",
+    paid: "Ya pagado",
+    balance: "Importe a pagar ahora",
+    payCta: "Pagar el resto",
+    copyLink: "O copie este enlace: {url}",
+    note: "Sin el pago al 100 % no enviamos el código de entrada.",
     questions: "¿Preguntas? Contáctenos: {from}",
   },
   preArrival: {
@@ -409,6 +527,7 @@ const es: EmailCopy = {
     receiptLater: "El recibo estará disponible en su cuenta de Stripe.",
     thanks: `Gracias por su estancia en ${SITE_NAME}.`,
     depositDescription: "Señal del 50 % de la reserva en {zone}{pitch}.",
+    balanceDescription: "Resto (50 %) de la reserva en {zone}{pitch}.",
     extensionDescription: "Pago de la extensión de estancia hasta {date}.",
   },
 };

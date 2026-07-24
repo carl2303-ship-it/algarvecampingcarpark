@@ -13,7 +13,7 @@ import { TermsDialog } from "@/components/legal/terms-dialog";
 import { appendPublicEntryQuery } from "@/lib/gate-entry";
 import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
 import { formatPrice, ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT, type ElectricityAmperage } from "@/lib/pricing";
-import { bookingDepositRatio, type Locale, type ParkSettings } from "@/lib/constants";
+import type { Locale, ParkSettings } from "@/lib/constants";
 import { getTranslations, t as translate } from "@/lib/i18n";
 import { dateFnsLocale } from "@/lib/locale-format";
 import type { TermsContent } from "@/lib/legal/terms-content";
@@ -63,6 +63,7 @@ export function BookingWizard({
   const [selectedPitch, setSelectedPitch] = useState<AvailablePitch | null>(null);
   const [totalCents, setTotalCents] = useState(0);
   const [depositCents, setDepositCents] = useState(0);
+  const [fullPayment, setFullPayment] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -199,10 +200,11 @@ export function BookingWizard({
       setSelectedZone(zone);
       setPitches(list);
       const total = pitchData.total_price_cents ?? zone.total_price_cents;
+      const charge =
+        typeof pitchData.deposit_cents === "number" ? pitchData.deposit_cents : total;
       setTotalCents(total);
-      setDepositCents(
-        pitchData.deposit_cents ?? Math.round(total * bookingDepositRatio(gateEntry))
-      );
+      setDepositCents(charge);
+      setFullPayment(Boolean(pitchData.full_payment) || charge >= total || gateEntry);
 
       if (list.length === 0) {
         setError(tr.book.no_pitches);
@@ -569,7 +571,7 @@ export function BookingWizard({
             <h2 className="text-lg font-semibold">{tr.book.select_pitch}</h2>
             <p className="text-sm text-muted-foreground mt-1">
               {typeSummary} · {formatPrice(totalCents)}
-              {gateEntry
+              {fullPayment
                 ? ` · ${tr.book.pay_full}: ${formatPrice(depositCents)}`
                 : ` · ${tr.book.deposit}: ${formatPrice(depositCents)}`}
             </p>
@@ -632,7 +634,7 @@ export function BookingWizard({
                 <span>{tr.book.total}</span>
                 <span className="font-semibold">{formatPrice(totalCents)}</span>
               </div>
-              {gateEntry ? (
+              {fullPayment ? (
                 <div className="flex justify-between text-primary">
                   <span>{tr.book.pay_full}</span>
                   <span className="font-semibold">{formatPrice(depositCents)}</span>
@@ -644,7 +646,7 @@ export function BookingWizard({
                     <span className="font-semibold">{formatPrice(depositCents)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>{tr.book.balance_on_arrival}</span>
+                    <span>{tr.book.balance_before_arrival}</span>
                     <span>{formatPrice(totalCents - depositCents)}</span>
                   </div>
                 </>
@@ -657,7 +659,7 @@ export function BookingWizard({
 
             <Button onClick={submitBooking} disabled={loading} className="w-full" size="lg">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {gateEntry ? tr.book.pay_full : tr.book.pay} — {formatPrice(depositCents)}
+              {fullPayment ? tr.book.pay_full : tr.book.pay} — {formatPrice(depositCents)}
             </Button>
           </CardContent>
         </Card>

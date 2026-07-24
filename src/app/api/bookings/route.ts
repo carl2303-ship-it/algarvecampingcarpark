@@ -11,8 +11,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createCheckoutSession } from "@/lib/stripe";
 import {
   PENDING_PAYMENT_EXPIRY_MINUTES,
-  bookingDepositRatio,
 } from "@/lib/constants";
+import { bookingChargeCents } from "@/lib/booking-deposit";
 import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
 import {
   normalizeVehiclePlate,
@@ -264,7 +264,11 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join("\n") || null;
 
-    const depositCents = Math.round(pricing.totalCents * bookingDepositRatio(gateEntry));
+    const depositCents = bookingChargeCents(pricing.totalCents, {
+      checkIn: data.check_in,
+      gateEntry,
+      checkInTime: parkSettings.check_in_time,
+    });
     if (depositCents < 50) {
       return NextResponse.json({ error: "Valor de reserva inválido" }, { status: 400 });
     }
@@ -337,6 +341,7 @@ export async function POST(request: Request) {
       .update({ stripe_session_id: session.id })
       .eq("id", reservation.id);
 
+    const isFull = depositCents >= pricing.totalCents;
     await supabase.from("payments").insert({
       reservation_id: reservation.id,
       stripe_session_id: session.id,
@@ -344,10 +349,16 @@ export async function POST(request: Request) {
       status: "pending",
       notes: gateEntry
         ? "Paiement intégral (entrée QR portail)"
-        : "Sinal 50% (reserva online)",
+        : isFull
+          ? "Paiement intégral (< 48 h avant arrivée)"
+          : "Acompte 50% (réservation en ligne)",
     });
 
-    return NextResponse.json({ checkout_url: session.url });
+    return NextResponse.json({
+      checkout_url: session.url,
+      charge_cents: depositCents,
+      full_payment: isFull,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });

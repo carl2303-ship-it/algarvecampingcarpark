@@ -45,7 +45,7 @@ const termsPt: TermsContent = {
     {
       title: "2. Modelos de Reserva",
       paragraphs: [
-        "Pagamento de um sinal de 50% online para garantir a vaga, sendo o restante valor pago no dia da chegada (em dinheiro ou MB WAY).",
+        "Pagamento de um sinal de 50% online se a reserva for feita com mais de 48 horas de antecedência; o restante de 50% é pago online via link Stripe enviado cerca de 48 horas antes da chegada. Se a reserva for feita a menos de 48 horas da chegada, o pagamento é de 100% no momento da reserva. O código de entrada da barreira só é enviado após o pagamento a 100%.",
       ],
     },
     {
@@ -112,7 +112,7 @@ const termsEn: TermsContent = {
     {
       title: "2. Booking Models",
       paragraphs: [
-        "Payment of a 50% deposit online to secure your pitch, with the remaining balance paid on arrival day (in cash or via MB WAY).",
+        "Payment of a 50% deposit online when booking more than 48 hours before arrival; the remaining 50% is paid online via a Stripe link emailed about 48 hours before arrival. If you book less than 48 hours before arrival, 100% is due at booking. The barrier entry code is only sent after 100% payment.",
       ],
     },
     {
@@ -179,7 +179,7 @@ const termsFr: TermsContent = {
     {
       title: "2. Modèles de réservation",
       paragraphs: [
-        "Paiement d'un acompte de 50 % en ligne pour garantir l'emplacement, le solde étant payé le jour de l'arrivée (en espèces ou via MB WAY).",
+        "Paiement d'un acompte de 50 % en ligne si la réservation est faite plus de 48 heures avant l'arrivée ; le solde de 50 % est payé en ligne via un lien Stripe envoyé environ 48 heures avant l'arrivée. Si la réservation est faite moins de 48 heures avant l'arrivée, le paiement est de 100 % au moment de la réservation. Le code d'entrée de la barrière n'est envoyé qu'après paiement à 100 %.",
       ],
     },
     {
@@ -246,7 +246,7 @@ const termsDe: TermsContent = {
     {
       title: "2. Buchungsmodelle",
       paragraphs: [
-        "Zahlung einer 50 %-Anzahlung online zur Sicherung des Stellplatzes; der Restbetrag wird am Anreisetag bar oder per MB WAY bezahlt.",
+        "Zahlung einer 50 %-Anzahlung online bei Buchung mehr als 48 Stunden vor Anreise; die restlichen 50 % werden online über einen Stripe-Link bezahlt, der ca. 48 Stunden vor Anreise per E-Mail gesendet wird. Bei Buchung weniger als 48 Stunden vor Anreise sind 100 % sofort fällig. Der Schrankencode wird erst nach Zahlung von 100 % gesendet.",
       ],
     },
     {
@@ -313,7 +313,7 @@ const termsEs: TermsContent = {
     {
       title: "2. Modelos de reserva",
       paragraphs: [
-        "Pago de una señal del 50 % online para garantizar la plaza; el resto se paga el día de llegada (en efectivo o mediante MB WAY).",
+        "Pago de una señal del 50 % online si la reserva se hace con más de 48 horas de antelación; el 50 % restante se paga online mediante un enlace Stripe enviado unas 48 horas antes de la llegada. Si reserva con menos de 48 horas de antelación, el pago es del 100 % en el momento de la reserva. El código de entrada de la barrera solo se envía tras el pago al 100 %.",
       ],
     },
     {

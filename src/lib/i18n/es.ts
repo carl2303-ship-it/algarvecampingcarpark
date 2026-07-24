@@ -219,7 +219,7 @@ const es = {
     reception_submit_hint:
       "Tras enviar, recepción encuentra su reserva por la matrícula para asignar plaza y cobrar.",
     hero_description:
-      "Indique sus datos, elija el tipo de plaza, selecciónela en el mapa y pague el 50 % para garantizar la reserva.",
+      "Indique sus datos, elija el tipo de plaza, selecciónela en el mapa y pague (50 % o 100 % según la antelación).",
     step_dates: "Fechas y datos",
     step_zone: "Tipo de plaza",
     step_pitch: "Plaza en el mapa",
@@ -257,6 +257,7 @@ const es = {
     email_confirm_alert:
       "Compruebe bien el correo: sin una dirección correcta, no recibirá el código de entrada.",
     balance_on_arrival: "Resto a la llegada",
+    balance_before_arrival: "Resto online (~48 h antes)",
     nights: "noches",
     min_nights: "Mínimo de {n} noches",
     spots_left: "{n} plazas disponibles",
@@ -277,7 +278,7 @@ const es = {
     pitch_list_title: "Plazas disponibles",
     select_this_pitch: "Seleccionar esta plaza",
     pre_arrival_alert:
-      "La plaza definitiva y el código de acceso a la barrera se comunicarán por email 24 horas antes de la fecha de llegada.",
+      "El código de barrera solo se envía tras el pago al 100 %. Con más de 48 h de antelación: pague el 50 % ahora y el resto con enlace Stripe ~48 h antes; con menos de 48 h: pague el 100 % ya.",
     terms_notice_title: "Antes de confirmar",
     terms_refund_fees:
       "En caso de reembolso, se deducirán las comisiones del organismo de pago (Stripe).",
@@ -289,7 +290,7 @@ const es = {
       terms_accept_after: "de reserva, incluida la política de reembolsos y la verificación de datos.",
       success_title: "¡Reserva confirmada!",
     success_message:
-      "Recibirá un email de confirmación en breve. La señal del 50 % está pagada; el resto se abona a la llegada.",
+      "Recibirá un email de confirmación en breve. Si pagó el 50 %, el resto llega por email con enlace Stripe unas 48 h antes de la llegada. Código de entrada solo tras el 100 %.",
     success_reception_title: "¡Datos enviados!",
     success_reception_message:
       "Acuda a recepción e indique su matrícula. El equipo asigna la plaza y cobra el pago.",
