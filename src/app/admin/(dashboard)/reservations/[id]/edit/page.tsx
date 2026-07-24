@@ -11,6 +11,7 @@ import { getActiveZones } from "@/lib/availability";
 import { getPitchMapSpotsAdmin } from "@/lib/pitch-map";
 import { getClientPaymentHistory } from "@/lib/admin-reservation-payments";
 import { getPricingSupplements } from "@/lib/pricing-supplements";
+import { listReservationEmails } from "@/lib/reservation-emails";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cn } from "@/lib/utils";
 
@@ -37,13 +38,14 @@ export default async function EditReservationPage({
     notFound();
   }
 
-  const [guestResult, clientPayments] = await Promise.all([
+  const [guestResult, clientPayments, emailHistory] = await Promise.all([
     reservation.guest_id
       ? supabase.from("guests").select("country").eq("id", reservation.guest_id).maybeSingle()
       : Promise.resolve({ data: null }),
     reservation.vehicle_plate
       ? getClientPaymentHistory(supabase, reservation.vehicle_plate)
       : Promise.resolve([]),
+    listReservationEmails(id, supabase),
   ]);
 
   const initial: AdminReservationInitial = {
@@ -90,6 +92,7 @@ export default async function EditReservationPage({
         mode="edit"
         initialReservation={initial}
         initialPayments={clientPayments}
+        initialEmailHistory={emailHistory}
         zones={zones}
         spots={spots}
         pricingSupplements={pricingSupplements.filter((item) => item.applies_admin)}

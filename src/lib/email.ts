@@ -5,6 +5,7 @@ import { fillTemplate, getEmailCopy, resolveLocale } from "./email-i18n";
 import { formatPrice } from "./pricing";
 import { assertResendSent } from "./resend-assert";
 import { stayManageUrl } from "./stay-token";
+import { logReservationEmail } from "./reservation-emails";
 
 function buildStayLinkBlock(reservationId: string, locale: Locale): string {
   const copy = getEmailCopy(locale).stayLink;
@@ -121,6 +122,12 @@ export async function sendBookingConfirmation({
     `,
   });
   assertResendSent(result, "Confirmation e-mail");
+  await logReservationEmail({
+    reservationId,
+    emailType: "confirmation",
+    sentTo: guestEmail,
+    subject: t.subject,
+  });
 }
 
 export async function sendBalancePaymentRequest({
@@ -189,6 +196,12 @@ export async function sendBalancePaymentRequest({
     `,
   });
   assertResendSent(result, "Balance payment e-mail");
+  await logReservationEmail({
+    reservationId,
+    emailType: "balance_payment",
+    sentTo: guestEmail,
+    subject: t.subject,
+  });
 }
 
 export async function sendPreArrivalAccess({
@@ -263,6 +276,12 @@ export async function sendPreArrivalAccess({
     `,
   });
   assertResendSent(result, "Pré-arrivée e-mail");
+  await logReservationEmail({
+    reservationId,
+    emailType: "pre_arrival",
+    sentTo: guestEmail,
+    subject: t.subject,
+  });
 }
 
 export async function sendExtensionPaymentLink({
@@ -274,6 +293,7 @@ export async function sendExtensionPaymentLink({
   extensionCents,
   paymentUrl,
   locale,
+  reservationId,
 }: {
   guestEmail: string;
   guestName: string;
@@ -283,6 +303,7 @@ export async function sendExtensionPaymentLink({
   extensionCents: number;
   paymentUrl: string;
   locale?: string | null;
+  reservationId?: string;
 }) {
   const client = await getResendClient();
   if (!client) {
@@ -312,6 +333,14 @@ export async function sendExtensionPaymentLink({
     `,
   });
   assertResendSent(result, "Extension e-mail");
+  if (reservationId) {
+    await logReservationEmail({
+      reservationId,
+      emailType: "extension_link",
+      sentTo: guestEmail,
+      subject: t.subject,
+    });
+  }
 }
 
 export async function sendPaymentReceipt({
@@ -321,6 +350,7 @@ export async function sendPaymentReceipt({
   receiptUrl,
   description,
   locale,
+  reservationId,
 }: {
   guestEmail: string;
   guestName: string;
@@ -328,6 +358,7 @@ export async function sendPaymentReceipt({
   receiptUrl: string | null;
   description: string;
   locale?: string | null;
+  reservationId?: string;
 }) {
   const client = await getResendClient();
   if (!client) {
@@ -356,6 +387,14 @@ export async function sendPaymentReceipt({
     `,
   });
   assertResendSent(result, "Reçu e-mail");
+  if (reservationId) {
+    await logReservationEmail({
+      reservationId,
+      emailType: "payment_receipt",
+      sentTo: guestEmail,
+      subject: t.subject,
+    });
+  }
 }
 
 /** Build localized receipt description helpers for callers. */

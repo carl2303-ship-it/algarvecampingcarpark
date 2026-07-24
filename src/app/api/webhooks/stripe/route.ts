@@ -132,6 +132,7 @@ export async function POST(request: Request) {
             nextCheckOut
           ),
           locale: resolveLocale(reservation.locale ?? session.metadata?.locale),
+          reservationId,
         });
       }
     } else if (paymentType === "booking_balance") {
@@ -189,6 +190,7 @@ export async function POST(request: Request) {
             receiptUrl,
             description: receiptBalanceDescription(locale, zoneName, reservation.pitch_code),
             locale,
+            reservationId,
           });
         } catch (receiptError) {
           console.error("Stripe webhook: balance receipt email failed:", receiptError);
@@ -308,6 +310,7 @@ export async function POST(request: Request) {
               reservation.pitch_code
             ),
             locale,
+            reservationId,
           });
         } catch (receiptError) {
           console.error("Stripe webhook: receipt email failed:", receiptError);

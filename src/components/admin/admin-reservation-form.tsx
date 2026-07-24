@@ -27,6 +27,7 @@ import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import type { Zone } from "@/types/database";
 import { formatPrice } from "@/lib/pricing";
 import type { PricingSupplement } from "@/lib/pricing-supplements";
+import type { ReservationEmailRow, ReservationEmailType } from "@/lib/reservation-emails";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -78,6 +79,23 @@ function centsToEurosInput(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
+function emailTypeLabel(type: ReservationEmailType): string {
+  switch (type) {
+    case "confirmation":
+      return adminT.reservationForm.emailTypeConfirmation;
+    case "balance_payment":
+      return adminT.reservationForm.emailTypeBalance;
+    case "pre_arrival":
+      return adminT.reservationForm.emailTypePreArrival;
+    case "payment_receipt":
+      return adminT.reservationForm.emailTypeReceipt;
+    case "extension_link":
+      return adminT.reservationForm.emailTypeExtension;
+    default:
+      return type;
+  }
+}
+
 export function AdminReservationForm({
   zones,
   spots,
@@ -86,11 +104,13 @@ export function AdminReservationForm({
   mode = "create",
   initialReservation,
   initialPayments = [],
+  initialEmailHistory = [],
 }: Props & {
   initialPitchCode?: string;
   mode?: "create" | "edit";
   initialReservation?: AdminReservationInitial;
   initialPayments?: AdminReservationPayment[];
+  initialEmailHistory?: ReservationEmailRow[];
 }) {
   const router = useRouter();
   const sortedSpots = useMemo(
@@ -150,6 +170,7 @@ export function AdminReservationForm({
   const [preArrivalSentAt, setPreArrivalSentAt] = useState(
     initialReservation?.pre_arrival_email_sent_at ?? null
   );
+  const [emailHistory, setEmailHistory] = useState(initialEmailHistory);
   const [error, setError] = useState<string | null>(null);
   const [extendCheckOut, setExtendCheckOut] = useState("");
   const [extendSendLink, setExtendSendLink] = useState(true);
@@ -560,6 +581,18 @@ export function AdminReservationForm({
     setEmailMessage(
       adminT.reservationForm.sendConfirmationSuccess.replace("{email}", data.sent_to ?? guestEmail)
     );
+    const sentTo = typeof data.sent_to === "string" ? data.sent_to : guestEmail;
+    setEmailHistory((prev) => [
+      {
+        id: `local-${Date.now()}`,
+        reservation_id: initialReservation.id,
+        email_type: "confirmation",
+        sent_to: sentTo,
+        subject: null,
+        created_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
   }
 
   async function handleSendPreArrival(force = false) {
@@ -589,6 +622,18 @@ export function AdminReservationForm({
     setEmailMessage(
       adminT.reservationForm.sendPreArrivalSuccess.replace("{email}", data.sent_to ?? guestEmail)
     );
+    const sentTo = typeof data.sent_to === "string" ? data.sent_to : guestEmail;
+    setEmailHistory((prev) => [
+      {
+        id: `local-${Date.now()}`,
+        reservation_id: initialReservation.id,
+        email_type: "pre_arrival",
+        sent_to: sentTo,
+        subject: null,
+        created_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
   }
 
   async function handleExtend() {
@@ -622,6 +667,19 @@ export function AdminReservationForm({
             .replace("{amount}", amount)
         : adminT.reservationForm.extendSuccessNoCharge.replace("{date}", data.check_out)
     );
+    if (extendSendLink && data.payment_url) {
+      setEmailHistory((prev) => [
+        {
+          id: `local-${Date.now()}`,
+          reservation_id: initialReservation.id,
+          email_type: "extension_link",
+          sent_to: guestEmail,
+          subject: null,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+    }
     setCheckOut(data.check_out);
     setTotalEuros(centsToEurosInput(data.total_cents ?? totalCents));
     setFollowQuote(false);
@@ -1319,14 +1377,28 @@ export function AdminReservationForm({
       </div>
 
       {isEdit && (
-        <p className="text-xs text-muted-foreground">
-          {preArrivalSentAt
-            ? adminT.reservationForm.preArrivalSentAt.replace(
-                "{date}",
-                new Date(preArrivalSentAt).toLocaleString("fr-FR")
-              )
-            : adminT.reservationForm.preArrivalNotSent}
-        </p>
+        <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 space-y-2">
+          <p className="text-sm font-medium">{adminT.reservationForm.emailHistoryTitle}</p>
+          {emailHistory.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {adminT.reservationForm.emailHistoryEmpty}
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {emailHistory.map((row) => (
+                <li key={row.id} className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {emailTypeLabel(row.email_type)}
+                  </span>
+                  {" — "}
+                  {new Date(row.created_at).toLocaleString("fr-FR")}
+                  {" · "}
+                  {adminT.reservationForm.emailSentTo.replace("{email}", row.sent_to)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
 
       {emailMessage && <p className="text-sm text-muted-foreground">{emailMessage}</p>}

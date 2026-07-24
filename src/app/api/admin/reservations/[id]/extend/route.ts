@@ -113,6 +113,7 @@ export async function PATCH(
           extensionCents,
           paymentUrl: session.url!,
           locale: reservation.locale ?? "pt",
+          reservationId: id,
         });
       } catch (stripeError) {
         console.error("Extension Stripe session error:", stripeError);
