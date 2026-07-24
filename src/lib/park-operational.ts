@@ -1,4 +1,3 @@
-import { format, startOfToday } from "date-fns";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPitchMapSpots } from "@/lib/pitch-map";
 import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
@@ -22,12 +21,23 @@ export type PitchWithBooking = PitchMapSpot & {
   } | null;
 };
 
+/** Calendar date in Europe/Lisbon (park local day). */
+function lisbonToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 export async function getPitchesWithOperationalStatus(
-  date = format(startOfToday(), "yyyy-MM-dd")
+  date = lisbonToday()
 ): Promise<PitchWithBooking[]> {
   const supabase = createAdminClient();
   const spots = await getPitchMapSpots();
 
+  // Include check_out === today so departures still show as yellow until auto-checkout.
   const { data: reservations } = await supabase
     .from("reservations")
     .select(
@@ -35,7 +45,7 @@ export async function getPitchesWithOperationalStatus(
     )
     .in("status", ["confirmed", "checked_in", "pending_payment"])
     .lte("check_in", date)
-    .gt("check_out", date);
+    .gte("check_out", date);
 
   const { data: spotRows } = await supabase
     .from("pitch_map_spots")
