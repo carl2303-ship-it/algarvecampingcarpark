@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Loader2, Mail, Plus } from "lucide-react";
 import { DeleteReservationButton } from "@/components/admin/delete-reservation-button";
+import { CheckOutButton } from "@/components/admin/check-out-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,7 @@ export type AdminReservationPayment = {
 
 export type AdminReservationInitial = {
   id: string;
+  pitch_id?: string | null;
   pitch_code: string | null;
   check_in: string;
   check_out: string;
@@ -1283,6 +1285,20 @@ export function AdminReservationForm({
             {adminT.reservationForm.sendPreArrival}
           </Button>
         )}
+
+        {isEdit &&
+          initialReservation &&
+          (initialReservation.status === "confirmed" ||
+            initialReservation.status === "checked_in") && (
+            <CheckOutButton
+              reservationId={initialReservation.id}
+              pitchId={initialReservation.pitch_id ?? null}
+              pitchCode={initialReservation.pitch_code ?? pitchCode ?? null}
+              size="lg"
+              variant="secondary"
+              redirectTo="/admin/reservations"
+            />
+          )}
 
         {isEdit && initialReservation && (
           <DeleteReservationButton

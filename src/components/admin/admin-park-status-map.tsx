@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { buttonVariants } from "@/components/ui/button";
+import { CheckOutButton } from "@/components/admin/check-out-button";
 import {
   adminDateLocale,
   adminT,
@@ -183,7 +184,7 @@ export function AdminParkStatusMap({
                   <p className="text-muted-foreground">{adminT.parkStatus.availableForCheckIn}</p>
                 ) : null}
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   {selected.operational_status === "free" && (
                     <Link
                       href={`/admin/reservations/new?pitch=${selected.code}`}
@@ -193,12 +194,20 @@ export function AdminParkStatusMap({
                     </Link>
                   )}
                   {selected.reservation && (
-                    <Link
-                      href={`/admin/reservations/${selected.reservation.id}/edit`}
-                      className={buttonVariants({ className: "flex-1" })}
-                    >
-                      {adminT.parkStatus.viewReservation}
-                    </Link>
+                    <>
+                      <Link
+                        href={`/admin/reservations/${selected.reservation.id}/edit`}
+                        className={buttonVariants({ className: "flex-1" })}
+                      >
+                        {adminT.parkStatus.viewReservation}
+                      </Link>
+                      <CheckOutButton
+                        reservationId={selected.reservation.id}
+                        pitchId={null}
+                        pitchCode={selected.code}
+                        redirectTo="/admin/park-status"
+                      />
+                    </>
                   )}
                 </div>
               </div>

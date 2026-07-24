@@ -48,6 +48,7 @@ export default async function EditReservationPage({
 
   const initial: AdminReservationInitial = {
     id: reservation.id,
+    pitch_id: reservation.pitch_id ?? null,
     pitch_code: reservation.pitch_code ?? null,
     check_in: reservation.check_in,
     check_out: reservation.check_out,

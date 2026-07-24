@@ -331,7 +331,7 @@ export function AdminReservationsTable({
                           {r.status === "confirmed" && (
                             <CheckInDialog reservation={r} pitches={pitches} />
                           )}
-                          {r.status === "checked_in" && (
+                          {(r.status === "confirmed" || r.status === "checked_in") && (
                             <CheckOutButton
                               reservationId={r.id}
                               pitchId={r.pitch_id}
