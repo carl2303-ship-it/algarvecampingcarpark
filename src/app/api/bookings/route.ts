@@ -31,6 +31,7 @@ const bookingSchema = z.object({
   guest_name: z.string().min(2).max(100),
   guest_email: z.string().email(),
   guest_phone: z.string().min(6).max(20),
+  guest_country: z.string().trim().min(2).max(80),
   vehicle_plate: z.string().min(1).max(20),
   num_guests: z.number().int().min(1).max(10),
   notes: z.string().max(500).optional(),
@@ -301,6 +302,17 @@ export async function POST(request: Request) {
     if (resError || !reservation) {
       console.error("Reservation insert error:", resError);
       return NextResponse.json({ error: "Erro ao criar reserva" }, { status: 500 });
+    }
+
+    const guestId = await upsertGuestForReservation(supabase, {
+      name: data.guest_name,
+      email: data.guest_email,
+      phone: data.guest_phone,
+      vehicle_plate: plate,
+      country: data.guest_country,
+    });
+    if (guestId) {
+      await supabase.from("reservations").update({ guest_id: guestId }).eq("id", reservation.id);
     }
 
     const zoneName =

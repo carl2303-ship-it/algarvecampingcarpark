@@ -1,8 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isReservationFullyPaid } from "@/lib/admin-reservation-payments";
 import { getPitchMapSpots } from "@/lib/pitch-map";
 import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
 
-export type PitchOperationalStatus = "free" | "occupied" | "checkout_today" | "maintenance";
+export type PitchOperationalStatus =
+  | "free"
+  | "occupied"
+  | "checkout_today"
+  | "unpaid"
+  | "maintenance";
 
 export type PitchWithBooking = PitchMapSpot & {
   status: "available" | "occupied" | "maintenance";
@@ -18,6 +24,8 @@ export type PitchWithBooking = PitchMapSpot & {
     check_out: string;
     operational_notes: string | null;
     payment_status: string;
+    paid_cents: number;
+    total_cents: number;
   } | null;
 };
 
@@ -41,7 +49,7 @@ export async function getPitchesWithOperationalStatus(
   const { data: reservations } = await supabase
     .from("reservations")
     .select(
-      "id, pitch_code, guest_name, guest_phone, vehicle_plate, check_in, check_out, operational_notes, payment_status, status"
+      "id, pitch_code, guest_name, guest_phone, vehicle_plate, check_in, check_out, operational_notes, payment_status, status, paid_cents, total_cents"
     )
     .in("status", ["confirmed", "checked_in", "pending_payment"])
     .lte("check_in", date)
@@ -79,10 +87,16 @@ export async function getPitchesWithOperationalStatus(
     const meta = spotMeta.get(spot.code);
     const reservation = reservationByPitch.get(spot.code) ?? null;
     const dbStatus = meta?.status ?? "available";
+    const paidCents = reservation?.paid_cents ?? 0;
+    const totalCents = reservation?.total_cents ?? 0;
+    const unpaid =
+      Boolean(reservation) && !isReservationFullyPaid(paidCents, totalCents);
 
     let operational_status: PitchOperationalStatus = "free";
     if (dbStatus === "maintenance") {
       operational_status = "maintenance";
+    } else if (unpaid) {
+      operational_status = "unpaid";
     } else if (checkoutSet.has(spot.code) && reservation) {
       operational_status = "checkout_today";
     } else if (reservation) {
@@ -105,6 +119,8 @@ export async function getPitchesWithOperationalStatus(
             check_out: reservation.check_out,
             operational_notes: reservation.operational_notes,
             payment_status: reservation.payment_status,
+            paid_cents: paidCents,
+            total_cents: totalCents,
           }
         : null,
     };

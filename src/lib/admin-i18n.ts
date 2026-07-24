@@ -13,8 +13,10 @@ const reservationStatus: Record<string, string> = {
 
 const paymentStatus: Record<string, string> = {
   unpaid: "Non payé",
+  pending: "Non payé",
   partial: "Partiel",
   paid_stripe: "Payé (Stripe)",
+  paid_manual: "Payé",
   paid_cash: "Payé (espèces)",
   paid_transfer: "Payé (virement)",
   paid_mb: "Payé (Multibanco)",
@@ -40,6 +42,10 @@ export function formatReceptionHours24h(open: string, close: string): string {
 }
 
 export const adminT = {
+  paymentBalance: {
+    paid: "Payée",
+    due: "À payer",
+  },
   common: {
     save: "Enregistrer",
     cancel: "Annuler",
@@ -267,6 +273,8 @@ export const adminT = {
     useCalculatedQuote: "Utiliser le tarif calculé",
     country: "Pays",
     countryPlaceholder: "Ex. : France, Portugal, Belgique…",
+    emailConfirmAlert:
+      "Vérifiez bien l'adresse e-mail : sans e-mail correct, le client ne recevra pas le code d'entrée.",
     paymentHistoryDescription:
       "Historique des paiements du client (matricule), sur toutes les réservations. Les lignes de cette réservation sont mises en évidence.",
     initialPaymentDescription:
@@ -356,9 +364,11 @@ export const adminT = {
     freeCount: "{count} libres",
     occupiedCount: "{count} occupés",
     checkoutTodayCount: "{count} départs aujourd'hui",
+    unpaidCount: "{count} non soldés",
     legendFree: "Libre — arrivée manuelle",
     legendOccupied: "Occupé",
     legendCheckout: "Départ aujourd'hui ({time})",
+    legendUnpaid: "Solde à payer",
     legendMaintenance: "Maintenance",
     mapAlt: "Plan opérationnel du parc",
     pitchTitle: "Emplacement {code}",
@@ -366,6 +376,7 @@ export const adminT = {
     stateFree: "Libre",
     stateOccupied: "Occupé",
     stateCheckout: "Départ aujourd'hui",
+    stateUnpaid: "Solde à payer",
     stateMaintenance: "Maintenance",
     stay: "Séjour :",
     availableForCheckIn: "Emplacement disponible pour arrivée manuelle ou nouvelle réservation.",
@@ -733,3 +744,8 @@ export const adminT = {
       "L'expéditeur actuel semble être une adresse grand public (Gmail, etc.). Les e-mails échouent tant qu'un domaine Resend n'est pas configuré.",
   },
 } as const;
+
+/** Statut paiement simplifié : Payée / À payer. */
+export function formatAdminPaymentBalanceLabel(tier: "paid" | "partial" | "unpaid"): string {
+  return tier === "paid" ? adminT.paymentBalance.paid : adminT.paymentBalance.due;
+}

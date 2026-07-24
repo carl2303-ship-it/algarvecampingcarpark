@@ -10,17 +10,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   adminDateLocale,
   adminT,
-  formatAdminPaymentStatus,
+  formatAdminPaymentBalanceLabel,
 } from "@/lib/admin-i18n";
 import {
   PARK_AERIAL_IMAGE,
   PARK_AERIAL_ASPECT_CLASS,
   PARK_AERIAL_MAP_MAX_WIDTH_CLASS,
 } from "@/lib/park-pitch-map-defaults";
+import { getPaymentBalanceTier } from "@/lib/admin-reservation-payments";
 import type { PitchWithBooking, PitchOperationalStatus } from "@/lib/park-operational";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const STATUS_STYLES: Record<PitchOperationalStatus, string> = {
   free: "bg-emerald-500/95 text-white border-emerald-300 hover:bg-emerald-600",
   occupied: "bg-red-500/95 text-white border-red-300 hover:bg-red-600",
   checkout_today: "bg-amber-400/95 text-amber-950 border-amber-300 hover:bg-amber-500",
+  unpaid: "bg-fuchsia-500/95 text-white border-fuchsia-300 hover:bg-fuchsia-600",
   maintenance: "bg-slate-500/95 text-white border-slate-300",
 };
 
@@ -39,6 +41,8 @@ function operationalStatusLabel(status: PitchOperationalStatus): string {
       return adminT.parkStatus.stateOccupied;
     case "checkout_today":
       return adminT.parkStatus.stateCheckout;
+    case "unpaid":
+      return adminT.parkStatus.stateUnpaid;
     case "maintenance":
       return adminT.parkStatus.stateMaintenance;
   }
@@ -76,6 +80,10 @@ export function AdminParkStatusMap({
         <span className="inline-flex items-center gap-2">
           <span className="h-3 w-5 rounded bg-amber-400 border border-amber-300" />
           {adminT.parkStatus.legendCheckout.replace("{time}", checkOutTime)}
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className="h-3 w-5 rounded bg-fuchsia-500 border border-fuchsia-300" />
+          {adminT.parkStatus.legendUnpaid}
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="h-3 w-5 rounded bg-slate-500 border border-slate-300" />
@@ -158,7 +166,12 @@ export function AdminParkStatusMap({
                     </p>
                     <p>
                       <span className="text-muted-foreground">{adminT.common.payment}</span>{" "}
-                      {formatAdminPaymentStatus(selected.reservation.payment_status)}
+                      {formatAdminPaymentBalanceLabel(
+                        getPaymentBalanceTier(
+                          selected.reservation.paid_cents,
+                          selected.reservation.total_cents
+                        )
+                      )}
                     </p>
                     {selected.reservation.operational_notes && (
                       <p className="rounded-lg bg-muted p-3 text-muted-foreground">

@@ -13,6 +13,7 @@ export default async function ParkStatusPage() {
 
   const occupied = pitches.filter((p) => p.operational_status === "occupied").length;
   const checkout = pitches.filter((p) => p.operational_status === "checkout_today").length;
+  const unpaid = pitches.filter((p) => p.operational_status === "unpaid").length;
   const free = pitches.filter((p) => p.operational_status === "free").length;
 
   return (
@@ -31,6 +32,9 @@ export default async function ParkStatusPage() {
         </span>
         <span className="rounded-full bg-amber-100 text-amber-900 px-3 py-1 font-medium">
           {adminT.parkStatus.checkoutTodayCount.replace("{count}", String(checkout))}
+        </span>
+        <span className="rounded-full bg-fuchsia-100 text-fuchsia-900 px-3 py-1 font-medium">
+          {adminT.parkStatus.unpaidCount.replace("{count}", String(unpaid))}
         </span>
       </div>
 

@@ -251,6 +251,12 @@ export function ReceptionIntakeForm({
                 onChange={(e) => setGuestEmail(e.target.value)}
                 required
               />
+              <p
+                role="alert"
+                className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+              >
+                {tr.book.email_confirm_alert}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">{tr.book.guest_phone}</Label>

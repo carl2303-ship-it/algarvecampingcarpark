@@ -15,11 +15,28 @@ import {
 import {
   adminDateLocale,
   adminT,
-  formatAdminReservationStatus,
+  formatAdminPaymentBalanceLabel,
 } from "@/lib/admin-i18n";
+import {
+  getPaymentBalanceTier,
+  type PaymentBalanceTier,
+} from "@/lib/admin-reservation-payments";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatPrice } from "@/lib/pricing";
 import { TOTAL_CAPACITY } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+
+const BALANCE_CARD_STYLES: Record<PaymentBalanceTier, string> = {
+  paid: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100/80",
+  partial: "bg-orange-50 border-orange-200 hover:bg-orange-100/80",
+  unpaid: "bg-red-50 border-red-200 hover:bg-red-100/80",
+};
+
+const BALANCE_LABEL_STYLES: Record<PaymentBalanceTier, string> = {
+  paid: "text-emerald-800",
+  partial: "text-orange-800",
+  unpaid: "text-red-800",
+};
 
 function ReservationList({ rows }: { rows: DashboardReservationRow[] }) {
   if (rows.length === 0) {
@@ -30,11 +47,15 @@ function ReservationList({ rows }: { rows: DashboardReservationRow[] }) {
     <div className="space-y-3">
       {rows.map((row) => {
         const pitchLabel = row.pitch_code ?? row.pitch?.code ?? "—";
+        const tier = getPaymentBalanceTier(row.paid_cents ?? 0, row.total_cents);
         return (
           <Link
             key={row.id}
             href={`/admin/reservations/${row.id}/edit`}
-            className="flex justify-between items-center border-b pb-3 last:border-0 gap-4 rounded-md -mx-1 px-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn(
+              "flex justify-between items-center border rounded-lg p-3 gap-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              BALANCE_CARD_STYLES[tier]
+            )}
           >
             <div className="min-w-0">
               <p className="font-medium truncate text-primary hover:underline">{row.guest_name}</p>
@@ -48,8 +69,8 @@ function ReservationList({ rows }: { rows: DashboardReservationRow[] }) {
             </div>
             <div className="text-right shrink-0">
               <p className="font-medium">{formatPrice(row.total_cents)}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatAdminReservationStatus(row.status)}
+              <p className={cn("text-xs font-medium", BALANCE_LABEL_STYLES[tier])}>
+                {formatAdminPaymentBalanceLabel(tier)}
               </p>
             </div>
           </Link>
@@ -153,20 +174,6 @@ export default async function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
-        <StaffChatPanel />
-        <StaffNotepadPanel />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{adminT.dashboard.occupancyRate14}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <OccupancyChart data={occupancy} />
-        </CardContent>
-      </Card>
-
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -185,6 +192,20 @@ export default async function AdminDashboard() {
             <ReservationList rows={upcomingDepartures} />
           </CardContent>
         </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{adminT.dashboard.occupancyRate14}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <OccupancyChart data={occupancy} />
+        </CardContent>
+      </Card>
+
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
+        <StaffChatPanel />
+        <StaffNotepadPanel />
       </div>
     </div>
   );

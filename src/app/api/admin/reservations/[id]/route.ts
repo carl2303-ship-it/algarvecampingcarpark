@@ -20,7 +20,7 @@ const updateSchema = z.object({
   guest_name: z.string().min(1),
   guest_email: z.string().email(),
   guest_phone: z.string().min(1),
-  guest_country: z.string().max(80).optional(),
+  guest_country: z.string().trim().min(1, "Pays requis").max(80),
   vehicle_plate: z.string().min(1, "Matricule requis"),
   num_guests: z.number().int().min(1).max(10).default(2),
   operational_notes: z.string().optional(),

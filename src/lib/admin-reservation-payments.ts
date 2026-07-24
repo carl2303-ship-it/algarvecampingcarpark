@@ -17,6 +17,22 @@ export function normalizeVehiclePlate(plate: string): string {
   return plate.trim().toUpperCase().replace(/\s+/g, "");
 }
 
+export type PaymentBalanceTier = "paid" | "partial" | "unpaid";
+
+/** paid = tout réglé ; partial = acompte ; unpaid = rien payé. */
+export function getPaymentBalanceTier(
+  paidCents: number,
+  totalCents: number
+): PaymentBalanceTier {
+  if (totalCents <= 0 || paidCents >= totalCents) return "paid";
+  if (paidCents > 0) return "partial";
+  return "unpaid";
+}
+
+export function isReservationFullyPaid(paidCents: number, totalCents: number): boolean {
+  return getPaymentBalanceTier(paidCents, totalCents) === "paid";
+}
+
 export function resolveReservationPaymentStatus(
   paidCents: number,
   totalCents: number,

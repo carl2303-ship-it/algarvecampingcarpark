@@ -470,7 +470,7 @@ export function AdminReservationForm({
       guest_name: guestName,
       guest_email: guestEmail,
       guest_phone: guestPhone,
-      guest_country: guestCountry || undefined,
+      guest_country: guestCountry.trim(),
       vehicle_plate: vehiclePlate.trim(),
       num_guests: numGuests,
       notes: notes || undefined,
@@ -965,6 +965,12 @@ export function AdminReservationForm({
               required
               className="mt-1"
             />
+            <p
+              role="alert"
+              className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+            >
+              {adminT.reservationForm.emailConfirmAlert}
+            </p>
           </div>
           <div>
             <Label htmlFor="guest_phone">{adminT.common.phone}</Label>
@@ -983,6 +989,7 @@ export function AdminReservationForm({
               value={guestCountry}
               onChange={(event) => setGuestCountry(event.target.value)}
               placeholder={adminT.reservationForm.countryPlaceholder}
+              required
               className="mt-1"
             />
           </div>

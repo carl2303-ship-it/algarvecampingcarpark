@@ -17,7 +17,14 @@ import {
 import { CheckInDialog } from "@/components/admin/check-in-dialog";
 import { CheckOutButton } from "@/components/admin/check-out-button";
 import { DeleteReservationButton } from "@/components/admin/delete-reservation-button";
-import { adminT, formatAdminReservationStatus } from "@/lib/admin-i18n";
+import {
+  adminT,
+  formatAdminPaymentBalanceLabel,
+} from "@/lib/admin-i18n";
+import {
+  getPaymentBalanceTier,
+  type PaymentBalanceTier,
+} from "@/lib/admin-reservation-payments";
 import { formatPrice } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { Pitch, Reservation } from "@/types/database";
@@ -39,14 +46,21 @@ type SortKey =
 
 type SortDir = "asc" | "desc";
 
-const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  pending_payment: "outline",
-  confirmed: "default",
-  checked_in: "secondary",
-  checked_out: "outline",
-  cancelled: "destructive",
-  expired: "destructive",
+const BALANCE_ROW_STYLES: Record<PaymentBalanceTier, string> = {
+  paid: "bg-emerald-50/80 hover:bg-emerald-50",
+  partial: "bg-orange-50/80 hover:bg-orange-50",
+  unpaid: "bg-red-50/80 hover:bg-red-50",
 };
+
+const BALANCE_BADGE_STYLES: Record<PaymentBalanceTier, string> = {
+  paid: "border-transparent bg-emerald-600 text-white hover:bg-emerald-600",
+  partial: "border-transparent bg-orange-500 text-white hover:bg-orange-500",
+  unpaid: "border-transparent bg-red-600 text-white hover:bg-red-600",
+};
+
+function paymentTier(row: ReservationRow): PaymentBalanceTier {
+  return getPaymentBalanceTier(row.paid_cents ?? 0, row.total_cents);
+}
 
 function normalizeSearch(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "");
@@ -91,8 +105,8 @@ function compareRows(a: ReservationRow, b: ReservationRow, key: SortKey, dir: So
       right = b.check_out;
       break;
     case "status":
-      left = formatAdminReservationStatus(a.status).toLowerCase();
-      right = formatAdminReservationStatus(b.status).toLowerCase();
+      left = formatAdminPaymentBalanceLabel(paymentTier(a)).toLowerCase();
+      right = formatAdminPaymentBalanceLabel(paymentTier(b)).toLowerCase();
       break;
     case "pitch":
       left = getPitchCode(a).toLowerCase();
@@ -264,8 +278,10 @@ export function AdminReservationsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              sorted.map((r) => (
-                <TableRow key={r.id}>
+              sorted.map((r) => {
+                const tier = paymentTier(r);
+                return (
+                <TableRow key={r.id} className={BALANCE_ROW_STYLES[tier]}>
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <span>
@@ -289,8 +305,8 @@ export function AdminReservationsTable({
                   <TableCell className="text-sm whitespace-nowrap">{r.check_in}</TableCell>
                   <TableCell className="text-sm whitespace-nowrap">{r.check_out}</TableCell>
                   <TableCell>
-                    <Badge variant={statusColors[r.status] ?? "outline"}>
-                      {formatAdminReservationStatus(r.status)}
+                    <Badge className={BALANCE_BADGE_STYLES[tier]}>
+                      {formatAdminPaymentBalanceLabel(tier)}
                     </Badge>
                   </TableCell>
                   <TableCell>{getZoneName(r) || "—"}</TableCell>
@@ -337,7 +353,8 @@ export function AdminReservationsTable({
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+              );
+              })
             )}
           </TableBody>
         </Table>

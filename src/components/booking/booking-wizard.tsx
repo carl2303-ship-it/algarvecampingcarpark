@@ -69,6 +69,7 @@ export function BookingWizard({
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
+  const [guestCountry, setGuestCountry] = useState("");
   const [vehiclePlate, setVehiclePlate] = useState("");
   const [plateBlocked, setPlateBlocked] = useState(false);
   const [plateLookupMessage, setPlateLookupMessage] = useState<string | null>(null);
@@ -125,6 +126,7 @@ export function BookingWizard({
             setGuestName(data.guest.name || "");
             setGuestEmail(data.guest.email || "");
             setGuestPhone(data.guest.phone || "");
+            if (data.guest.country) setGuestCountry(data.guest.country);
             setPlateLookupMessage(tr.book.vehicle_plate_autofilled);
           } else {
             setPlateLookupMessage(null);
@@ -141,7 +143,14 @@ export function BookingWizard({
 
   async function continueToPitches() {
     if (!checkInStr || !checkOutStr) return;
-    if (!guestName || !guestEmail || !guestPhone || !vehiclePlate.trim() || !acceptedTerms) {
+    if (
+      !guestName ||
+      !guestEmail ||
+      !guestPhone ||
+      !guestCountry.trim() ||
+      !vehiclePlate.trim() ||
+      !acceptedTerms
+    ) {
       setError(tr.book.terms_fill_required);
       return;
     }
@@ -229,6 +238,7 @@ export function BookingWizard({
           guest_name: guestName,
           guest_email: guestEmail,
           guest_phone: guestPhone,
+          guest_country: guestCountry.trim(),
           vehicle_plate: vehiclePlate.trim(),
           num_guests: numGuests,
           notes: notes || undefined,
@@ -363,6 +373,16 @@ export function BookingWizard({
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="country">{tr.book.guest_country}</Label>
+                <Input
+                  id="country"
+                  value={guestCountry}
+                  onChange={(e) => setGuestCountry(e.target.value)}
+                  placeholder={tr.book.guest_country_placeholder}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="email">{tr.book.guest_email}</Label>
                 <Input
                   id="email"
@@ -371,6 +391,12 @@ export function BookingWizard({
                   onChange={(e) => setGuestEmail(e.target.value)}
                   required
                 />
+                <p
+                  role="alert"
+                  className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+                >
+                  {tr.book.email_confirm_alert}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">{tr.book.guest_phone}</Label>

@@ -17,6 +17,7 @@ export type DashboardReservationRow = {
   check_in: string;
   check_out: string;
   total_cents: number;
+  paid_cents: number;
   status: string;
   pitch_code: string | null;
   zone: { name: string } | null;
@@ -40,14 +41,17 @@ export async function getUpcomingDepartures(limit = 10): Promise<DashboardReserv
 
   const { data } = await supabase
     .from("reservations")
-    .select("id, guest_name, check_in, check_out, total_cents, status, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
+    .select("id, guest_name, check_in, check_out, total_cents, paid_cents, status, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
     .in("status", ["confirmed", "checked_in"])
     .gte("check_out", today)
     .lte("check_out", weekEnd)
     .order("check_out")
     .limit(limit);
 
-  return (data ?? []) as unknown as DashboardReservationRow[];
+  return ((data ?? []) as unknown as DashboardReservationRow[]).map((row) => ({
+    ...row,
+    paid_cents: row.paid_cents ?? 0,
+  }));
 }
 
 export async function getUpcomingArrivals(limit = 10): Promise<DashboardReservationRow[]> {
@@ -57,16 +61,24 @@ export async function getUpcomingArrivals(limit = 10): Promise<DashboardReservat
 
   const { data } = await supabase
     .from("reservations")
-    .select("id, guest_name, check_in, check_out, total_cents, status, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
+    .select("id, guest_name, check_in, check_out, total_cents, paid_cents, status, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
     .in("status", ["confirmed", "checked_in", "pending_payment"])
     .gte("check_in", today)
     .lte("check_in", weekEnd)
     .order("check_in")
     .limit(limit);
 
-  return (data ?? []).filter((row) =>
-    isActiveReservation(row.status, (row as { expires_at?: string | null }).expires_at ?? null)
-  ) as unknown as DashboardReservationRow[];
+  return ((data ?? []) as unknown as DashboardReservationRow[])
+    .filter((row) =>
+      isActiveReservation(
+        row.status,
+        (row as { expires_at?: string | null }).expires_at ?? null
+      )
+    )
+    .map((row) => ({
+      ...row,
+      paid_cents: row.paid_cents ?? 0,
+    }));
 }
 
 export async function getOccupancySeries(days = 14): Promise<OccupancyDay[]> {

@@ -253,6 +253,8 @@ const pt = {
     confirm_reception: "Enviar os meus dados",
     guest_country: "País",
     guest_country_placeholder: "Ex.: Portugal, França, Alemanha…",
+    email_confirm_alert:
+      "Confirme bem o e-mail: sem um endereço correto, não receberá o código de entrada.",
     balance_on_arrival: "Restante na chegada",
     nights: "noites",
     min_nights: "Mínimo de {n} noites",
