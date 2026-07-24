@@ -156,8 +156,10 @@ export const adminT = {
     occupancyRate14: "Taux d'occupation (14 jours)",
     upcomingArrivals: "Prochaines arrivées (7 jours)",
     upcomingDepartures: "Prochains départs (7 jours)",
+    onSiteUnpaid: "Sur place — solde à payer",
     noRecords: "Aucun enregistrement",
     pitchLabel: "Emplacement {code}",
+    turnoverUrgent: "Relève le jour même ou le lendemain — départ à l'heure",
   },
   reservations: {
     title: "Réservations",

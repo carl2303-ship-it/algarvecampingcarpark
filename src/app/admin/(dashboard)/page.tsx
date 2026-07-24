@@ -8,6 +8,7 @@ import { StaffChatPanel } from "@/components/admin/staff-chat-panel";
 import { StaffNotepadPanel } from "@/components/admin/staff-notepad-panel";
 import {
   getOccupancySeries,
+  getOnSiteUnpaidReservations,
   getUpcomingArrivals,
   getUpcomingDepartures,
   type DashboardReservationRow,
@@ -48,28 +49,61 @@ function ReservationList({ rows }: { rows: DashboardReservationRow[] }) {
       {rows.map((row) => {
         const pitchLabel = row.pitch_code ?? row.pitch?.code ?? "—";
         const tier = getPaymentBalanceTier(row.paid_cents ?? 0, row.total_cents);
+        const turnoverUrgent = row.turnover_urgent;
         return (
           <Link
             key={row.id}
             href={`/admin/reservations/${row.id}/edit`}
             className={cn(
-              "flex justify-between items-center border rounded-lg p-3 gap-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              BALANCE_CARD_STYLES[tier]
+              "flex items-center border rounded-lg p-3 gap-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              turnoverUrgent
+                ? "bg-fuchsia-100 border-fuchsia-300 hover:bg-fuchsia-200/80"
+                : BALANCE_CARD_STYLES[tier]
             )}
           >
-            <div className="min-w-0">
-              <p className="font-medium truncate text-primary hover:underline">{row.guest_name}</p>
-              <p className="text-sm text-muted-foreground">
-                {row.zone?.name} · {adminT.dashboard.pitchLabel.replace("{code}", pitchLabel)}
+            <span
+              className={cn(
+                "flex h-12 min-w-12 shrink-0 items-center justify-center rounded-lg px-2.5 text-lg font-bold tracking-tight text-white shadow-sm",
+                turnoverUrgent ? "bg-fuchsia-600" : "bg-slate-900"
+              )}
+              aria-label={pitchLabel}
+            >
+              {pitchLabel}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium truncate text-primary hover:underline">
+                {row.vehicle_plate ? (
+                  <>
+                    <span className="font-bold tracking-wide text-foreground">
+                      {row.vehicle_plate}
+                    </span>
+                    <span className="ml-2 font-medium text-primary">{row.guest_name}</span>
+                  </>
+                ) : (
+                  row.guest_name
+                )}
               </p>
+              {row.zone?.name ? (
+                <p className="text-sm text-muted-foreground truncate">{row.zone.name}</p>
+              ) : null}
               <p className="text-sm text-muted-foreground">
                 {format(new Date(row.check_in), "dd MMM", { locale: adminDateLocale })} →{" "}
                 {format(new Date(row.check_out), "dd MMM", { locale: adminDateLocale })}
               </p>
+              {turnoverUrgent ? (
+                <p className="text-xs font-semibold text-fuchsia-800 mt-0.5">
+                  {adminT.dashboard.turnoverUrgent}
+                </p>
+              ) : null}
             </div>
             <div className="text-right shrink-0">
               <p className="font-medium">{formatPrice(row.total_cents)}</p>
-              <p className={cn("text-xs font-medium", BALANCE_LABEL_STYLES[tier])}>
+              <p
+                className={cn(
+                  "text-xs font-medium",
+                  turnoverUrgent ? "text-fuchsia-800" : BALANCE_LABEL_STYLES[tier]
+                )}
+              >
                 {formatAdminPaymentBalanceLabel(tier)}
               </p>
             </div>
@@ -91,6 +125,7 @@ export default async function AdminDashboard() {
     { data: zones },
     upcomingArrivals,
     upcomingDepartures,
+    onSiteUnpaid,
     occupancy,
   ] = await Promise.all([
     supabase
@@ -110,6 +145,7 @@ export default async function AdminDashboard() {
     supabase.from("zones").select("*").eq("active", true),
     getUpcomingArrivals(),
     getUpcomingDepartures(),
+    getOnSiteUnpaidReservations(),
     getOccupancySeries(14),
   ]);
 
@@ -174,7 +210,7 @@ export default async function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>{adminT.dashboard.upcomingArrivals}</CardTitle>
@@ -190,6 +226,15 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <ReservationList rows={upcomingDepartures} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{adminT.dashboard.onSiteUnpaid}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ReservationList rows={onSiteUnpaid} />
           </CardContent>
         </Card>
       </div>
