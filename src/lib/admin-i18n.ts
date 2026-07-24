@@ -160,6 +160,8 @@ export const adminT = {
     noRecords: "Aucun enregistrement",
     pitchLabel: "Emplacement {code}",
     turnoverUrgent: "Relève le jour même ou le lendemain — départ à l'heure",
+    totalAmount: "Total",
+    balanceDue: "Reste à payer",
   },
   reservations: {
     title: "Réservations",

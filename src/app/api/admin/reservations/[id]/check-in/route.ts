@@ -31,10 +31,14 @@ export async function POST(
     .select("*")
     .eq("id", body.pitch_id)
     .eq("zone_id", reservation.zone_id)
-    .eq("status", "available")
     .single();
 
   if (!pitch) {
+    return NextResponse.json({ error: "Lugar indisponível" }, { status: 409 });
+  }
+
+  const alreadyAssigned = reservation.pitch_id === body.pitch_id;
+  if (!alreadyAssigned && pitch.status !== "available") {
     return NextResponse.json({ error: "Lugar indisponível" }, { status: 409 });
   }
 
@@ -43,6 +47,7 @@ export async function POST(
     .update({
       status: "checked_in",
       pitch_id: body.pitch_id,
+      pitch_code: pitch.code,
       checked_in_at: new Date().toISOString(),
     })
     .eq("id", id);

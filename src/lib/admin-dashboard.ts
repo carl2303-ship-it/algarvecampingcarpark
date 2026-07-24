@@ -20,6 +20,8 @@ export type DashboardReservationRow = {
   total_cents: number;
   paid_cents: number;
   status: string;
+  zone_id: string;
+  pitch_id: string | null;
   pitch_code: string | null;
   zone: { name: string } | null;
   pitch: { code: string } | null;
@@ -105,7 +107,7 @@ export async function getUpcomingDepartures(limit = 10): Promise<DashboardReserv
 
   const { data } = await supabase
     .from("reservations")
-    .select("id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
+    .select("id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
     .in("status", ["confirmed", "checked_in"])
     .gte("check_out", today)
     .lte("check_out", weekEnd)
@@ -116,6 +118,7 @@ export async function getUpcomingDepartures(limit = 10): Promise<DashboardReserv
     (row) => ({
       ...row,
       vehicle_plate: row.vehicle_plate ?? null,
+      pitch_id: row.pitch_id ?? null,
       paid_cents: row.paid_cents ?? 0,
     })
   );
@@ -130,7 +133,7 @@ export async function getUpcomingArrivals(limit = 10): Promise<DashboardReservat
 
   const { data } = await supabase
     .from("reservations")
-    .select("id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
+    .select("id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
     .in("status", ["confirmed", "checked_in", "pending_payment"])
     .gte("check_in", today)
     .lte("check_in", weekEnd)
@@ -147,6 +150,7 @@ export async function getUpcomingArrivals(limit = 10): Promise<DashboardReservat
     .map((row) => ({
       ...row,
       vehicle_plate: row.vehicle_plate ?? null,
+      pitch_id: row.pitch_id ?? null,
       paid_cents: row.paid_cents ?? 0,
     }));
 
@@ -168,7 +172,7 @@ export async function getOnSiteUnpaidReservations(
   const { data } = await supabase
     .from("reservations")
     .select(
-      "id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)"
+      "id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)"
     )
     .in("status", ["confirmed", "checked_in"])
     .lte("check_in", today)
@@ -180,6 +184,7 @@ export async function getOnSiteUnpaidReservations(
     .map((row) => ({
       ...row,
       vehicle_plate: row.vehicle_plate ?? null,
+      pitch_id: row.pitch_id ?? null,
       paid_cents: row.paid_cents ?? 0,
     }))
     .filter((row) => row.total_cents > 0 && row.paid_cents < row.total_cents)

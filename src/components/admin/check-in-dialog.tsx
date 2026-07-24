@@ -27,12 +27,14 @@ export function CheckInDialog({
   reservation: Reservation;
   pitches: Pitch[];
 }) {
-  const [pitchId, setPitchId] = useState("");
+  const [pitchId, setPitchId] = useState(reservation.pitch_id ?? "");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
   const availablePitches = pitches.filter(
-    (p) => p.zone_id === reservation.zone_id && p.status === "available"
+    (p) =>
+      p.zone_id === reservation.zone_id &&
+      (p.status === "available" || p.id === reservation.pitch_id)
   );
 
   async function handleCheckIn() {
