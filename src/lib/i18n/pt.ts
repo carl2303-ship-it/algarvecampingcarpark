@@ -271,6 +271,8 @@ const pt = {
     vehicle_plate_active:
       "Já existe uma reserva activa para esta matrícula ({dates}). Não é possível criar outra.",
     num_guests: "Número de pessoas",
+    guests_step_down: "Menos uma pessoa",
+    guests_step_up: "Mais uma pessoa",
     notes: "Notas (opcional)",
     preferred_pitch: "Lugar selecionado: {code}",
     preferred_pitch_hint: "Poderá confirmar ou escolher outro lugar disponível no mapa.",

@@ -272,6 +272,8 @@ const de = {
     vehicle_plate_active:
       "Für dieses Kennzeichen besteht bereits eine aktive Reservierung ({dates}). Eine weitere ist nicht möglich.",
     num_guests: "Anzahl der Personen",
+    guests_step_down: "Eine Person weniger",
+    guests_step_up: "Eine Person mehr",
     notes: "Anmerkungen (optional)",
     preferred_pitch: "Ausgewählter Stellplatz: {code}",
     preferred_pitch_hint: "Sie können bestätigen oder einen anderen verfügbaren Stellplatz auf der Karte wählen.",

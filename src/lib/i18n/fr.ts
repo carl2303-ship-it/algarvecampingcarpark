@@ -272,6 +272,8 @@ const fr = {
     vehicle_plate_active:
       "Cette immatriculation a déjà une réservation active ({dates}). Impossible d'en créer une autre.",
     num_guests: "Nombre de personnes",
+    guests_step_down: "Une personne de moins",
+    guests_step_up: "Une personne de plus",
     notes: "Notes (facultatif)",
     preferred_pitch: "Place sélectionnée : {code}",
     preferred_pitch_hint: "Vous pourrez confirmer ou choisir une autre place disponible sur le plan.",

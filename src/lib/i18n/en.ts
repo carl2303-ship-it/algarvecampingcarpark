@@ -270,6 +270,8 @@ const en = {
     vehicle_plate_active:
       "This license plate already has an active booking ({dates}). Another booking cannot be created.",
     num_guests: "Number of guests",
+    guests_step_down: "One fewer guest",
+    guests_step_up: "One more guest",
     notes: "Notes (optional)",
     preferred_pitch: "Selected pitch: {code}",
     preferred_pitch_hint: "You can confirm or choose another available pitch on the map.",

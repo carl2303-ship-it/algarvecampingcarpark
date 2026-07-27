@@ -9,6 +9,7 @@ import { CheckOutButton } from "@/components/admin/check-out-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { GuestCountStepper } from "@/components/ui/guest-count-stepper";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -756,14 +757,13 @@ export function AdminReservationForm({
           </div>
           <div>
             <Label htmlFor="guests">{adminT.reservationForm.numGuests}</Label>
-            <Input
+            <GuestCountStepper
               id="guests"
-              type="number"
-              min={1}
-              max={10}
               value={numGuests}
-              onChange={(event) => setNumGuests(Number(event.target.value))}
+              onChange={setNumGuests}
               className="mt-1"
+              decreaseLabel={adminT.reservationForm.guestsStepDown}
+              increaseLabel={adminT.reservationForm.guestsStepUp}
             />
           </div>
 

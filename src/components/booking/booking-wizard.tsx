@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { format, addDays, startOfToday } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GuestCountStepper } from "@/components/ui/guest-count-stepper";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -412,14 +413,12 @@ export function BookingWizard({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="guests">{tr.book.num_guests}</Label>
-                <Input
+                <GuestCountStepper
                   id="guests"
-                  type="number"
-                  min={1}
-                  max={10}
                   value={numGuests}
-                  onChange={(e) => setNumGuests(parseInt(e.target.value, 10) || 1)}
-                  className="max-w-[120px]"
+                  onChange={setNumGuests}
+                  decreaseLabel={tr.book.guests_step_down}
+                  increaseLabel={tr.book.guests_step_up}
                 />
               </div>
             </div>

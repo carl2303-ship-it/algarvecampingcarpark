@@ -271,6 +271,8 @@ export const adminT = {
     arrivalDate: "Date d'arrivée",
     departureDate: "Date de départ",
     numGuests: "Nombre de personnes",
+    guestsStepDown: "Une personne de moins",
+    guestsStepUp: "Une personne de plus",
     estimatedTotal: "Total estimé",
     billableTotal: "Total à facturer (€)",
     calculatedQuote: "Tarif calculé : {amount}",
