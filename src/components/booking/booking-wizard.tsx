@@ -64,7 +64,6 @@ export function BookingWizard({
   const [selectedPitch, setSelectedPitch] = useState<AvailablePitch | null>(null);
   const [totalCents, setTotalCents] = useState(0);
   const [depositCents, setDepositCents] = useState(0);
-  const [fullPayment, setFullPayment] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -205,7 +204,6 @@ export function BookingWizard({
         typeof pitchData.deposit_cents === "number" ? pitchData.deposit_cents : total;
       setTotalCents(total);
       setDepositCents(charge);
-      setFullPayment(Boolean(pitchData.full_payment) || charge >= total || gateEntry);
 
       if (list.length === 0) {
         setError(tr.book.no_pitches);
@@ -569,10 +567,8 @@ export function BookingWizard({
           <div>
             <h2 className="text-lg font-semibold">{tr.book.select_pitch}</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {typeSummary} · {formatPrice(totalCents)}
-              {fullPayment
-                ? ` · ${tr.book.pay_full}: ${formatPrice(depositCents)}`
-                : ` · ${tr.book.deposit}: ${formatPrice(depositCents)}`}
+              {typeSummary} · {formatPrice(totalCents)} · {tr.book.pay_full}:{" "}
+              {formatPrice(depositCents)}
             </p>
           </div>
 
@@ -633,23 +629,10 @@ export function BookingWizard({
                 <span>{tr.book.total}</span>
                 <span className="font-semibold">{formatPrice(totalCents)}</span>
               </div>
-              {fullPayment ? (
-                <div className="flex justify-between text-primary">
-                  <span>{tr.book.pay_full}</span>
-                  <span className="font-semibold">{formatPrice(depositCents)}</span>
-                </div>
-              ) : (
-                <>
-                  <div className="flex justify-between text-primary">
-                    <span>{tr.book.deposit}</span>
-                    <span className="font-semibold">{formatPrice(depositCents)}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>{tr.book.balance_before_arrival}</span>
-                    <span>{formatPrice(totalCents - depositCents)}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex justify-between text-primary">
+                <span>{tr.book.pay_full}</span>
+                <span className="font-semibold">{formatPrice(depositCents)}</span>
+              </div>
             </div>
 
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -658,7 +641,7 @@ export function BookingWizard({
 
             <Button onClick={submitBooking} disabled={loading} className="w-full" size="lg">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {fullPayment ? tr.book.pay_full : tr.book.pay} — {formatPrice(depositCents)}
+              {tr.book.pay_full} — {formatPrice(depositCents)}
             </Button>
           </CardContent>
         </Card>

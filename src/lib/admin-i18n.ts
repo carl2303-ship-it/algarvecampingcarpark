@@ -338,7 +338,7 @@ export const adminT = {
     emailHistoryTitle: "Historique des e-mails",
     emailHistoryEmpty: "Aucun e-mail enregistré pour cette réservation.",
     emailTypeConfirmation: "Confirmation de réservation",
-    emailTypeBalance: "Paiement du solde (50 %)",
+    emailTypeBalance: "Paiement du solde",
     emailTypePreArrival: "Lieu + code barrière",
     emailTypeReceipt: "Reçu de paiement",
     emailTypeExtension: "Lien de prolongation",

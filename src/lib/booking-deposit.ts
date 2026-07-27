@@ -1,10 +1,5 @@
 import { CHECK_IN_TIME } from "@/lib/constants";
 
-/** Hours before check-in under which online booking requires 100% payment. */
-export const FULL_PAYMENT_WITHIN_HOURS = 48;
-
-export const ONLINE_BOOKING_DEPOSIT_RATIO = 0.5;
-
 /**
  * Convert a Europe/Lisbon wall-clock date+time to a UTC Date.
  */
@@ -47,35 +42,29 @@ export function hoursUntilCheckIn(
   return (checkInAt.getTime() - now.getTime()) / (1000 * 60 * 60);
 }
 
+/** Online bookings always require 100% at checkout. */
 export function requiresFullPaymentAtBooking(
-  checkIn: string,
-  checkInTime: string = CHECK_IN_TIME,
-  now: Date = new Date()
+  _checkIn?: string,
+  _checkInTime?: string,
+  _now?: Date
 ): boolean {
-  return hoursUntilCheckIn(checkIn, checkInTime, now) < FULL_PAYMENT_WITHIN_HOURS;
+  return true;
 }
 
+/**
+ * Amount charged at booking time — always the full stay total.
+ * (Legacy partial bookings may still settle via balance-payment cron.)
+ */
 export function bookingChargeCents(
   totalCents: number,
-  options: {
-    checkIn: string;
+  _options?: {
+    checkIn?: string;
     gateEntry?: boolean;
     checkInTime?: string;
     now?: Date;
   }
 ): number {
-  if (totalCents <= 0) return 0;
-  if (options.gateEntry) return totalCents;
-  if (
-    requiresFullPaymentAtBooking(
-      options.checkIn,
-      options.checkInTime ?? CHECK_IN_TIME,
-      options.now
-    )
-  ) {
-    return totalCents;
-  }
-  return Math.round(totalCents * ONLINE_BOOKING_DEPOSIT_RATIO);
+  return Math.max(0, totalCents);
 }
 
 export function isReservationFullyPaid(paidCents: number, totalCents: number): boolean {

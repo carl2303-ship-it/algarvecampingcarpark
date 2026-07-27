@@ -219,7 +219,7 @@ const es = {
     reception_submit_hint:
       "Tras enviar, recepción encuentra su reserva por la matrícula para asignar plaza y cobrar.",
     hero_description:
-      "Indique sus datos, elija el tipo de plaza, selecciónela en el mapa y pague (50 % o 100 % según la antelación).",
+      "Indique sus datos, elija el tipo de plaza, selecciónela en el mapa y pague el total de la estancia online.",
     step_dates: "Fechas y datos",
     step_zone: "Tipo de plaza",
     step_pitch: "Plaza en el mapa",
@@ -248,7 +248,7 @@ const es = {
     no_pitches: "No hay plazas libres de este tipo en las fechas elegidas",
     per_night: "por noche",
     total: "Total",
-    deposit: "Señal (50 %)",
+    deposit: "Pago",
     pay_full: "Pagar el total (100 %)",
     pay_at_reception: "A pagar en recepción",
     confirm_reception: "Enviar mis datos",
@@ -257,12 +257,12 @@ const es = {
     email_confirm_alert:
       "Compruebe bien el correo: sin una dirección correcta, no recibirá el código de entrada.",
     balance_on_arrival: "Resto a la llegada",
-    balance_before_arrival: "Resto online (~48 h antes)",
+    balance_before_arrival: "Incluido en el pago",
     nights: "noches",
     min_nights: "Mínimo de {n} noches",
     spots_left: "{n} plazas disponibles",
     continue: "Continuar",
-    pay: "Pagar señal del 50 %",
+    pay: "Pagar el total",
     guest_name: "Nombre completo",
     guest_email: "Email",
     guest_phone: "Teléfono",
@@ -280,7 +280,7 @@ const es = {
     pitch_list_title: "Plazas disponibles",
     select_this_pitch: "Seleccionar esta plaza",
     pre_arrival_alert:
-      "El código de barrera solo se envía tras el pago al 100 %. Con más de 48 h de antelación: pague el 50 % ahora y el resto con enlace Stripe ~48 h antes; con menos de 48 h: pague el 100 % ya.",
+      "El pago es del 100 % en el momento de la reserva. La plaza y el código de la barrera se envían por email normalmente en las 24 horas previas a la llegada.",
     terms_notice_title: "Antes de confirmar",
     terms_refund_fees:
       "En caso de reembolso, se deducirán las comisiones del organismo de pago (Stripe).",
@@ -292,7 +292,7 @@ const es = {
       terms_accept_after: "de reserva, incluida la política de reembolsos y la verificación de datos.",
       success_title: "¡Reserva confirmada!",
     success_message:
-      "Recibirá un email de confirmación en breve. Si pagó el 50 %, el resto llega por email con enlace Stripe unas 48 h antes de la llegada. Código de entrada solo tras el 100 %.",
+      "Recibirá un email de confirmación en breve. La plaza y el código de entrada se envían normalmente en las 24 horas previas a la llegada.",
     success_reception_title: "¡Datos enviados!",
     success_reception_message:
       "Acuda a recepción e indique su matrícula. El equipo asigna la plaza y cobra el pago.",

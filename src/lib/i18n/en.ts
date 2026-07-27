@@ -217,7 +217,7 @@ const en = {
     reception_submit_hint:
       "After submitting, reception finds your booking by plate number to assign a pitch and take payment.",
     hero_description:
-      "Enter your details, choose pitch type, select on the map and pay (50% or 100% depending on how soon you arrive).",
+      "Enter your details, choose pitch type, select on the map and pay the full stay online.",
     step_dates: "Dates & details",
     step_zone: "Pitch type",
     step_pitch: "Map pitch",
@@ -246,7 +246,7 @@ const en = {
     no_pitches: "No free pitches of this type for the selected dates",
     per_night: "per night",
     total: "Total",
-    deposit: "Deposit (50%)",
+    deposit: "Payment",
     pay_full: "Pay total (100%)",
     pay_at_reception: "Pay at reception",
     confirm_reception: "Submit my details",
@@ -255,12 +255,12 @@ const en = {
     email_confirm_alert:
       "Please double-check your email: without a correct address, you will not receive the entry code.",
     balance_on_arrival: "Balance on arrival",
-    balance_before_arrival: "Balance online (~48h before)",
+    balance_before_arrival: "Included in payment",
     nights: "nights",
     min_nights: "Minimum {n} nights",
     spots_left: "{n} spots available",
     continue: "Continue",
-    pay: "Pay 50% deposit",
+    pay: "Pay total",
     guest_name: "Full name",
     guest_email: "Email",
     guest_phone: "Phone",
@@ -278,7 +278,7 @@ const en = {
     pitch_list_title: "Available pitches",
     select_this_pitch: "Select this pitch",
     pre_arrival_alert:
-      "The barrier code is only sent after 100% payment. More than 48h ahead: pay 50% now and the rest via Stripe link ~48h before; less than 48h: pay 100% now.",
+      "Payment is 100% at booking. Your pitch and barrier code are emailed typically within 24 hours before arrival.",
     terms_notice_title: "Before confirming",
     terms_refund_fees:
       "In the event of a refund, payment processor fees (Stripe) will be deducted.",
@@ -290,7 +290,7 @@ const en = {
       terms_accept_after: ", including the refund policy and data verification.",
       success_title: "Booking confirmed!",
     success_message:
-      "You will receive a confirmation email shortly. If you paid 50%, the balance arrives by email with a Stripe link about 48h before arrival. Entry code only after 100%.",
+      "You will receive a confirmation email shortly. Your pitch and entry code are typically sent within 24 hours before arrival.",
     success_reception_title: "Details submitted!",
     success_reception_message:
       "Please go to reception and give your vehicle plate. Staff will assign a pitch and take payment.",

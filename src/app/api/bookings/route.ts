@@ -341,7 +341,6 @@ export async function POST(request: Request) {
       .update({ stripe_session_id: session.id })
       .eq("id", reservation.id);
 
-    const isFull = depositCents >= pricing.totalCents;
     await supabase.from("payments").insert({
       reservation_id: reservation.id,
       stripe_session_id: session.id,
@@ -349,15 +348,13 @@ export async function POST(request: Request) {
       status: "pending",
       notes: gateEntry
         ? "Paiement intégral (entrée QR portail)"
-        : isFull
-          ? "Paiement intégral (< 48 h avant arrivée)"
-          : "Acompte 50% (réservation en ligne)",
+        : "Paiement intégral (réservation en ligne)",
     });
 
     return NextResponse.json({
       checkout_url: session.url,
       charge_cents: depositCents,
-      full_payment: isFull,
+      full_payment: true,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

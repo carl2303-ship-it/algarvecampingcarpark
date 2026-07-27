@@ -61,14 +61,8 @@ export async function createCheckoutSession({
   gateEntry?: boolean;
 }) {
   const stripe = await getStripe();
-  const balanceCents = Math.max(0, totalCents - depositCents);
-  const fullPayment = gateEntry || balanceCents === 0;
-  const productName = fullPayment
-    ? `${SITE_NAME} — Paiement intégral · ${zoneName} · ${pitchCode}`
-    : `${SITE_NAME} — Acompte 50% · ${zoneName} · ${pitchCode}`;
-  const productDescription = fullPayment
-    ? `Check-in: ${checkIn} | Check-out: ${checkOut} | Total payé: ${(totalCents / 100).toFixed(2)} €`
-    : `Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} € | Solde à régler en ligne 48 h avant l'arrivée: ${(balanceCents / 100).toFixed(2)} €`;
+  const productName = `${SITE_NAME} — Paiement intégral · ${zoneName} · ${pitchCode}`;
+  const productDescription = `Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} €`;
   const cancelPath = gateEntry
     ? `${localePath(locale, "/book")}?from=qr&cancelled=1`
     : `${localePath(locale, "/book")}?cancelled=1`;
@@ -93,7 +87,7 @@ export async function createCheckoutSession({
     metadata: {
       reservation_id: reservationId,
       guest_name: guestName,
-      type: fullPayment ? "booking_full" : "booking_deposit",
+      type: "booking_full",
       deposit_cents: String(depositCents),
       total_cents: String(totalCents),
       pitch_code: pitchCode,
@@ -106,7 +100,7 @@ export async function createCheckoutSession({
   });
 }
 
-/** Remaining 50% balance — sent ~48h before arrival. */
+/** Remaining balance for legacy partial bookings — sent ~48h before arrival. */
 export async function createBalanceCheckoutSession({
   reservationId,
   balanceCents,
@@ -139,7 +133,7 @@ export async function createBalanceCheckoutSession({
         price_data: {
           currency: "eur",
           product_data: {
-            name: `${SITE_NAME} — Solde 50%${pitch}`,
+            name: `${SITE_NAME} — Solde${pitch}`,
             description: `Check-in: ${checkIn} | Check-out: ${checkOut} | Zone: ${zoneName}`,
           },
           unit_amount: balanceCents,

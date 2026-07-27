@@ -88,17 +88,17 @@ export function formatReceptionHours(
 }
 
 export const PENDING_PAYMENT_EXPIRY_MINUTES = 30;
-/** @deprecated Prefer bookingChargeCents / requiresFullPaymentAtBooking from booking-deposit. */
-export const ONLINE_BOOKING_DEPOSIT_RATIO = 0.5;
-/** Gate / QR arrivals pay the full stay online. */
+/** Online bookings charge 100% at checkout. */
+export const ONLINE_BOOKING_DEPOSIT_RATIO = 1;
+/** Gate / QR arrivals also pay the full stay online. */
 export const GATE_BOOKING_DEPOSIT_RATIO = 1;
 /** Public gate QR landing (scan → mandatory full-payment booking). */
 export const GATE_QR_PATH = "/gate";
 /** Reception desk QR (scan → client fills data; pay at reception). */
 export const RECEPTION_QR_PATH = "/reception";
 
-export function bookingDepositRatio(gateEntry: boolean): number {
-  return gateEntry ? GATE_BOOKING_DEPOSIT_RATIO : ONLINE_BOOKING_DEPOSIT_RATIO;
+export function bookingDepositRatio(_gateEntry: boolean): number {
+  return 1;
 }
 
 export function gateQrUrl(): string {
