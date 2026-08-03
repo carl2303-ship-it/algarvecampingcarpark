@@ -89,6 +89,7 @@ export async function PATCH(
           pitchCode: reservation.pitch_code ?? "—",
           oldCheckOut,
           newCheckOut: body.check_out,
+          vehiclePlate: reservation.vehicle_plate,
           applyOnPayment: false,
           locale: reservation.locale ?? "pt",
         });

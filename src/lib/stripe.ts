@@ -45,6 +45,7 @@ export async function createCheckoutSession({
   pitchCode,
   checkIn,
   checkOut,
+  vehiclePlate,
   locale = "pt",
   gateEntry = false,
 }: {
@@ -57,12 +58,17 @@ export async function createCheckoutSession({
   pitchCode: string;
   checkIn: string;
   checkOut: string;
+  vehiclePlate?: string | null;
   locale?: Locale;
   gateEntry?: boolean;
 }) {
   const stripe = await getStripe();
-  const productName = `${SITE_NAME} — Paiement intégral · ${zoneName} · ${pitchCode}`;
-  const productDescription = `Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} €`;
+  const plate = vehiclePlate?.trim() || "";
+  const platePart = plate ? `Matrícula: ${plate} | ` : "";
+  const productName = `${SITE_NAME} — Paiement intégral · ${zoneName} · ${pitchCode}${
+    plate ? ` · ${plate}` : ""
+  }`;
+  const productDescription = `${platePart}Check-in: ${checkIn} | Check-out: ${checkOut} | Total: ${(totalCents / 100).toFixed(2)} €`;
   const cancelPath = gateEntry
     ? `${localePath(locale, "/book")}?from=qr&cancelled=1`
     : `${localePath(locale, "/book")}?cancelled=1`;
@@ -84,6 +90,14 @@ export async function createCheckoutSession({
         quantity: 1,
       },
     ],
+    payment_intent_data: {
+      description: productDescription,
+      metadata: {
+        reservation_id: reservationId,
+        vehicle_plate: plate,
+        pitch_code: pitchCode,
+      },
+    },
     metadata: {
       reservation_id: reservationId,
       guest_name: guestName,
@@ -91,6 +105,7 @@ export async function createCheckoutSession({
       deposit_cents: String(depositCents),
       total_cents: String(totalCents),
       pitch_code: pitchCode,
+      vehicle_plate: plate,
       gate_entry: gateEntry ? "1" : "0",
       locale,
     },
@@ -110,6 +125,7 @@ export async function createBalanceCheckoutSession({
   pitchCode,
   checkIn,
   checkOut,
+  vehiclePlate,
   locale = "pt",
 }: {
   reservationId: string;
@@ -120,10 +136,15 @@ export async function createBalanceCheckoutSession({
   pitchCode: string | null;
   checkIn: string;
   checkOut: string;
+  vehiclePlate?: string | null;
   locale?: Locale;
 }) {
   const stripe = await getStripe();
+  const plate = vehiclePlate?.trim() || "";
+  const platePart = plate ? `Matrícula: ${plate} | ` : "";
   const pitch = pitchCode ? ` · ${pitchCode}` : "";
+  const plateInName = plate ? ` · ${plate}` : "";
+  const productDescription = `${platePart}Check-in: ${checkIn} | Check-out: ${checkOut} | Zone: ${zoneName}`;
   return stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: guestEmail,
@@ -133,20 +154,29 @@ export async function createBalanceCheckoutSession({
         price_data: {
           currency: "eur",
           product_data: {
-            name: `${SITE_NAME} — Solde${pitch}`,
-            description: `Check-in: ${checkIn} | Check-out: ${checkOut} | Zone: ${zoneName}`,
+            name: `${SITE_NAME} — Solde${pitch}${plateInName}`,
+            description: productDescription,
           },
           unit_amount: balanceCents,
         },
         quantity: 1,
       },
     ],
+    payment_intent_data: {
+      description: productDescription,
+      metadata: {
+        reservation_id: reservationId,
+        vehicle_plate: plate,
+        pitch_code: pitchCode ?? "",
+      },
+    },
     metadata: {
       reservation_id: reservationId,
       guest_name: guestName,
       type: "booking_balance",
       balance_cents: String(balanceCents),
       pitch_code: pitchCode ?? "",
+      vehicle_plate: plate,
       locale,
     },
     success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}&balance=1`,
@@ -163,6 +193,7 @@ export async function createExtensionCheckoutSession({
   pitchCode,
   oldCheckOut,
   newCheckOut,
+  vehiclePlate,
   applyOnPayment = false,
   cancelUrl,
   locale = "pt",
@@ -174,12 +205,16 @@ export async function createExtensionCheckoutSession({
   pitchCode: string;
   oldCheckOut: string;
   newCheckOut: string;
+  vehiclePlate?: string | null;
   /** When true, webhook applies new check_out + total after payment (guest flow). */
   applyOnPayment?: boolean;
   cancelUrl?: string;
   locale?: Locale;
 }) {
   const stripe = await getStripe();
+  const plate = vehiclePlate?.trim() || "";
+  const platePart = plate ? `Matrícula: ${plate} | ` : "";
+  const productDescription = `${platePart}Lugar ${pitchCode}: ${oldCheckOut} → ${newCheckOut}`;
   return stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: guestEmail,
@@ -189,14 +224,22 @@ export async function createExtensionCheckoutSession({
         price_data: {
           currency: "eur",
           product_data: {
-            name: `${SITE_NAME} — Extensão de estadia`,
-            description: `Lugar ${pitchCode}: ${oldCheckOut} → ${newCheckOut}`,
+            name: `${SITE_NAME} — Extensão de estadia${plate ? ` · ${plate}` : ""}`,
+            description: productDescription,
           },
           unit_amount: extensionCents,
         },
         quantity: 1,
       },
     ],
+    payment_intent_data: {
+      description: productDescription,
+      metadata: {
+        reservation_id: reservationId,
+        vehicle_plate: plate,
+        pitch_code: pitchCode,
+      },
+    },
     metadata: {
       reservation_id: reservationId,
       guest_name: guestName,
@@ -205,6 +248,7 @@ export async function createExtensionCheckoutSession({
       old_check_out: oldCheckOut,
       extension_cents: String(extensionCents),
       apply_on_payment: applyOnPayment ? "true" : "false",
+      vehicle_plate: plate,
       locale,
     },
     success_url: `${SITE_URL}${localePath(locale, "/book/success")}?session_id={CHECKOUT_SESSION_ID}&extended=1`,

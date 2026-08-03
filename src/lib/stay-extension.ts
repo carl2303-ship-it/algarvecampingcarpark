@@ -148,7 +148,7 @@ export async function getReservationForStay(reservationId: string) {
   const { data, error } = await supabase
     .from("reservations")
     .select(
-      "id, status, zone_id, check_in, check_out, total_cents, paid_cents, num_guests, pitch_code, electricity_amperage, motorhome_over_9m, manual_supplement_ids, guest_name, guest_email, payment_status, zone:zones(name)"
+      "id, status, zone_id, check_in, check_out, total_cents, paid_cents, num_guests, pitch_code, vehicle_plate, electricity_amperage, motorhome_over_9m, manual_supplement_ids, guest_name, guest_email, payment_status, zone:zones(name)"
     )
     .eq("id", reservationId)
     .maybeSingle();

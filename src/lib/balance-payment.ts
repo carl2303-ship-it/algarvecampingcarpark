@@ -29,6 +29,7 @@ type BalanceCandidate = {
   guest_email: string | null;
   guest_name: string;
   pitch_code: string | null;
+  vehicle_plate: string | null;
   check_in: string;
   check_out: string;
   locale: string | null;
@@ -72,6 +73,7 @@ export async function sendBalancePaymentForReservation(
     pitchCode: reservation.pitch_code,
     checkIn: reservation.check_in,
     checkOut: reservation.check_out,
+    vehiclePlate: reservation.vehicle_plate,
     locale,
   });
 
@@ -127,7 +129,7 @@ export async function runBalancePaymentEmails() {
   const { data: reservations, error } = await supabase
     .from("reservations")
     .select(
-      "id, guest_email, guest_name, pitch_code, check_in, check_out, locale, total_cents, paid_cents, balance_payment_email_sent_at, zone:zones(name)"
+      "id, guest_email, guest_name, pitch_code, vehicle_plate, check_in, check_out, locale, total_cents, paid_cents, balance_payment_email_sent_at, zone:zones(name)"
     )
     .eq("status", "confirmed")
     .in("check_in", [tomorrow, inTwoDays])

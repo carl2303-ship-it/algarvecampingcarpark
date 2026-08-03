@@ -350,6 +350,7 @@ export async function POST(request: Request) {
       pitchCode,
       checkIn: data.check_in,
       checkOut: data.check_out,
+      vehiclePlate: plate,
       locale: data.locale,
       gateEntry,
     });

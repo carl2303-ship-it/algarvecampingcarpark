@@ -71,6 +71,7 @@ export async function POST(request: Request) {
       pitchCode: reservation.pitch_code ?? "—",
       oldCheckOut: quote.oldCheckOut,
       newCheckOut: quote.newCheckOut,
+      vehiclePlate: reservation.vehicle_plate,
       applyOnPayment: true,
       cancelUrl,
       locale: body.locale as Locale,
