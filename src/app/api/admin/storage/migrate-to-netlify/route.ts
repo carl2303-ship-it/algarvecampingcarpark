@@ -4,10 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { optimizeImageForStorage } from "@/lib/gallery-upload";
 import { putMedia } from "@/lib/media-store";
 import { revalidateMarketingPaths } from "@/lib/revalidate-marketing";
+import { SITE_URL } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-export const maxDuration = 300;
+/** Netlify sync functions are short — migrate in tiny batches. */
+export const maxDuration = 60;
 
 type MigrateResult = {
   id: string;
@@ -20,145 +22,178 @@ type MigrateResult = {
   error?: string;
 };
 
+type PendingItem =
+  | { kind: "gallery"; id: string; url: string }
+  | { kind: "pitch"; id: string; url: string };
+
+/** Only Supabase Storage URLs generate Cached Egress — skip /media and /gallery static. */
+function needsSupabaseMigration(url: string): boolean {
+  return (
+    url.includes("supabase.co/storage") ||
+    url.includes("/storage/v1/object/public/")
+  );
+}
+
 async function downloadUrl(url: string): Promise<Buffer> {
-  const res = await fetch(url);
+  const absolute = url.startsWith("http")
+    ? url
+    : `${SITE_URL}${url.startsWith("/") ? url : `/${url}`}`;
+  const res = await fetch(absolute);
   if (!res.ok) {
     throw new Error(`Download falhou (${res.status})`);
   }
   return Buffer.from(await res.arrayBuffer());
 }
 
-function alreadyOnNetlify(url: string): boolean {
-  return url.startsWith("/media/") || url.includes("/media/");
+async function listPending(
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<PendingItem[]> {
+  const pending: PendingItem[] = [];
+
+  const { data: galleryRows, error: galleryError } = await supabase
+    .from("gallery_images")
+    .select("id, src")
+    .order("sort_order", { ascending: true });
+
+  if (galleryError) throw new Error(galleryError.message);
+
+  for (const row of galleryRows ?? []) {
+    if (needsSupabaseMigration(row.src)) {
+      pending.push({ kind: "gallery", id: row.id, url: row.src });
+    }
+  }
+
+  const { data: pitchRows, error: pitchError } = await supabase
+    .from("pitch_map_spots")
+    .select("code, image_url")
+    .not("image_url", "is", null);
+
+  if (pitchError) throw new Error(pitchError.message);
+
+  for (const row of pitchRows ?? []) {
+    if (row.image_url && needsSupabaseMigration(row.image_url)) {
+      pending.push({ kind: "pitch", id: row.code, url: row.image_url });
+    }
+  }
+
+  return pending;
+}
+
+async function migrateOne(
+  supabase: ReturnType<typeof createAdminClient>,
+  item: PendingItem
+): Promise<MigrateResult> {
+  try {
+    const raw = await downloadUrl(item.url);
+    const optimized =
+      item.kind === "gallery"
+        ? await optimizeImageForStorage(raw, { maxWidth: 1600, quality: 78 })
+        : await optimizeImageForStorage(raw, { maxWidth: 1200, quality: 75 });
+
+    const key =
+      item.kind === "gallery"
+        ? `gallery/${item.id}-${Date.now()}.webp`
+        : `pitch/${item.id}-${Date.now()}.webp`;
+
+    const to = await putMedia(key, optimized.buffer, optimized.contentType);
+
+    if (item.kind === "gallery") {
+      const { error } = await supabase
+        .from("gallery_images")
+        .update({ src: to })
+        .eq("id", item.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabase
+        .from("pitch_map_spots")
+        .update({ image_url: to })
+        .eq("code", item.id);
+      if (error) throw new Error(error.message);
+    }
+
+    return {
+      id: item.id,
+      kind: item.kind,
+      ok: true,
+      from: item.url,
+      to,
+      bytesBefore: raw.length,
+      bytesAfter: optimized.buffer.length,
+    };
+  } catch (err) {
+    return {
+      id: item.id,
+      kind: item.kind,
+      ok: false,
+      from: item.url,
+      error: err instanceof Error ? err.message : "erro",
+    };
+  }
 }
 
 /**
- * One-shot: copy gallery + pitch photos from Supabase Storage → Netlify Blobs,
- * then point DB URLs to `/media/...` (same origin, no Supabase egress).
+ * Migrate a small batch of Supabase Storage URLs → Netlify Blobs.
+ * Default limit=2 to stay under Netlify gateway timeout.
  *
- * Run on production after deploy (admin session):
- *   fetch('/api/admin/storage/migrate-to-netlify',{method:'POST'}).then(r=>r.json())
+ * Console (admin on production):
+ *   (async()=>{for(;;){const j=await(await fetch('/api/admin/storage/migrate-to-netlify?limit=2',{method:'POST'})).json();console.log(j);if(j.done||j.error)break;}})()
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const user = await getAdminUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(
+      5,
+      Math.max(1, parseInt(searchParams.get("limit") ?? "2", 10) || 2)
+    );
+
     const supabase = createAdminClient();
+    const pending = await listPending(supabase);
+
+    if (pending.length === 0) {
+      return NextResponse.json({
+        success: true,
+        done: true,
+        migrated: 0,
+        failed: 0,
+        remaining: 0,
+        message:
+          "Nada a migrar: fotos já estão em /media ou em ficheiros estáticos (/gallery), sem egress Supabase.",
+        results: [],
+      });
+    }
+
+    const batch = pending.slice(0, limit);
     const results: MigrateResult[] = [];
 
-    const { data: galleryRows, error: galleryError } = await supabase
-      .from("gallery_images")
-      .select("id, src")
-      .order("sort_order", { ascending: true });
-
-    if (galleryError) {
-      return NextResponse.json({ error: galleryError.message }, { status: 500 });
+    for (const item of batch) {
+      results.push(await migrateOne(supabase, item));
     }
 
-    for (const row of galleryRows ?? []) {
-      if (alreadyOnNetlify(row.src)) {
-        results.push({ id: row.id, kind: "gallery", ok: true, from: row.src, to: row.src });
-        continue;
-      }
-      try {
-        const raw = await downloadUrl(row.src);
-        const optimized = await optimizeImageForStorage(raw, { maxWidth: 1600, quality: 78 });
-        const key = `gallery/${row.id}-${Date.now()}.webp`;
-        const to = await putMedia(key, optimized.buffer, optimized.contentType);
-        const { error: updateError } = await supabase
-          .from("gallery_images")
-          .update({ src: to })
-          .eq("id", row.id);
-        if (updateError) throw new Error(updateError.message);
-        results.push({
-          id: row.id,
-          kind: "gallery",
-          ok: true,
-          from: row.src,
-          to,
-          bytesBefore: raw.length,
-          bytesAfter: optimized.buffer.length,
-        });
-      } catch (err) {
-        results.push({
-          id: row.id,
-          kind: "gallery",
-          ok: false,
-          from: row.src,
-          error: err instanceof Error ? err.message : "erro",
-        });
-      }
-    }
-
-    const { data: pitchRows, error: pitchError } = await supabase
-      .from("pitch_map_spots")
-      .select("code, image_url")
-      .not("image_url", "is", null);
-
-    if (pitchError) {
-      return NextResponse.json({ error: pitchError.message, results }, { status: 500 });
-    }
-
-    for (const row of pitchRows ?? []) {
-      if (!row.image_url) continue;
-      if (alreadyOnNetlify(row.image_url)) {
-        results.push({
-          id: row.code,
-          kind: "pitch",
-          ok: true,
-          from: row.image_url,
-          to: row.image_url,
-        });
-        continue;
-      }
-      try {
-        const raw = await downloadUrl(row.image_url);
-        const optimized = await optimizeImageForStorage(raw, { maxWidth: 1200, quality: 75 });
-        const key = `pitch/${row.code}-${Date.now()}.webp`;
-        const to = await putMedia(key, optimized.buffer, optimized.contentType);
-        const { error: updateError } = await supabase
-          .from("pitch_map_spots")
-          .update({ image_url: to })
-          .eq("code", row.code);
-        if (updateError) throw new Error(updateError.message);
-        results.push({
-          id: row.code,
-          kind: "pitch",
-          ok: true,
-          from: row.image_url,
-          to,
-          bytesBefore: raw.length,
-          bytesAfter: optimized.buffer.length,
-        });
-      } catch (err) {
-        results.push({
-          id: row.code,
-          kind: "pitch",
-          ok: false,
-          from: row.image_url,
-          error: err instanceof Error ? err.message : "erro",
-        });
-      }
-    }
-
-    revalidateMarketingPaths(["/", "/about", "/location", "/book"]);
-
-    const ok = results.filter((r) => r.ok && r.from !== r.to);
-    const skipped = results.filter((r) => r.ok && r.from === r.to);
+    const stillPending = (await listPending(supabase)).length;
+    const finished = stillPending === 0;
+    const migrated = results.filter((r) => r.ok);
     const failed = results.filter((r) => !r.ok);
-    const savedBytes = ok.reduce(
+
+    if (migrated.length > 0 || finished) {
+      revalidateMarketingPaths(["/", "/about", "/location", "/book"]);
+    }
+
+    const savedBytes = migrated.reduce(
       (sum, r) => sum + ((r.bytesBefore ?? 0) - (r.bytesAfter ?? 0)),
       0
     );
 
     return NextResponse.json({
       success: failed.length === 0,
-      migrated: ok.length,
-      skipped: skipped.length,
+      done: finished,
+      migrated: migrated.length,
       failed: failed.length,
+      remaining: stillPending,
+      batchSize: limit,
       savedBytes,
-      savedMB: Math.round((savedBytes / (1024 * 1024)) * 10) / 10,
       results,
     });
   } catch (error) {
