@@ -227,6 +227,8 @@ const fr = {
     step_payment: "Paiement",
     check_in: "Arrivée",
     check_out: "Départ",
+    online_period_hint:
+      "Dates bloquées pour les réservations en ligne hors du {from} au {until} (chaque année). Dernière nuit le {until} ; le départ peut être le lendemain.",
     select_dates: "Dates et coordonnées du client",
     select_zone: "Type de place",
     select_pitch: "Choisissez votre place sur le plan",
@@ -263,6 +265,8 @@ const fr = {
     spots_left: "{n} places disponibles",
     continue: "Continuer",
     pay: "Payer le total",
+    network_error:
+      "Impossible de contacter le serveur. Vérifiez votre connexion et réessayez.",
     guest_name: "Nom complet",
     guest_email: "Email",
     guest_phone: "Téléphone",

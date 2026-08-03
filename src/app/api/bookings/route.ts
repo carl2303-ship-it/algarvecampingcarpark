@@ -13,7 +13,11 @@ import {
   PENDING_PAYMENT_EXPIRY_MINUTES,
 } from "@/lib/constants";
 import { bookingChargeCents } from "@/lib/booking-deposit";
-import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
+import {
+  getParkSettings,
+  isOnlineBookingOpen,
+  isStayWithinOnlineBookableWindow,
+} from "@/lib/park-settings";
 import {
   normalizeVehiclePlate,
   upsertGuestForReservation,
@@ -202,6 +206,20 @@ export async function POST(request: Request) {
 
     const data = bookingSchema.parse(body);
     const pitchCode = data.pitch_code.toUpperCase();
+
+    if (
+      !gateEntry &&
+      !receptionEntry &&
+      !isStayWithinOnlineBookableWindow(parkSettings, data.check_in, data.check_out)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "As datas escolhidas estão fora do período de reservas online. Escolha datas dentro do período disponível.",
+        },
+        { status: 400 }
+      );
+    }
 
     const withElectricity = data.electricity_amperage != null;
 

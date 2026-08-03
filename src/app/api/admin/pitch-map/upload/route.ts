@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getImageExtension } from "@/lib/gallery-upload";
+import { optimizeImageForStorage } from "@/lib/gallery-upload";
+import { deleteMediaByUrl, putMedia } from "@/lib/media-store";
 import { revalidateMarketingPaths } from "@/lib/revalidate-marketing";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,13 @@ function isUploadFile(value: FormDataEntryValue | null): value is File {
 
 function revalidatePitchMapPages() {
   revalidateMarketingPaths(["/about", "/location"]);
+}
+
+function supabaseStoragePath(url: string, bucket: string): string | null {
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const idx = url.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(url.slice(idx + marker.length).split("?")[0] ?? "");
 }
 
 export async function POST(request: Request) {
@@ -43,13 +51,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const extension = getImageExtension(file.type);
-    if (!extension) {
-      return NextResponse.json({ error: "Formato de imagem inválido." }, { status: 400 });
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const filename = `${code}-${Date.now()}.${extension}`;
+    const raw = Buffer.from(await file.arrayBuffer());
+    const optimized = await optimizeImageForStorage(raw, { maxWidth: 1200, quality: 75 });
+    const key = `pitch/${code}-${Date.now()}.${optimized.extension}`;
+    const image_url = await putMedia(key, optimized.buffer, optimized.contentType);
 
     const supabase = createAdminClient();
 
@@ -63,18 +68,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Lugar não encontrado" }, { status: 404 });
     }
 
-    const { error: uploadError } = await supabase.storage
-      .from("pitch-photos")
-      .upload(filename, buffer, { contentType: file.type, upsert: false });
-
-    if (uploadError) {
-      console.error("Pitch photo upload failed:", uploadError);
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
-    }
-
-    const { data: urlData } = supabase.storage.from("pitch-photos").getPublicUrl(filename);
-    const image_url = urlData.publicUrl;
-
     const { error: updateError } = await supabase
       .from("pitch_map_spots")
       .update({ image_url })
@@ -82,14 +75,14 @@ export async function POST(request: Request) {
 
     if (updateError) {
       console.error("Pitch photo DB update failed:", updateError);
-      await supabase.storage.from("pitch-photos").remove([filename]);
       return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
-    if (existing.image_url?.includes("/pitch-photos/")) {
-      const oldPath = existing.image_url.split("/pitch-photos/")[1];
-      if (oldPath) {
-        await supabase.storage.from("pitch-photos").remove([oldPath]);
+    if (existing.image_url) {
+      await deleteMediaByUrl(existing.image_url);
+      const oldSupabasePath = supabaseStoragePath(existing.image_url, "pitch-photos");
+      if (oldSupabasePath) {
+        await supabase.storage.from("pitch-photos").remove([oldSupabasePath]);
       }
     }
 

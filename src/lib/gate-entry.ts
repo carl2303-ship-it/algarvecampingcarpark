@@ -19,10 +19,9 @@ export function isDeskQrEntry(from: string | null | undefined): boolean {
 
 export function allowsPublicBooking(
   settings: ParkSettings,
-  deskBypass: boolean,
-  now?: Date
+  deskBypass: boolean
 ): boolean {
-  return isOnlineBookingOpen(settings, now) || deskBypass;
+  return isOnlineBookingOpen(settings) || deskBypass;
 }
 
 export function gateEntryQuery(gateEntry: boolean): string {

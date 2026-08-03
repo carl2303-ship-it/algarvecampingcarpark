@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getImageExtension } from "@/lib/gallery-upload";
+import { optimizeImageForStorage } from "@/lib/gallery-upload";
+import { putMedia } from "@/lib/media-store";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,14 +40,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const extension = getImageExtension(file.type);
-    if (!extension) {
-      return NextResponse.json({ error: "Formato de imagem inválido." }, { status: 400 });
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const contentType = file.type;
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`;
+    const raw = Buffer.from(await file.arrayBuffer());
+    const optimized = await optimizeImageForStorage(raw, { maxWidth: 1600, quality: 78 });
+    const key = `gallery/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${optimized.extension}`;
+    const src = await putMedia(key, optimized.buffer, optimized.contentType);
 
     let supabase;
     try {
@@ -58,18 +55,6 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
-    const { error: uploadError } = await supabase.storage
-      .from("gallery")
-      .upload(filename, buffer, { contentType, upsert: false });
-
-    if (uploadError) {
-      console.error("Gallery storage upload failed:", uploadError);
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
-    }
-
-    const { data: urlData } = supabase.storage.from("gallery").getPublicUrl(filename);
-    const src = urlData.publicUrl;
 
     const { data: maxRow } = await supabase
       .from("gallery_images")
@@ -88,7 +73,6 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("Gallery DB insert failed:", error);
-      await supabase.storage.from("gallery").remove([filename]);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

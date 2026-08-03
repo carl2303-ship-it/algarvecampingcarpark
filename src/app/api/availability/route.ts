@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getZoneAvailability } from "@/lib/availability";
 import { getPublicPricingSupplements } from "@/lib/pricing-supplements";
 import { isPublicEntryRequest } from "@/lib/gate-entry";
-import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
+import { getParkSettings, isOnlineBookingOpen, isStayWithinOnlineBookableWindow } from "@/lib/park-settings";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,6 +33,16 @@ export async function GET(request: Request) {
   if (checkOut <= checkIn) {
     return NextResponse.json(
       { error: "Check-out deve ser posterior ao check-in" },
+      { status: 400 }
+    );
+  }
+
+  if (!deskEntry && !isStayWithinOnlineBookableWindow(parkSettings, checkIn, checkOut)) {
+    return NextResponse.json(
+      {
+        error:
+          "As datas escolhidas estão fora do período de reservas online. Escolha datas dentro do período disponível.",
+      },
       { status: 400 }
     );
   }

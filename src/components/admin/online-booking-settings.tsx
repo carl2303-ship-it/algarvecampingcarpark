@@ -8,26 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ParkSettings } from "@/lib/constants";
 import { adminT } from "@/lib/admin-i18n";
+import { lisbonDateFromIso } from "@/lib/park-settings";
 
-function toLocalInputValue(iso: string | null): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+function toDateInputValue(iso: string | null): string {
+  return lisbonDateFromIso(iso) ?? "";
 }
 
-function fromLocalInputValue(value: string): string | null {
-  if (!value.trim()) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString();
+/** Noon UTC keeps the calendar day stable in Europe/Lisbon. */
+function fromDateInputValue(value: string): string | null {
+  const day = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  return `${day}T12:00:00.000Z`;
 }
 
 export function OnlineBookingSettings({ initial }: { initial: ParkSettings }) {
   const [enabled, setEnabled] = useState(initial.online_booking_enabled);
-  const [startsAt, setStartsAt] = useState(toLocalInputValue(initial.online_booking_starts_at));
-  const [endsAt, setEndsAt] = useState(toLocalInputValue(initial.online_booking_ends_at));
+  const [startsAt, setStartsAt] = useState(toDateInputValue(initial.online_booking_starts_at));
+  const [endsAt, setEndsAt] = useState(toDateInputValue(initial.online_booking_ends_at));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -36,10 +33,10 @@ export function OnlineBookingSettings({ initial }: { initial: ParkSettings }) {
     setSaving(true);
     setMessage(null);
 
-    const startsIso = fromLocalInputValue(startsAt);
-    const endsIso = fromLocalInputValue(endsAt);
+    const startsIso = fromDateInputValue(startsAt);
+    const endsIso = fromDateInputValue(endsAt);
 
-    if (startsIso && endsIso && new Date(startsIso) > new Date(endsIso)) {
+    if (startsIso && endsIso && startsAt > endsAt) {
       setSaving(false);
       setMessage(adminT.onlineBooking.invalidRange);
       return;
@@ -59,8 +56,8 @@ export function OnlineBookingSettings({ initial }: { initial: ParkSettings }) {
 
     if (res.ok) {
       setEnabled(Boolean(data.settings.online_booking_enabled));
-      setStartsAt(toLocalInputValue(data.settings.online_booking_starts_at));
-      setEndsAt(toLocalInputValue(data.settings.online_booking_ends_at));
+      setStartsAt(toDateInputValue(data.settings.online_booking_starts_at));
+      setEndsAt(toDateInputValue(data.settings.online_booking_ends_at));
       setMessage(adminT.onlineBooking.saved);
     } else {
       setMessage(
@@ -100,7 +97,7 @@ export function OnlineBookingSettings({ initial }: { initial: ParkSettings }) {
               <Label htmlFor="online_booking_starts_at">{adminT.onlineBooking.startsAt}</Label>
               <Input
                 id="online_booking_starts_at"
-                type="datetime-local"
+                type="date"
                 value={startsAt}
                 onChange={(event) => {
                   setStartsAt(event.target.value);
@@ -112,7 +109,7 @@ export function OnlineBookingSettings({ initial }: { initial: ParkSettings }) {
               <Label htmlFor="online_booking_ends_at">{adminT.onlineBooking.endsAt}</Label>
               <Input
                 id="online_booking_ends_at"
-                type="datetime-local"
+                type="date"
                 value={endsAt}
                 onChange={(event) => {
                   setEndsAt(event.target.value);

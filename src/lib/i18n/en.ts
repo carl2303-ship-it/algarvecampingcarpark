@@ -225,6 +225,8 @@ const en = {
     step_payment: "Payment",
     check_in: "Check-in",
     check_out: "Check-out",
+    online_period_hint:
+      "Dates blocked for online bookings outside {from} to {until} (every year). Last night is {until}; check-out may be the next day.",
     select_dates: "Dates and guest details",
     select_zone: "Pitch type",
     select_pitch: "Choose your pitch on the map",
@@ -261,6 +263,7 @@ const en = {
     spots_left: "{n} spots available",
     continue: "Continue",
     pay: "Pay total",
+    network_error: "Could not reach the server. Check your connection and try again.",
     guest_name: "Full name",
     guest_email: "Email",
     guest_phone: "Phone",

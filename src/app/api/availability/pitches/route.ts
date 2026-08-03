@@ -3,7 +3,11 @@ import { z } from "zod";
 import { getActiveZones, getAvailablePitchesForZone } from "@/lib/availability";
 import { isPricingZoneSlug, type PricingZoneSlug } from "@/lib/park-pitch-map-defaults";
 import { getPublicPricingSupplements } from "@/lib/pricing-supplements";
-import { getParkSettings, isOnlineBookingOpen } from "@/lib/park-settings";
+import {
+  getParkSettings,
+  isOnlineBookingOpen,
+  isStayWithinOnlineBookableWindow,
+} from "@/lib/park-settings";
 import { bookingChargeCents } from "@/lib/booking-deposit";
 import { isPublicEntryRequest } from "@/lib/gate-entry";
 
@@ -57,6 +61,19 @@ export async function GET(request: Request) {
 
     if (parsed.check_out <= parsed.check_in) {
       return NextResponse.json({ error: "Datas inválidas" }, { status: 400 });
+    }
+
+    if (
+      !deskEntry &&
+      !isStayWithinOnlineBookableWindow(parkSettings, parsed.check_in, parsed.check_out)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "As datas escolhidas estão fora do período de reservas online. Escolha datas dentro do período disponível.",
+        },
+        { status: 400 }
+      );
     }
 
     const zones = await getActiveZones();

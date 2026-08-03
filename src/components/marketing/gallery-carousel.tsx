@@ -41,11 +41,16 @@ export function GalleryCarousel({
 
   const current = images[index];
   const alt = locale === "pt" ? current.alt_pt : current.alt_en;
+  // Only mount nearby slides — avoids fetching every gallery asset via Image CDN / Supabase egress.
+  const visibleIndexes = new Set(
+    [index, (index - 1 + total) % total, (index + 1) % total].slice(0, Math.min(3, total))
+  );
 
   return (
     <div className="relative mx-auto max-w-5xl">
       <div className="relative overflow-hidden rounded-2xl border bg-muted shadow-lg aspect-[5/3]">
         {images.map((image, i) => {
+          if (!visibleIndexes.has(i)) return null;
           const imageAlt = locale === "pt" ? image.alt_pt : image.alt_en;
           return (
             <div
@@ -60,7 +65,7 @@ export function GalleryCarousel({
                 src={image.src}
                 alt={imageAlt}
                 fill
-                priority={i === 0}
+                priority={i === index}
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 1024px"
               />
@@ -117,12 +122,14 @@ export function GalleryCarousel({
               aria-label={locale === "pt" ? image.alt_pt : image.alt_en}
               aria-current={i === index}
             >
+              {/* Tiny thumbs: load only when near viewport */}
               <Image
                 src={image.src}
                 alt=""
                 fill
+                loading="lazy"
                 className="object-cover"
-                sizes="80px"
+                sizes="96px"
               />
             </button>
           ))}

@@ -667,19 +667,19 @@ export const adminT = {
     },
   },
   onlineBooking: {
-    title: "Réservations en ligne",
+    title: "Dates bloquées pour les réservations",
     description:
-      "Activez ou désactivez les réservations publiques. Hors période, le site affiche le contact téléphonique.",
-    enabled: "Réservations en ligne activées",
+      "Les réservations en ligne restent actives. La plage ci-dessous se répète chaque année (ex. 01/04 → 19/09).",
+    enabled: "Réservations en ligne actives",
     enabledHint:
-      "Si désactivé, le bouton Réserver ouvre le dialogue de contact (même avec des dates).",
-    startsAt: "Activation (optionnel)",
-    endsAt: "Désactivation (optionnel)",
+      "Laissez activé pour garder le site ouvert aux réservations. Désactivez uniquement en urgence (le bouton Réserver affiche alors le contact).",
+    startsAt: "Première nuit réservable (jour/mois)",
+    endsAt: "Dernière nuit réservable (jour/mois)",
     datesHint:
-      "Laissez vide pour aucune limite. Avec les deux dates, ouvert uniquement dans l'intervalle.",
-    invalidRange: "La date d'activation doit être antérieure à la désactivation.",
+      "L'année choisie sert de modèle : le même jour/mois s'applique chaque année. La date de fin = dernière nuit (départ possible le lendemain). Hors plage = calendrier bloqué. Admin / réception / QR peuvent réserver hors plage.",
+    invalidRange: "La première date doit être antérieure à la dernière.",
     save: "Enregistrer",
-    saved: "Paramètres de réservation en ligne enregistrés.",
+    saved: "Dates de réservation enregistrées.",
     saveError: "Erreur lors de l'enregistrement.",
   },
   pricingSupplements: {

@@ -60,7 +60,7 @@ export const DEFAULT_PARK_SETTINGS: ParkSettings = {
   check_in_time: CHECK_IN_TIME,
   check_out_time: CHECK_OUT_TIME,
   gate_access_code: null,
-  online_booking_enabled: false,
+  online_booking_enabled: true,
   online_booking_starts_at: null,
   online_booking_ends_at: null,
   extra_guest_cents_per_night: 150,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deleteMediaByUrl } from "@/lib/media-store";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +13,11 @@ const updateSchema = z.object({
   active: z.boolean().optional(),
 });
 
-function storagePathFromUrl(src: string): string | null {
+function supabaseGalleryPath(src: string): string | null {
   const marker = "/storage/v1/object/public/gallery/";
   const idx = src.indexOf(marker);
   if (idx === -1) return null;
-  return src.slice(idx + marker.length);
+  return decodeURIComponent(src.slice(idx + marker.length).split("?")[0] ?? "");
 }
 
 export async function PATCH(
@@ -57,9 +58,10 @@ export async function DELETE(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   if (row?.src) {
-    const path = storagePathFromUrl(row.src);
-    if (path) {
-      await supabase.storage.from("gallery").remove([path]);
+    await deleteMediaByUrl(row.src);
+    const supabasePath = supabaseGalleryPath(row.src);
+    if (supabasePath) {
+      await supabase.storage.from("gallery").remove([supabasePath]);
     }
   }
 

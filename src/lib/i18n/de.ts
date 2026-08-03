@@ -227,6 +227,8 @@ const de = {
     step_payment: "Zahlung",
     check_in: "Anreise",
     check_out: "Abreise",
+    online_period_hint:
+      "Für Online-Buchungen gesperrte Daten außerhalb von {from} bis {until} (jedes Jahr). Letzte Nacht {until}; Abreise am Folgetag möglich.",
     select_dates: "Daten und Kundendaten",
     select_zone: "Stellplatztyp",
     select_pitch: "Wählen Sie Ihren Stellplatz auf der Karte",
@@ -263,6 +265,8 @@ const de = {
     spots_left: "{n} Stellplätze verfügbar",
     continue: "Weiter",
     pay: "Gesamtbetrag zahlen",
+    network_error:
+      "Server nicht erreichbar. Bitte Internetverbindung prüfen und erneut versuchen.",
     guest_name: "Vollständiger Name",
     guest_email: "E-Mail",
     guest_phone: "Telefon",

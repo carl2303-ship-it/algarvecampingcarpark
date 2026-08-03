@@ -46,3 +46,6 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# Local media fallback (Netlify Blobs substitute in next dev)
+.data/

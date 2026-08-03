@@ -35,7 +35,13 @@ export const EARLY_PWA_CAPTURE_SCRIPT = `
   });
   function registerSW() {
     if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {});
+    navigator.serviceWorker.register("/sw.js", { scope: "/" }).then(function (reg) {
+      try { reg.update(); } catch (e) {}
+      // Activate updated worker ASAP so old interceptors stop breaking /_next and /api.
+      if (reg.waiting) {
+        try { reg.waiting.postMessage({ type: "SKIP_WAITING" }); } catch (e) {}
+      }
+    }).catch(function () {});
   }
   if (document.readyState === "complete") registerSW();
   else window.addEventListener("load", registerSW);

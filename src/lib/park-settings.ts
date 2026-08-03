@@ -29,22 +29,121 @@ function normalizeSettings(row: Partial<ParkSettings> | null): ParkSettings {
   };
 }
 
-export function isOnlineBookingOpen(
-  settings: ParkSettings,
-  now: Date = new Date()
-): boolean {
-  if (!settings.online_booking_enabled) return false;
+/** Calendar day (yyyy-MM-dd) in Europe/Lisbon for an ISO timestamp. */
+export function lisbonDateFromIso(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
 
-  const ts = now.getTime();
-  if (settings.online_booking_starts_at) {
-    const start = new Date(settings.online_booking_starts_at).getTime();
-    if (!Number.isNaN(start) && ts < start) return false;
-  }
-  if (settings.online_booking_ends_at) {
-    const end = new Date(settings.online_booking_ends_at).getTime();
-    if (!Number.isNaN(end) && ts > end) return false;
+function monthDay(ymd: string): string {
+  return ymd.slice(5, 10);
+}
+
+export function addCalendarDays(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+export type OnlineBookableSeason = {
+  /** First bookable night / check-in, as MM-DD (repeats every year) */
+  fromMd: string | null;
+  /** Last bookable night, as MM-DD (repeats every year). Check-out may be the next day. */
+  untilMd: string | null;
+};
+
+/**
+ * Annual season from admin dates (year is ignored — 01/04→19/09 every year).
+ * `until` = last night; departure the following morning is allowed.
+ */
+export function getOnlineBookableSeason(settings: ParkSettings): OnlineBookableSeason {
+  const from = lisbonDateFromIso(settings.online_booking_starts_at);
+  const until = lisbonDateFromIso(settings.online_booking_ends_at);
+  return {
+    fromMd: from ? monthDay(from) : null,
+    untilMd: until ? monthDay(until) : null,
+  };
+}
+
+/** @deprecated Use getOnlineBookableSeason — kept for display helpers */
+export function getOnlineBookableDateRange(settings: ParkSettings): {
+  from: string | null;
+  until: string | null;
+} {
+  const season = getOnlineBookableSeason(settings);
+  return { from: season.fromMd, until: season.untilMd };
+}
+
+function isNightInSeason(ymd: string, season: OnlineBookableSeason): boolean {
+  const md = monthDay(ymd);
+  if (season.fromMd && md < season.fromMd) return false;
+  if (season.untilMd && md > season.untilMd) return false;
+  return true;
+}
+
+/** Check-in day selectable on the public calendar. */
+export function isOnlineBookableCheckInDay(
+  settings: ParkSettings,
+  ymd: string
+): boolean {
+  const season = getOnlineBookableSeason(settings);
+  if (!season.fromMd && !season.untilMd) return true;
+  return isNightInSeason(ymd, season);
+}
+
+/**
+ * Check-out day selectable: previous calendar day must be a bookable night
+ * (so last night 19/09 → check-out 20/09 is allowed).
+ */
+export function isOnlineBookableCheckOutDay(
+  settings: ParkSettings,
+  ymd: string
+): boolean {
+  const season = getOnlineBookableSeason(settings);
+  if (!season.fromMd && !season.untilMd) return true;
+  const lastNight = addCalendarDays(ymd, -1);
+  return isNightInSeason(lastNight, season);
+}
+
+/**
+ * Every night of the stay (check_in .. check_out exclusive) must fall in the annual season.
+ */
+export function isStayWithinOnlineBookableWindow(
+  settings: ParkSettings,
+  checkIn: string,
+  checkOut: string
+): boolean {
+  const season = getOnlineBookableSeason(settings);
+  if (!season.fromMd && !season.untilMd) return true;
+  if (checkOut <= checkIn) return false;
+
+  let night = checkIn;
+  while (night < checkOut) {
+    if (!isNightInSeason(night, season)) return false;
+    night = addCalendarDays(night, 1);
   }
   return true;
+}
+
+export function formatSeasonDayPt(md: string | null): string {
+  if (!md || !/^\d{2}-\d{2}$/.test(md)) return "…";
+  const [mm, dd] = md.split("-");
+  return `${dd}/${mm}`;
+}
+
+export function isOnlineBookingOpen(settings: ParkSettings): boolean {
+  // Period starts/ends only block stay dates on the calendar — they do not close the portal.
+  return settings.online_booking_enabled;
 }
 
 function currentTimeInLisbon(now: Date): string {

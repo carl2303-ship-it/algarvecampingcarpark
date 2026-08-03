@@ -227,6 +227,8 @@ const es = {
     step_payment: "Pago",
     check_in: "Entrada",
     check_out: "Salida",
+    online_period_hint:
+      "Fechas bloqueadas para reservas online fuera de {from} a {until} (cada año). La última noche es {until}; la salida puede ser al día siguiente.",
     select_dates: "Fechas y datos del cliente",
     select_zone: "Tipo de plaza",
     select_pitch: "Elija su plaza en el mapa",
@@ -263,6 +265,8 @@ const es = {
     spots_left: "{n} plazas disponibles",
     continue: "Continuar",
     pay: "Pagar el total",
+    network_error:
+      "No se pudo contactar con el servidor. Compruebe la conexión e inténtelo de nuevo.",
     guest_name: "Nombre completo",
     guest_email: "Email",
     guest_phone: "Teléfono",

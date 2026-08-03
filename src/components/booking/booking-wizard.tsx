@@ -14,6 +14,12 @@ import { TermsDialog } from "@/components/legal/terms-dialog";
 import { appendPublicEntryQuery } from "@/lib/gate-entry";
 import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
 import { formatPrice, ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT, type ElectricityAmperage } from "@/lib/pricing";
+import {
+  formatSeasonDayPt,
+  getOnlineBookableSeason,
+  isOnlineBookableCheckInDay,
+  isOnlineBookableCheckOutDay,
+} from "@/lib/park-settings";
 import type { Locale, ParkSettings } from "@/lib/constants";
 import { getTranslations, t as translate } from "@/lib/i18n";
 import { dateFnsLocale } from "@/lib/locale-format";
@@ -36,6 +42,10 @@ type AvailablePitch = PitchMapSpot & {
 
 function resolvePricingZoneSlug(withElectricity: boolean): PricingZoneSlug {
   return withElectricity ? "com-eletricidade" : "sem-eletricidade";
+}
+
+function toLocalDay(d: Date): string {
+  return format(d, "yyyy-MM-dd");
 }
 
 export function BookingWizard({
@@ -89,6 +99,15 @@ export function BookingWizard({
   const canChoose10A = !preferredSpot || preferredMaxAmps >= 10;
   const amperage10SurchargeLabel = formatPrice(ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT);
   const steps: Step[] = useMemo(() => ["details", "pitch", "pay"], []);
+
+  // Public online booking: lock calendar to annual season. Desk/gate QR can pick any future date.
+  const bookableSeason = useMemo(
+    () =>
+      gateEntry
+        ? { fromMd: null, untilMd: null }
+        : getOnlineBookableSeason(parkSettings),
+    [gateEntry, parkSettings]
+  );
 
   useEffect(() => {
     if (!preferredSpot) return;
@@ -172,8 +191,18 @@ export function BookingWizard({
           { gateEntry }
         )
       );
-      const availData = await availRes.json();
-      if (!availRes.ok) throw new Error(availData.error ?? "Erro");
+      const availText = await availRes.text();
+      let availData: { availability?: ZoneAvailability[]; error?: unknown } = {};
+      try {
+        availData = availText ? JSON.parse(availText) : {};
+      } catch {
+        throw new Error(tr.book.network_error);
+      }
+      if (!availRes.ok) {
+        throw new Error(
+          typeof availData.error === "string" ? availData.error : tr.book.network_error
+        );
+      }
 
       const zones = (availData.availability ?? []) as ZoneAvailability[];
       const zone = zones.find((item) => item.zone.slug === targetSlug);
@@ -191,9 +220,22 @@ export function BookingWizard({
           { gateEntry }
         )
       );
-      const pitchData = await pitchRes.json();
+      const pitchText = await pitchRes.text();
+      let pitchData: {
+        pitches?: AvailablePitch[];
+        total_price_cents?: number;
+        deposit_cents?: number;
+        error?: unknown;
+      } = {};
+      try {
+        pitchData = pitchText ? JSON.parse(pitchText) : {};
+      } catch {
+        throw new Error(tr.book.network_error);
+      }
       if (!pitchRes.ok) {
-        throw new Error(typeof pitchData.error === "string" ? pitchData.error : "Erro");
+        throw new Error(
+          typeof pitchData.error === "string" ? pitchData.error : tr.book.network_error
+        );
       }
 
       const list = (pitchData.pitches ?? []) as AvailablePitch[];
@@ -216,8 +258,15 @@ export function BookingWizard({
         list.find((p) => p.code.toUpperCase() === preferredSpot.code.toUpperCase());
       setSelectedPitch(preferred ?? null);
       setStep("pitch");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao verificar disponibilidade");
+      const message =
+        e instanceof TypeError
+          ? tr.book.network_error
+          : e instanceof Error
+            ? e.message
+            : tr.book.network_error;
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -318,7 +367,10 @@ export function BookingWizard({
                     setCheckIn(d);
                     if (d && checkOut && d >= checkOut) setCheckOut(addDays(d, 1));
                   }}
-                  disabled={(d) => d < startOfToday()}
+                  disabled={(d) =>
+                    d < startOfToday() ||
+                    (!gateEntry && !isOnlineBookableCheckInDay(parkSettings, toLocalDay(d)))
+                  }
                   locale={dateLocale}
                   className="rounded-md border mt-2"
                 />
@@ -329,12 +381,23 @@ export function BookingWizard({
                   mode="single"
                   selected={checkOut}
                   onSelect={setCheckOut}
-                  disabled={(d) => d < startOfToday() || (checkIn ? d <= checkIn : false)}
+                  disabled={(d) =>
+                    d < startOfToday() ||
+                    (checkIn ? d <= checkIn : false) ||
+                    (!gateEntry && !isOnlineBookableCheckOutDay(parkSettings, toLocalDay(d)))
+                  }
                   locale={dateLocale}
                   className="rounded-md border mt-2"
                 />
               </div>
             </div>
+            {!gateEntry && (bookableSeason.fromMd || bookableSeason.untilMd) && (
+              <p className="text-xs text-muted-foreground">
+                {tr.book.online_period_hint
+                  .replaceAll("{from}", formatSeasonDayPt(bookableSeason.fromMd))
+                  .replaceAll("{until}", formatSeasonDayPt(bookableSeason.untilMd))}
+              </p>
+            )}
             {checkIn && checkOut && (
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <CalendarIcon className="h-4 w-4" />
@@ -548,6 +611,7 @@ export function BookingWizard({
             </div>
 
             <Button
+              type="button"
               onClick={continueToPitches}
               disabled={!checkIn || !checkOut || loading || plateBlocked || !vehiclePlate.trim()}
               className="w-full"
