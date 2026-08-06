@@ -10,11 +10,6 @@ import { Input } from "@/components/ui/input";
 import { GuestCountStepper } from "@/components/ui/guest-count-stepper";
 import { Label } from "@/components/ui/label";
 import { TermsDialog } from "@/components/legal/terms-dialog";
-import {
-  formatPrice,
-  ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT,
-  type ElectricityAmperage,
-} from "@/lib/pricing";
 import type { Locale, ParkSettings } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
 import { dateFnsLocale } from "@/lib/locale-format";
@@ -48,12 +43,10 @@ export function ReceptionIntakeForm({
   const [numGuests, setNumGuests] = useState(2);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [withElectricity, setWithElectricity] = useState(true);
-  const [electricityAmperage, setElectricityAmperage] = useState<ElectricityAmperage>(6);
   const [over9m, setOver9m] = useState(false);
 
   const checkInStr = checkIn ? format(checkIn, "yyyy-MM-dd") : "";
   const checkOutStr = checkOut ? format(checkOut, "yyyy-MM-dd") : "";
-  const amperage10SurchargeLabel = formatPrice(ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT);
 
   useEffect(() => {
     const plate = vehiclePlate.trim();
@@ -137,7 +130,7 @@ export function ReceptionIntakeForm({
           locale,
           reception_entry: true,
           over_9m: over9m || undefined,
-          electricity_amperage: withElectricity ? electricityAmperage : undefined,
+          electricity_amperage: withElectricity ? 6 : undefined,
         }),
       });
       const data = await res.json();
@@ -301,10 +294,7 @@ export function ReceptionIntakeForm({
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setWithElectricity(false);
-                    setElectricityAmperage(6);
-                  }}
+                  onClick={() => setWithElectricity(false)}
                   className={cn(
                     "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
                     !withElectricity
@@ -316,44 +306,6 @@ export function ReceptionIntakeForm({
                 </button>
               </div>
             </div>
-
-            {withElectricity && (
-              <div className="space-y-2">
-                <Label>{tr.book.amperage_label}</Label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setElectricityAmperage(6)}
-                    className={cn(
-                      "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
-                      electricityAmperage === 6
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <span className="font-medium">{tr.book.amperage_6a}</span>
-                    <span className="block text-muted-foreground mt-0.5 text-xs">
-                      {tr.book.amperage_6a_hint}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setElectricityAmperage(10)}
-                    className={cn(
-                      "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
-                      electricityAmperage === 10
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    <span className="font-medium">{tr.book.amperage_10a}</span>
-                    <span className="block text-muted-foreground mt-0.5 text-xs">
-                      {tr.book.amperage_10a_hint.replace("{amount}", amperage10SurchargeLabel)}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            )}
 
             <label className="flex items-start gap-3 cursor-pointer">
               <input
