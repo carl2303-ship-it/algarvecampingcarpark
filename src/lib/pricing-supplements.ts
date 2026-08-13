@@ -32,7 +32,7 @@ export type PricingContext = {
   manualSupplementIds?: string[];
 };
 
-const FALLBACK_SUPPLEMENTS: PricingSupplement[] = [
+export const FALLBACK_SUPPLEMENTS: PricingSupplement[] = [
   {
     id: "fallback-extra-guest",
     slug: "extra_guest",

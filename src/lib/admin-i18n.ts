@@ -738,6 +738,17 @@ export const adminT = {
     saveError: "Erreur lors de l'enregistrement des identifiants.",
     footer: "Obtenez les clés sur",
     webhookNote: ". Le webhook doit pointer vers",
+    moloniTitle: "Articles Moloni (Stripe)",
+    moloniDescription:
+      "Ces produits sont créés dans Stripe avec IVA inclus (6 % hébergement, 23 % électricité et personne extra). Kapta/Moloni peut les mapper par nom. Le checkout décompose chaque séjour en ces lignes.",
+    moloniSync: "Créer / mettre à jour dans Stripe",
+    moloniSyncing: "Synchronisation…",
+    moloniSynced: "Articles synchronisés dans le catalogue Stripe.",
+    moloniSyncError: "Impossible de synchroniser les articles Stripe.",
+    moloniColName: "Article",
+    moloniColPrice: "TTC / nuit",
+    moloniColVat: "IVA",
+    moloniProductsLink: "Voir les produits Stripe",
   },
   email: {
     title: "E-mail (Resend)",

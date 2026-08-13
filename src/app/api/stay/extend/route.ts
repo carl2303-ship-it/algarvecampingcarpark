@@ -39,6 +39,9 @@ export async function POST(request: Request) {
         total_cents: reservation.total_cents,
         num_guests: reservation.num_guests,
         pitch_code: reservation.pitch_code,
+        electricity_amperage: reservation.electricity_amperage,
+        motorhome_over_9m: reservation.motorhome_over_9m,
+        manual_supplement_ids: reservation.manual_supplement_ids,
       },
       newCheckOut: body.check_out,
     });
@@ -75,6 +78,7 @@ export async function POST(request: Request) {
       applyOnPayment: true,
       cancelUrl,
       locale: body.locale as Locale,
+      accountingLines: quote.lines,
     });
 
     const supabase = createAdminClient();

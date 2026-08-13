@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculateTotalPrice, type PricingOptions } from "@/lib/pricing";
+import { calculateTotalPrice, EMPTY_STAY_PRICING, type PricingOptions } from "@/lib/pricing";
 import {
   getSpotZoneSlug,
   isPricingZoneSlug,
@@ -112,7 +112,7 @@ export async function validateBookingAvailability(
 
   if (error) throw error;
   if (!availableSpots || availableSpots <= 0) {
-    return { available: false, pricing: { totalCents: 0, nights: 0, minNights: 1, pricePerNightCents: 0 } };
+    return { available: false, pricing: EMPTY_STAY_PRICING };
   }
 
   const rates = await getZoneRates(zoneId);
@@ -329,7 +329,7 @@ export async function validatePitchBookingAvailability(params: {
   if (!zone) {
     return {
       available: false,
-      pricing: { totalCents: 0, nights: 0, minNights: 1, pricePerNightCents: 0 },
+      pricing: EMPTY_STAY_PRICING,
       pitch: null,
       zone: null,
     };
@@ -338,7 +338,7 @@ export async function validatePitchBookingAvailability(params: {
   if (!isPricingZoneSlug(zone.slug)) {
     return {
       available: false,
-      pricing: { totalCents: 0, nights: 0, minNights: 1, pricePerNightCents: 0 },
+      pricing: EMPTY_STAY_PRICING,
       pitch: null,
       zone: null,
     };

@@ -4,6 +4,7 @@ import { GateQrGenerator } from "@/components/admin/gate-qr-generator";
 import { ReceptionQrGenerator } from "@/components/admin/reception-qr-generator";
 import { OnlineBookingSettings } from "@/components/admin/online-booking-settings";
 import { StripeSettingsForm } from "@/components/admin/stripe-settings-form";
+import { MoloniStripeCatalogCard } from "@/components/admin/moloni-stripe-catalog-card";
 import { EmailSettingsForm } from "@/components/admin/email-settings-form";
 import { BlockedDatesManager } from "@/components/admin/blocked-dates-manager";
 import { StaffAccessManager } from "@/components/admin/staff-access-manager";
@@ -42,6 +43,8 @@ export default async function SettingsPage() {
       <EmailSettingsForm initial={emailSettings} />
 
       <StripeSettingsForm initial={stripeSettings} />
+
+      <MoloniStripeCatalogCard />
     </div>
   );
 }

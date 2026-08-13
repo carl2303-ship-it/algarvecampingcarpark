@@ -2,6 +2,12 @@ import Stripe from "stripe";
 import { SITE_NAME, SITE_URL, type Locale } from "./constants";
 import { localePath } from "./locale-path";
 import { getStripeSecrets } from "./stripe-settings";
+import type { AccountingLine } from "./moloni-articles";
+import {
+  linesMatchAmount,
+  resetMoloniStripeCatalogCache,
+  toStripeCheckoutLineItems,
+} from "./stripe-moloni";
 
 /** Stripe Checkout: expires_at must be 30 min–24 h from session creation. */
 const CHECKOUT_EXPIRES_IN_SECONDS = {
@@ -16,6 +22,7 @@ let cachedSecretKey: string | null = null;
 export function resetStripeClient() {
   stripeInstance = null;
   cachedSecretKey = null;
+  resetMoloniStripeCatalogCache();
 }
 
 export async function getStripe(): Promise<Stripe> {
@@ -35,6 +42,49 @@ export async function getStripe(): Promise<Stripe> {
   return stripeInstance;
 }
 
+async function stripeCheckoutLineItems({
+  stripe,
+  accountingLines,
+  amountCents,
+  fallbackName,
+  fallbackDescription,
+}: {
+  stripe: Stripe;
+  accountingLines?: AccountingLine[];
+  amountCents: number;
+  fallbackName: string;
+  fallbackDescription: string;
+}): Promise<Stripe.Checkout.SessionCreateParams.LineItem[]> {
+  if (linesMatchAmount(accountingLines, amountCents)) {
+    const items = await toStripeCheckoutLineItems(stripe, accountingLines!);
+    if (items.length > 0) return items;
+  }
+
+  return [
+    {
+      price_data: {
+        currency: "eur",
+        product_data: {
+          name: fallbackName,
+          description: fallbackDescription,
+        },
+        unit_amount: amountCents,
+      },
+      quantity: 1,
+    },
+  ];
+}
+
+function invoiceCreation(description: string, reservationId: string) {
+  return {
+    enabled: true as const,
+    invoice_data: {
+      description,
+      metadata: { reservation_id: reservationId },
+    },
+  };
+}
+
 export async function createCheckoutSession({
   reservationId,
   depositCents,
@@ -48,6 +98,7 @@ export async function createCheckoutSession({
   vehiclePlate,
   locale = "pt",
   gateEntry = false,
+  accountingLines,
 }: {
   reservationId: string;
   depositCents: number;
@@ -61,6 +112,7 @@ export async function createCheckoutSession({
   vehiclePlate?: string | null;
   locale?: Locale;
   gateEntry?: boolean;
+  accountingLines?: AccountingLine[];
 }) {
   const stripe = await getStripe();
   const plate = vehiclePlate?.trim() || "";
@@ -72,24 +124,19 @@ export async function createCheckoutSession({
   const cancelPath = gateEntry
     ? `${localePath(locale, "/book")}?from=qr&cancelled=1`
     : `${localePath(locale, "/book")}?cancelled=1`;
+  const line_items = await stripeCheckoutLineItems({
+    stripe,
+    accountingLines,
+    amountCents: depositCents,
+    fallbackName: productName,
+    fallbackDescription: productDescription,
+  });
 
   return stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: guestEmail,
-    invoice_creation: { enabled: true },
-    line_items: [
-      {
-        price_data: {
-          currency: "eur",
-          product_data: {
-            name: productName,
-            description: productDescription,
-          },
-          unit_amount: depositCents,
-        },
-        quantity: 1,
-      },
-    ],
+    invoice_creation: invoiceCreation(productDescription, reservationId),
+    line_items,
     payment_intent_data: {
       description: productDescription,
       metadata: {
@@ -145,23 +192,17 @@ export async function createBalanceCheckoutSession({
   const pitch = pitchCode ? ` · ${pitchCode}` : "";
   const plateInName = plate ? ` · ${plate}` : "";
   const productDescription = `${platePart}Check-in: ${checkIn} | Check-out: ${checkOut} | Zone: ${zoneName}`;
+  const line_items = await stripeCheckoutLineItems({
+    stripe,
+    amountCents: balanceCents,
+    fallbackName: `${SITE_NAME} — Solde${pitch}${plateInName}`,
+    fallbackDescription: productDescription,
+  });
   return stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: guestEmail,
-    invoice_creation: { enabled: true },
-    line_items: [
-      {
-        price_data: {
-          currency: "eur",
-          product_data: {
-            name: `${SITE_NAME} — Solde${pitch}${plateInName}`,
-            description: productDescription,
-          },
-          unit_amount: balanceCents,
-        },
-        quantity: 1,
-      },
-    ],
+    invoice_creation: invoiceCreation(productDescription, reservationId),
+    line_items,
     payment_intent_data: {
       description: productDescription,
       metadata: {
@@ -197,6 +238,7 @@ export async function createExtensionCheckoutSession({
   applyOnPayment = false,
   cancelUrl,
   locale = "pt",
+  accountingLines,
 }: {
   reservationId: string;
   extensionCents: number;
@@ -210,28 +252,24 @@ export async function createExtensionCheckoutSession({
   applyOnPayment?: boolean;
   cancelUrl?: string;
   locale?: Locale;
+  accountingLines?: AccountingLine[];
 }) {
   const stripe = await getStripe();
   const plate = vehiclePlate?.trim() || "";
   const platePart = plate ? `Matrícula: ${plate} | ` : "";
   const productDescription = `${platePart}Lugar ${pitchCode}: ${oldCheckOut} → ${newCheckOut}`;
+  const line_items = await stripeCheckoutLineItems({
+    stripe,
+    accountingLines,
+    amountCents: extensionCents,
+    fallbackName: `${SITE_NAME} — Extensão de estadia${plate ? ` · ${plate}` : ""}`,
+    fallbackDescription: productDescription,
+  });
   return stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: guestEmail,
-    invoice_creation: { enabled: true },
-    line_items: [
-      {
-        price_data: {
-          currency: "eur",
-          product_data: {
-            name: `${SITE_NAME} — Extensão de estadia${plate ? ` · ${plate}` : ""}`,
-            description: productDescription,
-          },
-          unit_amount: extensionCents,
-        },
-        quantity: 1,
-      },
-    ],
+    invoice_creation: invoiceCreation(productDescription, reservationId),
+    line_items,
     payment_intent_data: {
       description: productDescription,
       metadata: {
