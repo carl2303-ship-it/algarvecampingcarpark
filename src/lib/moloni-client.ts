@@ -60,15 +60,32 @@ function extractMoloniError(body: unknown): string | null {
   return null;
 }
 
+const MOLONI_FETCH_TIMEOUT_MS = 12_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MOLONI_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new MoloniApiError("Tempo esgotado ao contactar a API Moloni. Tente de novo.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function requestGrant(params: Record<string, string>): Promise<TokenResponse> {
   const query = new URLSearchParams(params);
   const url = `${MOLONI_BASE}/grant/?${query.toString()}`;
 
-  let response = await fetch(url, { method: "GET" });
+  let response = await fetchWithTimeout(url, { method: "GET" });
   let body = (await response.json().catch(() => ({}))) as TokenResponse;
 
   if ((!response.ok || !body.access_token) && response.status !== 400) {
-    response = await fetch(`${MOLONI_BASE}/grant/`, {
+    response = await fetchWithTimeout(`${MOLONI_BASE}/grant/`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: query,
@@ -177,7 +194,7 @@ export async function moloniPost<T>(
 ): Promise<T> {
   const token = await getMoloniAccessToken();
   const url = `${MOLONI_BASE}${path}?access_token=${encodeURIComponent(token)}&json=true`;
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: JSON.stringify(payload),
@@ -298,6 +315,54 @@ async function moloniProductsInCategory(companyId: number, categoryId: number): 
     console.warn("Moloni products/getAll failed:", error);
   }
   return products;
+}
+
+function mergeProductResults(byId: Map<number, MoloniProduct>, items: MoloniProduct[]): void {
+  for (const item of items) {
+    if (item?.product_id) byId.set(item.product_id, item);
+  }
+}
+
+async function parallelProductSearches(
+  companyId: number,
+  queries: string[]
+): Promise<MoloniProduct[]> {
+  const unique = [...new Set(queries.map((query) => query.trim()).filter(Boolean))];
+  if (!unique.length) return [];
+
+  const byId = new Map<number, MoloniProduct>();
+  const results = await Promise.allSettled(
+    unique.map((search) => moloniProductsBySearch(companyId, search))
+  );
+  for (const result of results) {
+    if (result.status === "fulfilled") mergeProductResults(byId, result.value);
+  }
+  return [...byId.values()];
+}
+
+/** Fast catalog fetch for admin sync — parallel searches, no recursive category walk. */
+export async function moloniProductsForArticleSync(companyId: number): Promise<MoloniProduct[]> {
+  const byId = new Map<number, MoloniProduct>();
+
+  const primary = await parallelProductSearches(companyId, [
+    "Noite",
+    "Inverno",
+    "Agosto",
+    "Verao",
+    "Verão",
+    "Elec",
+    "PESSOA",
+    "1.50",
+    "10m",
+    "9m",
+  ]);
+  mergeProductResults(byId, primary);
+
+  if (byId.size < 6) {
+    mergeProductResults(byId, await moloniProductsInCategory(companyId, 0));
+  }
+
+  return [...byId.values()];
 }
 
 export async function moloniListAllProducts(companyId: number): Promise<MoloniProduct[]> {

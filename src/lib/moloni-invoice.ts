@@ -31,10 +31,12 @@ import {
   moloniDocumentSets,
   moloniInsertInvoiceReceipt,
   moloniInvoiceReceiptsByReference,
-  moloniListAllProducts,
+  moloniProductsForArticleSync,
+  moloniProductsBySearch,
   moloniLogin,
   moloniPaymentMethods,
   moloniTaxes,
+  type MoloniProduct,
 } from "@/lib/moloni-client";
 import { getStripe } from "@/lib/stripe";
 import { buildMoloniInvoicePayload, pickMatchingProductForArticle } from "@/lib/moloni-payload";
@@ -50,6 +52,51 @@ function pickPaymentMethodId(methods: { payment_method_id: number; name?: string
     /stripe|cart[aã]o|credit|visa|mbway|multibanco/i.test(method.name ?? "")
   );
   return ranked?.payment_method_id ?? methods[0]?.payment_method_id ?? null;
+}
+
+function matchArticlesToProducts(
+  products: MoloniProduct[],
+  existingMap: MoloniProductMap
+): { productMap: MoloniProductMap; missing: string[] } {
+  const productMap: MoloniProductMap = { ...existingMap };
+  const missing: string[] = [];
+
+  for (const article of MOLONI_ARTICLE_LIST) {
+    const id = pickMatchingProductForArticle(
+      article,
+      products,
+      MOLONI_ARTICLE_ALIASES[article.sku] ?? []
+    );
+    if (id) productMap[article.sku] = id;
+    else missing.push(article.name);
+  }
+
+  return { productMap, missing };
+}
+
+async function loadProductsForCompany(companyId: number): Promise<MoloniProduct[]> {
+  let products = await moloniProductsForArticleSync(companyId);
+  let { missing } = matchArticlesToProducts(products, {});
+
+  if (missing.length > 0) {
+    const extraTerms = missing.flatMap((name) => {
+      const parts = name.split(/\s+/).filter(Boolean);
+      return [parts[0], parts.slice(0, 2).join(" ")].filter(Boolean) as string[];
+    });
+    const extra = await Promise.allSettled(
+      [...new Set(extraTerms)].slice(0, 6).map((search) => moloniProductsBySearch(companyId, search))
+    );
+    const byId = new Map(products.map((product) => [product.product_id, product]));
+    for (const result of extra) {
+      if (result.status !== "fulfilled") continue;
+      for (const product of result.value) {
+        if (product?.product_id) byId.set(product.product_id, product);
+      }
+    }
+    products = [...byId.values()];
+  }
+
+  return products;
 }
 
 export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promise<{
@@ -70,38 +117,33 @@ export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promis
   let companyId = secrets.companyId ?? companies[0]?.company_id;
   if (!companyId) throw new MoloniApiError("Nenhuma empresa encontrada na conta Moloni");
 
-  let products = await moloniListAllProducts(companyId);
-  if (products.length === 0) {
-    for (const company of companies) {
-      if (company.company_id === companyId) continue;
-      const found = await moloniListAllProducts(company.company_id);
-      if (found.length > 0) {
-        companyId = company.company_id;
-        products = found;
-        break;
-      }
-    }
-  }
-
-  const [taxes, sets, methods, consumers] = await Promise.all([
+  let [products, taxes, sets, methods, consumers] = await Promise.all([
+    loadProductsForCompany(companyId),
     moloniTaxes(companyId),
     moloniDocumentSets(companyId),
     moloniPaymentMethods(companyId),
     moloniCustomersByVat(companyId, MOLONI_CONSUMER_VAT),
   ]);
 
-  const productMap: MoloniProductMap = { ...secrets.productMap };
-  const missing: string[] = [];
-
-  for (const article of MOLONI_ARTICLE_LIST) {
-    const id = pickMatchingProductForArticle(
-      article,
-      products,
-      MOLONI_ARTICLE_ALIASES[article.sku] ?? []
-    );
-    if (id) productMap[article.sku] = id;
-    else missing.push(article.name);
+  if (products.length === 0) {
+    for (const company of companies) {
+      if (company.company_id === companyId) continue;
+      const found = await loadProductsForCompany(company.company_id);
+      if (found.length > 0) {
+        companyId = company.company_id;
+        products = found;
+        [taxes, sets, methods, consumers] = await Promise.all([
+          moloniTaxes(companyId),
+          moloniDocumentSets(companyId),
+          moloniPaymentMethods(companyId),
+          moloniCustomersByVat(companyId, MOLONI_CONSUMER_VAT),
+        ]);
+        break;
+      }
+    }
   }
+
+  const { productMap, missing } = matchArticlesToProducts(products, secrets.productMap);
 
   await saveMoloniSettings(
     {
