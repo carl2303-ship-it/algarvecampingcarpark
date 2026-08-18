@@ -49,6 +49,8 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
     setSaving(false);
     if (res.ok) {
       setView(data.settings);
+      setEnabled(data.settings.enabled);
+      setCloseDocuments(data.settings.close_documents);
       setClientId("");
       setClientSecret("");
       setUsername("");
@@ -83,6 +85,8 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
     setSyncing(false);
     if (res.ok) {
       setView(data.settings);
+      setEnabled(data.settings.enabled);
+      setCloseDocuments(data.settings.close_documents);
       setClientId("");
       setClientSecret("");
       setUsername("");
@@ -117,7 +121,17 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
           <Badge variant={view.enabled ? "default" : "secondary"}>
             {view.enabled ? adminT.moloni.autoOn : adminT.moloni.autoOff}
           </Badge>
+          {view.source === "database" ? (
+            <Badge variant="secondary">{adminT.common.inApp}</Badge>
+          ) : null}
+          {view.source === "fallback" ? (
+            <Badge variant="outline">{adminT.moloni.fallbackStorage}</Badge>
+          ) : null}
         </div>
+
+        {view.configured ? (
+          <p className="text-xs text-muted-foreground">{adminT.moloni.savedHint}</p>
+        ) : null}
 
         <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-2">

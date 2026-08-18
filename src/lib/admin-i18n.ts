@@ -763,6 +763,8 @@ export const adminT = {
     save: "Enregistrer Moloni",
     saved: "Paramètres Moloni enregistrés.",
     saveError: "Erreur lors de l'enregistrement Moloni.",
+    savePersistError:
+      "Les identifiants n'ont pas été enregistrés de façon permanente. Exécutez la migration 031 dans Supabase (SQL Editor).",
     sync: "Tester et synchroniser articles / IVA / série",
     syncing: "Connexion Moloni…",
     synced: "Connexion OK. Articles, taxes et série synchronisés.",
@@ -771,6 +773,9 @@ export const adminT = {
     syncHint:
       "Remplissez Developer ID, Client Secret, e-mail et mot de passe Moloni, puis cliquez ci-dessous. Les noms des articles doivent correspondre à la liste.",
     configured: "Identifiants présents",
+    savedHint:
+      "Les champs secrets restent vides après enregistrement (comme Stripe). Les valeurs sont conservées — laissez vide pour les garder.",
+    fallbackStorage: "Stockage temporaire",
     autoOn: "Automatisation ON",
     autoOff: "Automatisation OFF",
     missingArticles: "Articles introuvables dans Moloni",
@@ -779,7 +784,7 @@ export const adminT = {
     developerHint:
       "Moloni → Área de Cliente → Configuração da API. Developer ID + Client Secret. L'URI de callback peut être https://algarvecampingcarpark.pt/",
     tableMissing:
-      "La table moloni_settings n'existe pas encore dans Supabase. Exécutez la migration 031 (SQL Editor ou npm run db:apply-moloni). Les paramètres sont temporairement stockés en secours.",
+      "La table moloni_settings n'existe pas encore dans Supabase. Sans elle, les identifiants ne survivent pas à un rechargement. Exécutez la migration 031 (SQL Editor).",
   },
   email: {
     title: "E-mail (Resend)",

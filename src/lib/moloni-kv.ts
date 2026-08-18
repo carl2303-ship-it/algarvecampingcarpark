@@ -39,6 +39,10 @@ export type MoloniPaymentSync = {
   moloni_synced_at?: string | null;
 };
 
+function hasStoredSecrets(row: MoloniSettingsRow | null): boolean {
+  return Boolean(row?.client_id?.trim() || row?.username?.trim());
+}
+
 export async function loadMoloniKvRow(): Promise<MoloniSettingsRow | null> {
   try {
     const store = openBlobStore();
@@ -52,21 +56,28 @@ export async function loadMoloniKvRow(): Promise<MoloniSettingsRow | null> {
   }
 }
 
-export async function saveMoloniKvRow(row: MoloniSettingsRow): Promise<void> {
+/** Returns true when secrets can be read back after write. */
+export async function saveMoloniKvRow(row: MoloniSettingsRow): Promise<boolean> {
   try {
     const store = openBlobStore();
     await store.setJSON(SETTINGS_KEY, row);
-    return;
+    const data = await store.get(SETTINGS_KEY, { type: "json" });
+    const parsed = parseSettingsRow(data);
+    if (hasStoredSecrets(parsed)) return true;
   } catch (error) {
     if (!isMissingBlobsEnv(error)) {
       console.warn("Moloni fallback store write error:", error);
     }
   }
+
   try {
     await fs.mkdir(path.dirname(LOCAL_FILE), { recursive: true });
     await fs.writeFile(LOCAL_FILE, JSON.stringify(row), "utf8");
+    const parsed = await loadLocalRow();
+    return hasStoredSecrets(parsed);
   } catch (error) {
     console.warn("Moloni local settings write error:", error);
+    return false;
   }
 }
 

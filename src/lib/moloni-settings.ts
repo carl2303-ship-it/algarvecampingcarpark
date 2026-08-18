@@ -8,6 +8,13 @@ export const MOLONI_CONSUMER_VAT = "999999990";
 
 export type { MoloniProductMap };
 
+export class MoloniSettingsPersistError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MoloniSettingsPersistError";
+  }
+}
+
 export type MoloniSecrets = {
   clientId: string | null;
   clientSecret: string | null;
@@ -76,7 +83,6 @@ function parseProductMap(value: unknown): MoloniProductMap {
 }
 
 let moloniTableMissing = false;
-let memoryRow: MoloniSettingsRow | null = null;
 
 export function isMoloniSettingsTableMissing(): boolean {
   return moloniTableMissing;
@@ -89,36 +95,74 @@ function normalizeMoloniRow(data: MoloniSettingsRow): MoloniSettingsRow {
   };
 }
 
+function mergeMoloniRows(
+  primary: MoloniSettingsRow | null,
+  secondary: MoloniSettingsRow | null
+): MoloniSettingsRow | null {
+  if (!primary && !secondary) return null;
+  const base = primary ?? secondary!;
+  const extra = primary && secondary ? secondary : null;
+  if (!extra) return normalizeMoloniRow(base);
+  return normalizeMoloniRow({
+    client_id: base.client_id ?? extra.client_id,
+    client_secret: base.client_secret ?? extra.client_secret,
+    username: base.username ?? extra.username,
+    password: base.password ?? extra.password,
+    company_id: base.company_id ?? extra.company_id,
+    document_set_id: base.document_set_id ?? extra.document_set_id,
+    payment_method_id: base.payment_method_id ?? extra.payment_method_id,
+    tax_id_6: base.tax_id_6 ?? extra.tax_id_6,
+    tax_id_23: base.tax_id_23 ?? extra.tax_id_23,
+    consumer_customer_id: base.consumer_customer_id ?? extra.consumer_customer_id,
+    access_token: base.access_token ?? extra.access_token,
+    refresh_token: base.refresh_token ?? extra.refresh_token,
+    token_expires_at: base.token_expires_at ?? extra.token_expires_at,
+    product_map: {
+      ...parseProductMap(extra.product_map),
+      ...parseProductMap(base.product_map),
+    },
+    enabled: base.enabled ?? extra.enabled,
+    close_documents: base.close_documents ?? extra.close_documents,
+  });
+}
+
+async function loadMoloniDbRow(): Promise<MoloniSettingsRow | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("moloni_settings")
+    .select("*")
+    .eq("id", true)
+    .maybeSingle();
+  if (error) {
+    if (isMissingRelationError(error)) {
+      moloniTableMissing = true;
+      return null;
+    }
+    throw new Error(error.message);
+  }
+  moloniTableMissing = false;
+  if (!data) return null;
+  return normalizeMoloniRow(data as MoloniSettingsRow);
+}
+
 async function loadMoloniRow(): Promise<MoloniSettingsRow | null> {
   try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("moloni_settings")
-      .select("*")
-      .eq("id", true)
-      .maybeSingle();
-    if (error) {
-      if (isMissingRelationError(error)) {
-        moloniTableMissing = true;
-        const fallback = await loadMoloniKvRow();
-        const row = fallback ?? memoryRow;
-        return row ? normalizeMoloniRow(row) : null;
-      }
-      console.warn("Moloni settings fetch error:", error.message);
-      return memoryRow ? normalizeMoloniRow(memoryRow) : null;
+    const dbRow = await loadMoloniDbRow();
+    if (moloniTableMissing) {
+      const kvRow = await loadMoloniKvRow();
+      return kvRow ? normalizeMoloniRow(kvRow) : null;
     }
-    moloniTableMissing = false;
-    if (!data) return memoryRow ? normalizeMoloniRow(memoryRow) : null;
-    return normalizeMoloniRow(data as MoloniSettingsRow);
+    const kvRow = await loadMoloniKvRow();
+    return mergeMoloniRows(dbRow, kvRow);
   } catch (error) {
     if (isMissingRelationError(error)) {
       moloniTableMissing = true;
-    } else {
-      console.warn("Moloni settings unavailable:", error);
+      const kvRow = await loadMoloniKvRow();
+      return kvRow ? normalizeMoloniRow(kvRow) : null;
     }
-    const fallback = await loadMoloniKvRow();
-    const row = fallback ?? memoryRow;
-    return row ? normalizeMoloniRow(row) : null;
+    console.warn("Moloni settings unavailable:", error);
+    const kvRow = await loadMoloniKvRow();
+    return kvRow ? normalizeMoloniRow(kvRow) : null;
   }
 }
 
@@ -127,6 +171,56 @@ function envInt(name: string): number | null {
   if (!raw) return null;
   const value = Number(raw);
   return Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function rowHasSecrets(row: MoloniSettingsRow | null): boolean {
+  return Boolean(
+    row?.client_id?.trim() &&
+      row?.client_secret?.trim() &&
+      row?.username?.trim() &&
+      row?.password
+  );
+}
+
+async function persistMoloniRow(rowPayload: MoloniSettingsRow): Promise<"database" | "fallback"> {
+  if (!moloniTableMissing) {
+    try {
+      const supabase = createAdminClient();
+      const { error } = await supabase.from("moloni_settings").upsert({
+        id: true,
+        ...rowPayload,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) {
+        if (isMissingRelationError(error)) {
+          moloniTableMissing = true;
+        } else {
+          throw new Error(error.message);
+        }
+      } else {
+        const verified = await loadMoloniDbRow();
+        if (rowHasSecrets(rowPayload) && !rowHasSecrets(verified)) {
+          throw new MoloniSettingsPersistError(
+            "As credenciais Moloni não ficaram guardadas na base de dados. Verifique a migração 031 no Supabase."
+          );
+        }
+        await saveMoloniKvRow(rowPayload).catch(() => undefined);
+        return "database";
+      }
+    } catch (error) {
+      if (error instanceof MoloniSettingsPersistError) throw error;
+      if (!isMissingRelationError(error)) throw error;
+      moloniTableMissing = true;
+    }
+  }
+
+  const kvSaved = await saveMoloniKvRow(rowPayload);
+  if (rowHasSecrets(rowPayload) && !kvSaved) {
+    throw new MoloniSettingsPersistError(
+      "Não foi possível guardar as credenciais Moloni. Execute a migração 031 no Supabase (SQL Editor) — é a forma persistente em produção."
+    );
+  }
+  return "fallback";
 }
 
 export async function getMoloniSecrets(): Promise<MoloniSecrets> {
@@ -154,7 +248,7 @@ export async function getMoloniSecrets(): Promise<MoloniSecrets> {
 export async function getMoloniSettingsView(): Promise<MoloniSettingsView> {
   const secrets = await getMoloniSecrets();
   const row = await loadMoloniRow();
-  const hasDb = Boolean(row?.client_id || row?.username);
+  const hasDb = !moloniTableMissing && Boolean(row?.client_id || row?.username);
   const hasEnv = Boolean(process.env.MOLONI_CLIENT_ID || process.env.MOLONI_USERNAME);
   let source: MoloniSettingsView["source"] = null;
   if (moloniTableMissing && (row || hasEnv)) source = "fallback";
@@ -202,7 +296,7 @@ export async function saveMoloniSettings(input: {
 }): Promise<MoloniSettingsView> {
   const current = await loadMoloniRow();
 
-  const payload = {
+  const rowPayload: MoloniSettingsRow = {
     client_id: input.client_id?.trim() || current?.client_id || null,
     client_secret: input.client_secret?.trim() || current?.client_secret || null,
     username: input.username?.trim() || current?.username || null,
@@ -230,50 +324,25 @@ export async function saveMoloniSettings(input: {
       input.token_expires_at !== undefined
         ? input.token_expires_at
         : current?.token_expires_at ?? null,
-    updated_at: new Date().toISOString(),
   };
 
-  const rowPayload: MoloniSettingsRow = {
-    client_id: payload.client_id,
-    client_secret: payload.client_secret,
-    username: payload.username,
-    password: payload.password,
-    company_id: payload.company_id,
-    document_set_id: payload.document_set_id,
-    payment_method_id: payload.payment_method_id,
-    tax_id_6: payload.tax_id_6,
-    tax_id_23: payload.tax_id_23,
-    consumer_customer_id: payload.consumer_customer_id,
-    access_token: payload.access_token,
-    refresh_token: payload.refresh_token,
-    token_expires_at: payload.token_expires_at,
-    product_map: payload.product_map,
-    enabled: payload.enabled,
-    close_documents: payload.close_documents,
-  };
+  const savingSecrets = Boolean(
+    input.client_id?.trim() ||
+      input.client_secret?.trim() ||
+      input.username?.trim() ||
+      input.password
+  );
 
-  memoryRow = rowPayload;
+  await persistMoloniRow(rowPayload);
 
-  try {
-    const supabase = createAdminClient();
-    const { error } = await supabase.from("moloni_settings").upsert({ id: true, ...payload });
-    if (!error) {
-      moloniTableMissing = false;
-      return getMoloniSettingsView();
-    }
-    if (!isMissingRelationError(error)) throw new Error(error.message);
-    moloniTableMissing = true;
-  } catch (error) {
-    if (!isMissingRelationError(error) && !(error instanceof Error && /not configured/i.test(error.message))) {
-      console.warn("Moloni settings database save failed:", error);
-      if (error instanceof Error && !isMissingRelationError(error)) {
-        /* still persist to fallback so sync can continue */
-      }
-    } else {
-      moloniTableMissing = true;
+  if (savingSecrets) {
+    const verified = await loadMoloniRow();
+    if (!rowHasSecrets(verified)) {
+      throw new MoloniSettingsPersistError(
+        "As credenciais não persistiram após guardar. Aplique a migração 031 no Supabase."
+      );
     }
   }
 
-  await saveMoloniKvRow(rowPayload);
   return getMoloniSettingsView();
 }
