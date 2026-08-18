@@ -128,6 +128,25 @@ export const MOLONI_ARTICLES: Record<MoloniArticleSku, MoloniArticle> = {
 
 export const MOLONI_ARTICLE_LIST: MoloniArticle[] = Object.values(MOLONI_ARTICLES);
 
+/** Alternate Moloni product titles (park uses +9 m in the app, Moloni may say + de 9m). */
+export const MOLONI_ARTICLE_ALIASES: Partial<Record<MoloniArticleSku, string[]>> = {
+  "over-10m": [
+    "+ de 9m",
+    "+ de 10 m",
+    "+ de 10 metros",
+    "+ de 9 metros",
+    "+9m",
+    "+ 9m",
+    "+10m",
+    "+ 10m",
+    "mais de 10m",
+    "mais de 9m",
+    "+ de 10 M",
+    "superior a 10m",
+    "superior a 9m",
+  ],
+};
+
 export function splitInclusiveVat(
   grossCents: number,
   vatPercent: number

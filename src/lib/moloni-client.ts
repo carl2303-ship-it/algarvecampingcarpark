@@ -328,7 +328,21 @@ export async function moloniListAllProducts(companyId: number): Promise<MoloniPr
     }
   }
 
-  for (const query of ["Noite", "Elec", "PESSOA", "pessoa", "10m", "Inverno", "Agosto", "Verao", "Verão"]) {
+  for (const query of [
+    "Noite",
+    "Elec",
+    "PESSOA",
+    "pessoa",
+    "10m",
+    "9m",
+    "+ de",
+    "de 10",
+    "de 9",
+    "Inverno",
+    "Agosto",
+    "Verao",
+    "Verão",
+  ]) {
     try {
       add(await moloniProductsBySearch(companyId, query));
     } catch (error) {

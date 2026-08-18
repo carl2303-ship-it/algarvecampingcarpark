@@ -10,6 +10,7 @@ import { getZoneRates } from "@/lib/availability";
 import { calculateTotalPrice } from "@/lib/pricing";
 import { getPricingSupplements } from "@/lib/pricing-supplements";
 import {
+  MOLONI_ARTICLE_ALIASES,
   MOLONI_ARTICLE_LIST,
   accountingLinesTotalCents,
   type AccountingLine,
@@ -35,7 +36,7 @@ import {
   moloniTaxes,
 } from "@/lib/moloni-client";
 import { getStripe } from "@/lib/stripe";
-import { buildMoloniInvoicePayload, pickMatchingProductId } from "@/lib/moloni-payload";
+import { buildMoloniInvoicePayload, pickMatchingProductForArticle } from "@/lib/moloni-payload";
 
 function pickTaxId(taxes: { tax_id: number; value?: number; saft_type?: number; type?: number }[], percent: number) {
   const iva = taxes.filter((tax) => tax.saft_type === 1 || tax.type === 1 || tax.saft_type == null);
@@ -92,7 +93,11 @@ export async function syncMoloniCatalog(): Promise<{
   const missing: string[] = [];
 
   for (const article of MOLONI_ARTICLE_LIST) {
-    const id = pickMatchingProductId(article.name, products);
+    const id = pickMatchingProductForArticle(
+      article,
+      products,
+      MOLONI_ARTICLE_ALIASES[article.sku] ?? []
+    );
     if (id) productMap[article.sku] = id;
     else missing.push(article.name);
   }

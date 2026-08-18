@@ -71,9 +71,16 @@ function normalizeName(value: string): string {
     .toLowerCase();
 }
 
+export type MoloniProductCandidate = {
+  product_id: number;
+  name?: string;
+  reference?: string;
+  price?: number;
+};
+
 export function pickMatchingProductId(
   articleName: string,
-  products: { product_id: number; name?: string; reference?: string }[]
+  products: MoloniProductCandidate[]
 ): number | null {
   const wanted = normalizeName(articleName);
   const wantedFp = fingerprint(articleName);
@@ -91,11 +98,44 @@ export function pickMatchingProductId(
     const name = normalizeName(item.name ?? "");
     const fp = fingerprint(item.name ?? "");
     return (
-      (name.length >= 4 && (name.includes(wanted) || wanted.includes(name))) ||
-      (wantedFp.length >= 6 && (fp.includes(wantedFp) || wantedFp.includes(fp)))
+      (name.length >= 3 && (name.includes(wanted) || wanted.includes(name))) ||
+      (wantedFp.length >= 4 && (fp.includes(wantedFp) || wantedFp.includes(fp)))
     );
   });
   return partial?.product_id ?? null;
+}
+
+const LENGTH_SUPPLEMENT_NAME =
+  /(?:\+|mais|de|superior).*(?:9|10)\s*m|(?:9|10)\s*m(?:et|$)|(?:9|10)\s*metros/i;
+
+function pickByCatalogPrice(
+  grossCents: number,
+  vatPercent: VatPercent,
+  products: MoloniProductCandidate[],
+  nameFilter?: RegExp
+): number | null {
+  const net = moloniNetPrice(grossCents, vatPercent);
+  const gross = grossCents / 100;
+  const matches = products.filter((product) => {
+    const price = Number(product.price ?? 0);
+    if (Math.abs(price - net) > 0.03 && Math.abs(price - gross) > 0.03) return false;
+    if (!nameFilter) return true;
+    const label = `${product.name ?? ""} ${product.reference ?? ""}`;
+    return nameFilter.test(label);
+  });
+  return matches.length === 1 ? matches[0]!.product_id : null;
+}
+
+export function pickMatchingProductForArticle(
+  article: { name: string; unitAmountCents: number; vatPercent: VatPercent },
+  products: MoloniProductCandidate[],
+  aliases: string[] = []
+): number | null {
+  for (const name of [article.name, ...aliases]) {
+    const id = pickMatchingProductId(name, products);
+    if (id) return id;
+  }
+  return pickByCatalogPrice(article.unitAmountCents, article.vatPercent, products, LENGTH_SUPPLEMENT_NAME);
 }
 
 export function buildMoloniInvoicePayload(input: {

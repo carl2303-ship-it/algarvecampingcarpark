@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MOLONI_ARTICLES } from "./moloni-articles";
-import { buildMoloniInvoicePayload, moloniNetPrice, pickMatchingProductId } from "./moloni-payload";
+import { buildMoloniInvoicePayload, moloniNetPrice, pickMatchingProductForArticle, pickMatchingProductId } from "./moloni-payload";
 
 describe("Moloni invoice payload", () => {
   it("sends net prices and 6%/23% tax ids", () => {
@@ -68,6 +68,22 @@ describe("Moloni invoice payload", () => {
     assert.equal(
       pickMatchingProductId("+ de 10m", [{ product_id: 3, name: "+ de 10 m" }]),
       3
+    );
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["over-10m"],
+        [{ product_id: 4, name: "+ de 9m", price: 1.89 }],
+        ["+ de 9m"]
+      ),
+      4
+    );
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["over-10m"],
+        [{ product_id: 5, name: "+ extra 9 m", price: 1.89 }],
+        []
+      ),
+      5
     );
   });
 });
