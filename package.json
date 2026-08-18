@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "npx --yes tsx --test src/lib/moloni-articles.test.ts src/lib/pricing-lines.test.ts"
+    "test": "npx --yes tsx --test src/lib/moloni-articles.test.ts src/lib/pricing-lines.test.ts src/lib/moloni-invoice.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

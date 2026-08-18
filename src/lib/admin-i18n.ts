@@ -750,6 +750,33 @@ export const adminT = {
     moloniColVat: "IVA",
     moloniProductsLink: "Voir les produits Stripe",
   },
+  moloni: {
+    title: "Moloni (facturation auto)",
+    description:
+      "Après un paiement Stripe réussi, une facture-reçu est émise dans Moloni avec les articles (nuit, électricité, personne extra, +10 m) et l'IVA 6 % / 23 %.",
+    clientId: "Developer ID (client_id)",
+    clientSecret: "Client Secret",
+    username: "E-mail Moloni",
+    password: "Mot de passe Moloni",
+    enable: "Émettre automatiquement les factures-reçus",
+    closeDocuments: "Clôturer le document (communication AT)",
+    save: "Enregistrer Moloni",
+    saved: "Paramètres Moloni enregistrés.",
+    saveError: "Erreur lors de l'enregistrement Moloni.",
+    sync: "Tester et synchroniser articles / IVA / série",
+    syncing: "Connexion Moloni…",
+    synced: "Connexion OK. Articles, taxes et série synchronisés.",
+    syncedMissing: "Connexion OK, mais certains articles Moloni n'ont pas été trouvés par nom.",
+    syncError: "Impossible de se connecter à l'API Moloni.",
+    syncHint:
+      "Créez une application API dans Moloni (Configurações → API) avec grant password. Les noms des articles doivent correspondre à la liste ci-dessous.",
+    configured: "Identifiants présents",
+    autoOn: "Automatisation ON",
+    autoOff: "Automatisation OFF",
+    missingArticles: "Articles introuvables dans Moloni",
+    developerHint:
+      "Moloni → Área de Cliente → Configuração da API. Developer ID + Client Secret. L'URI de callback peut être https://algarvecampingcarpark.pt/",
+  },
   email: {
     title: "E-mail (Resend)",
     description:
