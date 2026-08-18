@@ -769,7 +769,7 @@ export const adminT = {
     syncedMissing: "Connexion OK, mais certains articles Moloni n'ont pas été trouvés par nom.",
     syncError: "Impossible de se connecter à l'API Moloni.",
     syncHint:
-      "Créez une application API dans Moloni (Configurações → API) avec grant password. Les noms des articles doivent correspondre à la liste ci-dessous.",
+      "Remplissez Developer ID, Client Secret, e-mail et mot de passe Moloni, puis cliquez ci-dessous. Les noms des articles doivent correspondre à la liste.",
     configured: "Identifiants présents",
     autoOn: "Automatisation ON",
     autoOff: "Automatisation OFF",

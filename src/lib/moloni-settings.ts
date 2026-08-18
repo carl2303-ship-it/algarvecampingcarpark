@@ -76,6 +76,7 @@ function parseProductMap(value: unknown): MoloniProductMap {
 }
 
 let moloniTableMissing = false;
+let memoryRow: MoloniSettingsRow | null = null;
 
 export function isMoloniSettingsTableMissing(): boolean {
   return moloniTableMissing;
@@ -100,22 +101,24 @@ async function loadMoloniRow(): Promise<MoloniSettingsRow | null> {
       if (isMissingRelationError(error)) {
         moloniTableMissing = true;
         const fallback = await loadMoloniKvRow();
-        return fallback ? normalizeMoloniRow(fallback) : null;
+        const row = fallback ?? memoryRow;
+        return row ? normalizeMoloniRow(row) : null;
       }
       console.warn("Moloni settings fetch error:", error.message);
-      return null;
+      return memoryRow ? normalizeMoloniRow(memoryRow) : null;
     }
     moloniTableMissing = false;
-    if (!data) return null;
+    if (!data) return memoryRow ? normalizeMoloniRow(memoryRow) : null;
     return normalizeMoloniRow(data as MoloniSettingsRow);
   } catch (error) {
     if (isMissingRelationError(error)) {
       moloniTableMissing = true;
-      const fallback = await loadMoloniKvRow();
-      return fallback ? normalizeMoloniRow(fallback) : null;
+    } else {
+      console.warn("Moloni settings unavailable:", error);
     }
-    console.warn("Moloni settings unavailable:", error);
-    return null;
+    const fallback = await loadMoloniKvRow();
+    const row = fallback ?? memoryRow;
+    return row ? normalizeMoloniRow(row) : null;
   }
 }
 
@@ -197,7 +200,6 @@ export async function saveMoloniSettings(input: {
   refresh_token?: string | null;
   token_expires_at?: string | null;
 }): Promise<MoloniSettingsView> {
-  const supabase = createAdminClient();
   const current = await loadMoloniRow();
 
   const payload = {
@@ -250,15 +252,28 @@ export async function saveMoloniSettings(input: {
     close_documents: payload.close_documents,
   };
 
-  const { error } = await supabase.from("moloni_settings").upsert({ id: true, ...payload });
-  if (error) {
-    if (isMissingRelationError(error)) {
-      moloniTableMissing = true;
-      await saveMoloniKvRow(rowPayload);
+  memoryRow = rowPayload;
+
+  try {
+    const supabase = createAdminClient();
+    const { error } = await supabase.from("moloni_settings").upsert({ id: true, ...payload });
+    if (!error) {
+      moloniTableMissing = false;
       return getMoloniSettingsView();
     }
-    throw new Error(error.message);
+    if (!isMissingRelationError(error)) throw new Error(error.message);
+    moloniTableMissing = true;
+  } catch (error) {
+    if (!isMissingRelationError(error) && !(error instanceof Error && /not configured/i.test(error.message))) {
+      console.warn("Moloni settings database save failed:", error);
+      if (error instanceof Error && !isMissingRelationError(error)) {
+        /* still persist to fallback so sync can continue */
+      }
+    } else {
+      moloniTableMissing = true;
+    }
   }
-  moloniTableMissing = false;
+
+  await saveMoloniKvRow(rowPayload);
   return getMoloniSettingsView();
 }

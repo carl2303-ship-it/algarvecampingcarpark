@@ -63,15 +63,29 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
     setSyncing(true);
     setMessage(null);
     setError(false);
+    const payload: Record<string, unknown> = {
+      action: "sync",
+      enabled,
+      close_documents: closeDocuments,
+    };
+    if (clientId.trim()) payload.client_id = clientId.trim();
+    if (clientSecret.trim()) payload.client_secret = clientSecret.trim();
+    if (username.trim()) payload.username = username.trim();
+    if (password) payload.password = password;
+
     const res = await fetch("/api/admin/moloni-settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "sync" }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     setSyncing(false);
     if (res.ok) {
       setView(data.settings);
+      setClientId("");
+      setClientSecret("");
+      setUsername("");
+      setPassword("");
       setMissing(data.catalog?.missing_articles ?? []);
       setMessage(
         data.catalog?.missing_articles?.length

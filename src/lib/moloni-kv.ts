@@ -56,10 +56,17 @@ export async function saveMoloniKvRow(row: MoloniSettingsRow): Promise<void> {
   try {
     const store = openBlobStore();
     await store.setJSON(SETTINGS_KEY, row);
+    return;
   } catch (error) {
-    if (!isMissingBlobsEnv(error)) throw error;
+    if (!isMissingBlobsEnv(error)) {
+      console.warn("Moloni fallback store write error:", error);
+    }
+  }
+  try {
     await fs.mkdir(path.dirname(LOCAL_FILE), { recursive: true });
     await fs.writeFile(LOCAL_FILE, JSON.stringify(row), "utf8");
+  } catch (error) {
+    console.warn("Moloni local settings write error:", error);
   }
 }
 

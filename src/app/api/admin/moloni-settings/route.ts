@@ -51,6 +51,17 @@ export async function POST(request: Request) {
   const action = body?.action === "login" ? "login" : "sync";
 
   try {
+    const credentials = updateSchema.safeParse(body);
+    if (credentials.success) {
+      const hasAny =
+        Boolean(credentials.data.client_id) ||
+        Boolean(credentials.data.client_secret) ||
+        Boolean(credentials.data.username) ||
+        Boolean(credentials.data.password) ||
+        credentials.data.enabled !== undefined ||
+        credentials.data.close_documents !== undefined;
+      if (hasAny) await saveMoloniSettings(credentials.data);
+    }
     if (action === "login") {
       await moloniLogin();
       return NextResponse.json({ ok: true, settings: await getMoloniSettingsView() });
@@ -64,6 +75,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro na API Moloni";
     console.error("Moloni admin action failed:", error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const incomplete = /incompletas/i.test(message);
+    return NextResponse.json({ error: message }, { status: incomplete ? 400 : 500 });
   }
 }

@@ -26,16 +26,59 @@ type TokenResponse = {
   error_description?: string;
 };
 
+type CachedTokens = {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresAtMs: number;
+};
+
+let tokenCache: CachedTokens | null = null;
+
+function moloniAuthMessage(body: TokenResponse, fallback: string): string {
+  const code = (body.error || "").toLowerCase();
+  const description = body.error_description || "";
+  if (code === "invalid_grant" || /invalid username or password/i.test(description)) {
+    return "E-mail ou password Moloni incorretos.";
+  }
+  if (code === "invalid_client" || /client credentials/i.test(description)) {
+    return "Developer ID ou Client Secret Moloni incorretos.";
+  }
+  if (code === "unauthorized_client") {
+    return "A app Moloni não tem permissão para grant password. Em Configuração da API, ative o acesso nativo / password.";
+  }
+  return description || body.error || fallback;
+}
+
+function extractMoloniError(body: unknown): string | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const record = body as Record<string, unknown>;
+  if (typeof record.error_description === "string" && record.error_description.trim()) {
+    return record.error_description;
+  }
+  if (typeof record.error === "string" && record.error.trim()) return record.error;
+  if (record.error === 1) return "Sessão Moloni inválida ou expirada. Volte a sincronizar.";
+  return null;
+}
+
 async function requestGrant(params: Record<string, string>): Promise<TokenResponse> {
-  const response = await fetch(`${MOLONI_BASE}/grant/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(params),
-  });
-  const body = (await response.json().catch(() => ({}))) as TokenResponse;
+  const query = new URLSearchParams(params);
+  const url = `${MOLONI_BASE}/grant/?${query.toString()}`;
+
+  let response = await fetch(url, { method: "GET" });
+  let body = (await response.json().catch(() => ({}))) as TokenResponse;
+
+  if ((!response.ok || !body.access_token) && response.status !== 400) {
+    response = await fetch(`${MOLONI_BASE}/grant/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: query,
+    });
+    body = (await response.json().catch(() => ({}))) as TokenResponse;
+  }
+
   if (!response.ok || !body.access_token) {
     throw new MoloniApiError(
-      body.error_description || body.error || "Falha na autenticação Moloni",
+      moloniAuthMessage(body, "Falha na autenticação Moloni"),
       response.status,
       body
     );
@@ -43,23 +86,39 @@ async function requestGrant(params: Record<string, string>): Promise<TokenRespon
   return body;
 }
 
+function cacheTokens(tokens: TokenResponse) {
+  const expiresIn = Number(tokens.expires_in ?? 3600);
+  tokenCache = {
+    accessToken: tokens.access_token!,
+    refreshToken: tokens.refresh_token ?? null,
+    expiresAtMs: Date.now() + expiresIn * 1000,
+  };
+}
+
 async function persistTokens(
   tokens: TokenResponse,
   extras?: Partial<Parameters<typeof saveMoloniSettings>[0]>
 ) {
+  cacheTokens(tokens);
   const expiresIn = Number(tokens.expires_in ?? 3600);
-  await saveMoloniSettings({
-    access_token: tokens.access_token ?? null,
-    refresh_token: tokens.refresh_token ?? null,
-    token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
-    ...extras,
-  });
+  try {
+    await saveMoloniSettings({
+      access_token: tokens.access_token ?? null,
+      refresh_token: tokens.refresh_token ?? null,
+      token_expires_at: new Date(Date.now() + expiresIn * 1000).toISOString(),
+      ...extras,
+    });
+  } catch (error) {
+    console.warn("Moloni token persist failed:", error);
+  }
 }
 
 export async function moloniLogin(secrets?: MoloniSecrets): Promise<string> {
   const current = secrets ?? (await getMoloniSecrets());
   if (!current.clientId || !current.clientSecret || !current.username || !current.password) {
-    throw new MoloniApiError("Credenciais Moloni incompletas");
+    throw new MoloniApiError(
+      "Credenciais Moloni incompletas. Preencha Developer ID, Client Secret, e-mail e password, depois clique em sincronizar."
+    );
   }
 
   const tokens = await requestGrant({
@@ -74,7 +133,8 @@ export async function moloniLogin(secrets?: MoloniSecrets): Promise<string> {
 }
 
 async function refreshAccessToken(current: MoloniSecrets): Promise<string> {
-  if (!current.clientId || !current.clientSecret || !current.refreshToken) {
+  const refreshToken = current.refreshToken || tokenCache?.refreshToken;
+  if (!current.clientId || !current.clientSecret || !refreshToken) {
     return moloniLogin(current);
   }
   try {
@@ -82,7 +142,7 @@ async function refreshAccessToken(current: MoloniSecrets): Promise<string> {
       grant_type: "refresh_token",
       client_id: current.clientId,
       client_secret: current.clientSecret,
-      refresh_token: current.refreshToken,
+      refresh_token: refreshToken,
     });
     await persistTokens(tokens);
     return tokens.access_token!;
@@ -92,10 +152,20 @@ async function refreshAccessToken(current: MoloniSecrets): Promise<string> {
 }
 
 export async function getMoloniAccessToken(): Promise<string> {
+  if (tokenCache && tokenCache.expiresAtMs - TOKEN_SKEW_MS > Date.now()) {
+    return tokenCache.accessToken;
+  }
   const current = await getMoloniSecrets();
   if (current.accessToken && current.tokenExpiresAt) {
     const expires = new Date(current.tokenExpiresAt).getTime();
-    if (expires - TOKEN_SKEW_MS > Date.now()) return current.accessToken;
+    if (expires - TOKEN_SKEW_MS > Date.now()) {
+      tokenCache = {
+        accessToken: current.accessToken,
+        refreshToken: current.refreshToken,
+        expiresAtMs: expires,
+      };
+      return current.accessToken;
+    }
     return refreshAccessToken(current);
   }
   return moloniLogin(current);
@@ -109,14 +179,14 @@ export async function moloniPost<T>(
   const url = `${MOLONI_BASE}${path}?access_token=${encodeURIComponent(token)}&json=true`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: JSON.stringify(payload),
   });
-  const body = (await response.json().catch(() => null)) as T | { error?: string; error_description?: string };
-  if (!response.ok) {
-    const err = body as { error?: string; error_description?: string };
+  const body = (await response.json().catch(() => null)) as T | Record<string, unknown> | null;
+  const moloniError = extractMoloniError(body);
+  if (!response.ok || moloniError) {
     throw new MoloniApiError(
-      err?.error_description || err?.error || `Erro Moloni ${path}`,
+      moloniError || `Erro Moloni ${path} (HTTP ${response.status})`,
       response.status,
       body
     );
