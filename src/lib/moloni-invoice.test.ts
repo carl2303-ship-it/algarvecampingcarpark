@@ -55,4 +55,19 @@ describe("Moloni invoice payload", () => {
     ]);
     assert.equal(id, 9);
   });
+
+  it("matches Portuguese decimal comma and punctuation", () => {
+    assert.equal(
+      pickMatchingProductId("+1.50 EUROS/PESSOA", [{ product_id: 1, name: "+1,50 EUROS/PESSOA" }]),
+      1
+    );
+    assert.equal(
+      pickMatchingProductId("Elec 3.50 6A", [{ product_id: 2, name: "Elec 3,50 6A" }]),
+      2
+    );
+    assert.equal(
+      pickMatchingProductId("+ de 10m", [{ product_id: 3, name: "+ de 10 m" }]),
+      3
+    );
+  });
 });

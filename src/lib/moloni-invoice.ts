@@ -29,9 +29,9 @@ import {
   moloniDocumentSets,
   moloniInsertInvoiceReceipt,
   moloniInvoiceReceiptsByReference,
+  moloniListAllProducts,
   moloniLogin,
   moloniPaymentMethods,
-  moloniProductsBySearch,
   moloniTaxes,
 } from "@/lib/moloni-client";
 import { getStripe } from "@/lib/stripe";
@@ -59,13 +59,27 @@ export async function syncMoloniCatalog(): Promise<{
   consumer_customer_id: number | null;
   product_map: MoloniProductMap;
   missing_articles: string[];
+  moloni_product_names: string[];
   companies: { company_id: number; name?: string }[];
 }> {
   await moloniLogin();
   const secrets = await getMoloniSecrets();
   const companies = await moloniCompanies();
-  const companyId = secrets.companyId ?? companies[0]?.company_id;
+  let companyId = secrets.companyId ?? companies[0]?.company_id;
   if (!companyId) throw new MoloniApiError("Nenhuma empresa encontrada na conta Moloni");
+
+  let products = await moloniListAllProducts(companyId);
+  if (products.length === 0) {
+    for (const company of companies) {
+      if (company.company_id === companyId) continue;
+      const found = await moloniListAllProducts(company.company_id);
+      if (found.length > 0) {
+        companyId = company.company_id;
+        products = found;
+        break;
+      }
+    }
+  }
 
   const [taxes, sets, methods, consumers] = await Promise.all([
     moloniTaxes(companyId),
@@ -78,9 +92,7 @@ export async function syncMoloniCatalog(): Promise<{
   const missing: string[] = [];
 
   for (const article of MOLONI_ARTICLE_LIST) {
-    if (productMap[article.sku]) continue;
-    const found = await moloniProductsBySearch(companyId, article.name);
-    const id = pickMatchingProductId(article.name, found);
+    const id = pickMatchingProductId(article.name, products);
     if (id) productMap[article.sku] = id;
     else missing.push(article.name);
   }
@@ -104,6 +116,10 @@ export async function syncMoloniCatalog(): Promise<{
     consumer_customer_id: secrets.consumerCustomerId ?? consumers[0]?.customer_id ?? null,
     product_map: productMap,
     missing_articles: missing,
+    moloni_product_names: products
+      .map((product) => product.name)
+      .filter((name): name is string => Boolean(name))
+      .slice(0, 30),
     companies,
   };
 }

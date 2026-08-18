@@ -23,7 +23,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
-  const [missing, setMissing] = useState<string[]>([]);
+  const [moloniNames, setMoloniNames] = useState<string[]>([]);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
@@ -87,6 +87,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
       setUsername("");
       setPassword("");
       setMissing(data.catalog?.missing_articles ?? []);
+      setMoloniNames(data.catalog?.moloni_product_names ?? []);
       setMessage(
         data.catalog?.missing_articles?.length
           ? adminT.moloni.syncedMissing
@@ -219,9 +220,18 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
             ))}
           </ul>
           {missing.length > 0 ? (
-            <p className="text-sm text-destructive">
-              {adminT.moloni.missingArticles}: {missing.join(", ")}
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-destructive">
+                {adminT.moloni.missingArticles}: {missing.join(", ")}
+              </p>
+              {moloniNames.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {adminT.moloni.foundInMoloni}: {moloniNames.join(" · ")}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{adminT.moloni.noneInMoloni}</p>
+              )}
+            </div>
           ) : null}
         </div>
 

@@ -774,6 +774,8 @@ export const adminT = {
     autoOn: "Automatisation ON",
     autoOff: "Automatisation OFF",
     missingArticles: "Articles introuvables dans Moloni",
+    foundInMoloni: "Articles actuellement dans Moloni",
+    noneInMoloni: "Aucun article n'a été renvoyé par l'API Moloni pour cette entreprise.",
     developerHint:
       "Moloni → Área de Cliente → Configuração da API. Developer ID + Client Secret. L'URI de callback peut être https://algarvecampingcarpark.pt/",
     tableMissing:

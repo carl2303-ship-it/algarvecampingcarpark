@@ -50,10 +50,22 @@ export function moloniNetPrice(grossCents: number, vatPercent: VatPercent): numb
   return splitInclusiveVat(grossCents, vatPercent).netCents / 100;
 }
 
+function fingerprint(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/euros?/g, " ")
+    .replace(/,/g, ".")
+    .replace(/[^a-z0-9.]+/g, "");
+}
+
 function normalizeName(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/,/g, ".")
+    .replace(/[+/]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
@@ -61,14 +73,27 @@ function normalizeName(value: string): string {
 
 export function pickMatchingProductId(
   articleName: string,
-  products: { product_id: number; name?: string }[]
+  products: { product_id: number; name?: string; reference?: string }[]
 ): number | null {
   const wanted = normalizeName(articleName);
+  const wantedFp = fingerprint(articleName);
+
   const exact = products.find((item) => normalizeName(item.name ?? "") === wanted);
   if (exact) return exact.product_id;
+
+  const byFingerprint = products.find((item) => fingerprint(item.name ?? "") === wantedFp);
+  if (byFingerprint) return byFingerprint.product_id;
+
+  const byReference = products.find((item) => fingerprint(item.reference ?? "") === wantedFp);
+  if (byReference) return byReference.product_id;
+
   const partial = products.find((item) => {
     const name = normalizeName(item.name ?? "");
-    return name.includes(wanted) || wanted.includes(name);
+    const fp = fingerprint(item.name ?? "");
+    return (
+      (name.length >= 4 && (name.includes(wanted) || wanted.includes(name))) ||
+      (wantedFp.length >= 6 && (fp.includes(wantedFp) || wantedFp.includes(fp)))
+    );
   });
   return partial?.product_id ?? null;
 }

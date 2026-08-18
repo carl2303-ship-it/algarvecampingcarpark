@@ -205,49 +205,138 @@ export type MoloniTax = {
 export type MoloniDocumentSet = { document_set_id: number; name?: string };
 export type MoloniPaymentMethod = { payment_method_id: number; name?: string };
 export type MoloniCustomer = { customer_id: number; vat?: string; name?: string; number?: string };
-export type MoloniProduct = { product_id: number; name?: string; reference?: string; price?: number };
+export type MoloniProduct = {
+  product_id: number;
+  name?: string;
+  reference?: string;
+  price?: number;
+  category_id?: number;
+};
+
+type MoloniCategory = { category_id: number; parent_id?: number; name?: string };
+
+function asList<T>(data: unknown): T[] {
+  return Array.isArray(data) ? (data as T[]) : [];
+}
 
 export async function moloniCompanies(): Promise<MoloniCompany[]> {
-  const data = await moloniPost<MoloniCompany[] | { error?: string }>("/companies/getAll/", {});
-  return Array.isArray(data) ? data : [];
+  const data = await moloniPost<unknown>("/companies/getAll/", {});
+  return asList<MoloniCompany>(data);
 }
 
 export async function moloniTaxes(companyId: number): Promise<MoloniTax[]> {
-  const data = await moloniPost<MoloniTax[] | { error?: string }>("/taxes/getAll/", {
+  const data = await moloniPost<unknown>("/taxes/getAll/", {
     company_id: companyId,
   });
-  return Array.isArray(data) ? data : [];
+  return asList<MoloniTax>(data);
 }
 
 export async function moloniDocumentSets(companyId: number): Promise<MoloniDocumentSet[]> {
-  const data = await moloniPost<MoloniDocumentSet[] | { error?: string }>("/documentSets/getAll/", {
+  const data = await moloniPost<unknown>("/documentSets/getAll/", {
     company_id: companyId,
   });
-  return Array.isArray(data) ? data : [];
+  return asList<MoloniDocumentSet>(data);
 }
 
 export async function moloniPaymentMethods(companyId: number): Promise<MoloniPaymentMethod[]> {
-  const data = await moloniPost<MoloniPaymentMethod[] | { error?: string }>("/paymentMethods/getAll/", {
+  const data = await moloniPost<unknown>("/paymentMethods/getAll/", {
     company_id: companyId,
   });
-  return Array.isArray(data) ? data : [];
+  return asList<MoloniPaymentMethod>(data);
 }
 
 export async function moloniCustomersByVat(companyId: number, vat: string): Promise<MoloniCustomer[]> {
-  const data = await moloniPost<MoloniCustomer[] | { error?: string }>("/customers/getByVat/", {
+  const data = await moloniPost<unknown>("/customers/getByVat/", {
     company_id: companyId,
     vat,
   });
-  return Array.isArray(data) ? data : [];
+  return asList<MoloniCustomer>(data);
 }
 
 export async function moloniProductsBySearch(companyId: number, search: string): Promise<MoloniProduct[]> {
-  const data = await moloniPost<MoloniProduct[] | { error?: string }>("/products/getBySearch/", {
+  const cleaned = search.replace(/^[+]+/, "").trim();
+  const data = await moloniPost<unknown>("/products/getBySearch/", {
     company_id: companyId,
-    search,
+    search: cleaned,
     qty: 50,
+    offset: 0,
   });
-  return Array.isArray(data) ? data : [];
+  return asList<MoloniProduct>(data);
+}
+
+async function moloniCategories(
+  companyId: number,
+  parentId: number | null = 0
+): Promise<MoloniCategory[]> {
+  try {
+    const payload: Record<string, unknown> = { company_id: companyId };
+    if (parentId !== null) payload.parent_id = parentId;
+    const data = await moloniPost<unknown>("/productCategories/getAll/", payload);
+    return asList<MoloniCategory>(data);
+  } catch (error) {
+    console.warn("Moloni productCategories/getAll failed:", error);
+    return [];
+  }
+}
+
+async function moloniProductsInCategory(companyId: number, categoryId: number): Promise<MoloniProduct[]> {
+  const products: MoloniProduct[] = [];
+  try {
+    for (let offset = 0; offset < 2000; offset += 50) {
+      const data = await moloniPost<unknown>("/products/getAll/", {
+        company_id: companyId,
+        category_id: categoryId,
+        qty: 50,
+        offset,
+        with_invisible: 1,
+      });
+      const batch = asList<MoloniProduct>(data);
+      products.push(...batch);
+      if (batch.length < 50) break;
+    }
+  } catch (error) {
+    console.warn("Moloni products/getAll failed:", error);
+  }
+  return products;
+}
+
+export async function moloniListAllProducts(companyId: number): Promise<MoloniProduct[]> {
+  const byId = new Map<number, MoloniProduct>();
+  const add = (items: MoloniProduct[]) => {
+    for (const item of items) {
+      if (item?.product_id) byId.set(item.product_id, item);
+    }
+  };
+
+  const walk = async (parentId: number) => {
+    const cats = await moloniCategories(companyId, parentId);
+    for (const cat of cats) {
+      if (!cat.category_id) continue;
+      add(await moloniProductsInCategory(companyId, cat.category_id));
+      await walk(cat.category_id);
+    }
+    return cats.length;
+  };
+
+  const rootCount = await walk(0);
+  if (rootCount === 0) {
+    add(await moloniProductsInCategory(companyId, 0));
+    const allCats = await moloniCategories(companyId, null);
+    for (const cat of allCats) {
+      if (!cat.category_id) continue;
+      add(await moloniProductsInCategory(companyId, cat.category_id));
+    }
+  }
+
+  for (const query of ["Noite", "Elec", "PESSOA", "pessoa", "10m", "Inverno", "Agosto", "Verao", "Verão"]) {
+    try {
+      add(await moloniProductsBySearch(companyId, query));
+    } catch (error) {
+      console.warn("Moloni products/getBySearch failed:", query, error);
+    }
+  }
+
+  return [...byId.values()];
 }
 
 export type MoloniInsertResult = {
