@@ -776,6 +776,8 @@ export const adminT = {
     missingArticles: "Articles introuvables dans Moloni",
     developerHint:
       "Moloni → Área de Cliente → Configuração da API. Developer ID + Client Secret. L'URI de callback peut être https://algarvecampingcarpark.pt/",
+    tableMissing:
+      "La table moloni_settings n'existe pas encore dans Supabase. Exécutez la migration 031 (SQL Editor ou npm run db:apply-moloni). Les paramètres sont temporairement stockés en secours.",
   },
   email: {
     title: "E-mail (Resend)",

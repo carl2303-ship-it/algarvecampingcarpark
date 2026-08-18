@@ -1,5 +1,11 @@
 import type Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  loadMoloniPaymentSync,
+  saveMoloniPaymentSync,
+  type MoloniPaymentSync,
+} from "@/lib/moloni-kv";
+import { isMissingColumnError } from "@/lib/schema-errors";
 import { getZoneRates } from "@/lib/availability";
 import { calculateTotalPrice } from "@/lib/pricing";
 import { getPricingSupplements } from "@/lib/pricing-supplements";
@@ -173,18 +179,16 @@ async function linesFromStripeSession(session: Stripe.Checkout.Session): Promise
   return lines;
 }
 
-async function markPaymentMoloni(
-  stripeSessionId: string | null,
-  patch: {
-    moloni_document_id?: number | null;
-    moloni_document_ref?: string | null;
-    moloni_error?: string | null;
-    moloni_synced_at?: string | null;
-  }
-) {
+async function markPaymentMoloni(stripeSessionId: string | null, patch: MoloniPaymentSync) {
   if (!stripeSessionId) return;
   const supabase = createAdminClient();
-  await supabase.from("payments").update(patch).eq("stripe_session_id", stripeSessionId);
+  const { error } = await supabase.from("payments").update(patch).eq("stripe_session_id", stripeSessionId);
+  if (!error) return;
+  if (isMissingColumnError(error)) {
+    await saveMoloniPaymentSync(stripeSessionId, patch);
+    return;
+  }
+  console.warn("Moloni payment sync update failed:", error.message);
 }
 
 export async function issueMoloniInvoiceFromCheckout(
@@ -198,13 +202,19 @@ export async function issueMoloniInvoiceFromCheckout(
   const supabase = createAdminClient();
 
   if (session.id) {
-    const { data: payment } = await supabase
+    const { data: payment, error } = await supabase
       .from("payments")
       .select("moloni_document_id")
       .eq("stripe_session_id", session.id)
       .maybeSingle();
-    if (payment && (payment as { moloni_document_id?: number | null }).moloni_document_id) {
+    if (!error && payment && (payment as { moloni_document_id?: number | null }).moloni_document_id) {
       return { skipped: "already_synced", document_id: payment.moloni_document_id ?? undefined };
+    }
+    if (error && isMissingColumnError(error)) {
+      const cached = await loadMoloniPaymentSync(session.id);
+      if (cached?.moloni_document_id) {
+        return { skipped: "already_synced", document_id: cached.moloni_document_id };
+      }
     }
   }
 

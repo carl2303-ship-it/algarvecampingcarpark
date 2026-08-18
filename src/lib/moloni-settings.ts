@@ -1,4 +1,6 @@
+import { loadMoloniKvRow, saveMoloniKvRow } from "@/lib/moloni-kv";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isMissingRelationError } from "@/lib/schema-errors";
 import { maskSecret } from "@/lib/stripe-settings";
 import type { MoloniProductMap } from "@/lib/moloni-payload";
 
@@ -40,7 +42,8 @@ export type MoloniSettingsView = {
   tax_id_23: number | null;
   consumer_customer_id: number | null;
   product_map: MoloniProductMap;
-  source: "database" | "environment" | "mixed" | null;
+  source: "database" | "environment" | "mixed" | "fallback" | null;
+  table_missing: boolean;
 };
 
 export type MoloniSettingsRow = {
@@ -72,6 +75,19 @@ function parseProductMap(value: unknown): MoloniProductMap {
   return map;
 }
 
+let moloniTableMissing = false;
+
+export function isMoloniSettingsTableMissing(): boolean {
+  return moloniTableMissing;
+}
+
+function normalizeMoloniRow(data: MoloniSettingsRow): MoloniSettingsRow {
+  return {
+    ...data,
+    product_map: parseProductMap(data.product_map),
+  };
+}
+
 async function loadMoloniRow(): Promise<MoloniSettingsRow | null> {
   try {
     const supabase = createAdminClient();
@@ -81,15 +97,23 @@ async function loadMoloniRow(): Promise<MoloniSettingsRow | null> {
       .eq("id", true)
       .maybeSingle();
     if (error) {
+      if (isMissingRelationError(error)) {
+        moloniTableMissing = true;
+        const fallback = await loadMoloniKvRow();
+        return fallback ? normalizeMoloniRow(fallback) : null;
+      }
       console.warn("Moloni settings fetch error:", error.message);
       return null;
     }
+    moloniTableMissing = false;
     if (!data) return null;
-    return {
-      ...(data as MoloniSettingsRow),
-      product_map: parseProductMap((data as { product_map?: unknown }).product_map),
-    };
+    return normalizeMoloniRow(data as MoloniSettingsRow);
   } catch (error) {
+    if (isMissingRelationError(error)) {
+      moloniTableMissing = true;
+      const fallback = await loadMoloniKvRow();
+      return fallback ? normalizeMoloniRow(fallback) : null;
+    }
     console.warn("Moloni settings unavailable:", error);
     return null;
   }
@@ -130,7 +154,8 @@ export async function getMoloniSettingsView(): Promise<MoloniSettingsView> {
   const hasDb = Boolean(row?.client_id || row?.username);
   const hasEnv = Boolean(process.env.MOLONI_CLIENT_ID || process.env.MOLONI_USERNAME);
   let source: MoloniSettingsView["source"] = null;
-  if (hasDb && hasEnv) source = "mixed";
+  if (moloniTableMissing && (row || hasEnv)) source = "fallback";
+  else if (hasDb && hasEnv) source = "mixed";
   else if (hasDb) source = "database";
   else if (hasEnv) source = "environment";
 
@@ -150,6 +175,7 @@ export async function getMoloniSettingsView(): Promise<MoloniSettingsView> {
     consumer_customer_id: secrets.consumerCustomerId,
     product_map: secrets.productMap,
     source,
+    table_missing: moloniTableMissing,
   };
 }
 
@@ -205,7 +231,34 @@ export async function saveMoloniSettings(input: {
     updated_at: new Date().toISOString(),
   };
 
+  const rowPayload: MoloniSettingsRow = {
+    client_id: payload.client_id,
+    client_secret: payload.client_secret,
+    username: payload.username,
+    password: payload.password,
+    company_id: payload.company_id,
+    document_set_id: payload.document_set_id,
+    payment_method_id: payload.payment_method_id,
+    tax_id_6: payload.tax_id_6,
+    tax_id_23: payload.tax_id_23,
+    consumer_customer_id: payload.consumer_customer_id,
+    access_token: payload.access_token,
+    refresh_token: payload.refresh_token,
+    token_expires_at: payload.token_expires_at,
+    product_map: payload.product_map,
+    enabled: payload.enabled,
+    close_documents: payload.close_documents,
+  };
+
   const { error } = await supabase.from("moloni_settings").upsert({ id: true, ...payload });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (isMissingRelationError(error)) {
+      moloniTableMissing = true;
+      await saveMoloniKvRow(rowPayload);
+      return getMoloniSettingsView();
+    }
+    throw new Error(error.message);
+  }
+  moloniTableMissing = false;
   return getMoloniSettingsView();
 }

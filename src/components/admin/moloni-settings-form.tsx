@@ -215,6 +215,10 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
           <p className={`text-sm ${error ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>
         )}
 
+        {view.table_missing ? (
+          <p className="text-sm text-amber-600 dark:text-amber-400">{adminT.moloni.tableMissing}</p>
+        ) : null}
+
         <p className="text-xs text-muted-foreground">{adminT.moloni.developerHint}</p>
       </CardContent>
     </Card>
