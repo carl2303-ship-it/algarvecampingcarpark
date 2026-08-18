@@ -23,6 +23,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [missing, setMissing] = useState<string[]>([]);
   const [moloniNames, setMoloniNames] = useState<string[]>([]);
 
   async function handleSave(event: React.FormEvent) {
