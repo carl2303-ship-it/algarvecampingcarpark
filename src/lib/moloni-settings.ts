@@ -182,15 +182,27 @@ function rowHasSecrets(row: MoloniSettingsRow | null): boolean {
   );
 }
 
-async function persistMoloniRow(rowPayload: MoloniSettingsRow): Promise<"database" | "fallback"> {
+type PersistMoloniOptions = {
+  requireSecrets?: boolean;
+};
+
+async function persistMoloniRow(
+  rowPayload: MoloniSettingsRow,
+  options: PersistMoloniOptions = {}
+): Promise<"database" | "fallback"> {
+  const requireSecrets = options.requireSecrets ?? rowHasSecrets(rowPayload);
+
   if (!moloniTableMissing) {
     try {
       const supabase = createAdminClient();
-      const { error } = await supabase.from("moloni_settings").upsert({
-        id: true,
-        ...rowPayload,
-        updated_at: new Date().toISOString(),
-      });
+      const { error } = await supabase.from("moloni_settings").upsert(
+        {
+          id: true,
+          ...rowPayload,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
       if (error) {
         if (isMissingRelationError(error)) {
           moloniTableMissing = true;
@@ -198,29 +210,50 @@ async function persistMoloniRow(rowPayload: MoloniSettingsRow): Promise<"databas
           throw new Error(error.message);
         }
       } else {
-        const verified = await loadMoloniDbRow();
-        if (rowHasSecrets(rowPayload) && !rowHasSecrets(verified)) {
-          throw new MoloniSettingsPersistError(
-            "As credenciais Moloni não ficaram guardadas na base de dados. Verifique a migração 031 no Supabase."
-          );
-        }
         await saveMoloniKvRow(rowPayload).catch(() => undefined);
         return "database";
       }
     } catch (error) {
-      if (error instanceof MoloniSettingsPersistError) throw error;
       if (!isMissingRelationError(error)) throw error;
       moloniTableMissing = true;
     }
   }
 
   const kvSaved = await saveMoloniKvRow(rowPayload);
-  if (rowHasSecrets(rowPayload) && !kvSaved) {
+  if (requireSecrets && !kvSaved) {
     throw new MoloniSettingsPersistError(
       "Não foi possível guardar as credenciais Moloni. Execute a migração 031 no Supabase (SQL Editor) — é a forma persistente em produção."
     );
   }
   return "fallback";
+}
+
+export function mergeMoloniSecrets(
+  base: MoloniSecrets,
+  input?: {
+    client_id?: string;
+    client_secret?: string;
+    username?: string;
+    password?: string;
+  }
+): MoloniSecrets {
+  if (!input) return base;
+  return {
+    ...base,
+    clientId: input.client_id?.trim() || base.clientId,
+    clientSecret: input.client_secret?.trim() || base.clientSecret,
+    username: input.username?.trim() || base.username,
+    password: input.password || base.password,
+  };
+}
+
+export async function resolveMoloniSecrets(input?: {
+  client_id?: string;
+  client_secret?: string;
+  username?: string;
+  password?: string;
+}): Promise<MoloniSecrets> {
+  return mergeMoloniSecrets(await getMoloniSecrets(), input);
 }
 
 export async function getMoloniSecrets(): Promise<MoloniSecrets> {
@@ -276,7 +309,7 @@ export async function getMoloniSettingsView(): Promise<MoloniSettingsView> {
   };
 }
 
-export async function saveMoloniSettings(input: {
+export type SaveMoloniSettingsInput = {
   client_id?: string;
   client_secret?: string;
   username?: string;
@@ -293,7 +326,18 @@ export async function saveMoloniSettings(input: {
   access_token?: string | null;
   refresh_token?: string | null;
   token_expires_at?: string | null;
-}): Promise<MoloniSettingsView> {
+};
+
+export type SaveMoloniSettingsOptions = {
+  /** When false, persist failures return a warning instead of throwing (sync uses inline creds). */
+  requirePersist?: boolean;
+};
+
+export async function saveMoloniSettings(
+  input: SaveMoloniSettingsInput,
+  options: SaveMoloniSettingsOptions = {}
+): Promise<MoloniSettingsView & { persist_warning?: string }> {
+  const requirePersist = options.requirePersist !== false;
   const current = await loadMoloniRow();
 
   const rowPayload: MoloniSettingsRow = {
@@ -333,9 +377,18 @@ export async function saveMoloniSettings(input: {
       input.password
   );
 
-  await persistMoloniRow(rowPayload);
+  let persistWarning: string | undefined;
+  try {
+    await persistMoloniRow(rowPayload, { requireSecrets: savingSecrets && requirePersist });
+  } catch (error) {
+    if (!requirePersist && error instanceof MoloniSettingsPersistError) {
+      persistWarning = error.message;
+    } else {
+      throw error;
+    }
+  }
 
-  if (savingSecrets) {
+  if (requirePersist && savingSecrets) {
     const verified = await loadMoloniRow();
     if (!rowHasSecrets(verified)) {
       throw new MoloniSettingsPersistError(
@@ -344,5 +397,6 @@ export async function saveMoloniSettings(input: {
     }
   }
 
-  return getMoloniSettingsView();
+  const view = await getMoloniSettingsView();
+  return persistWarning ? { ...view, persist_warning: persistWarning } : view;
 }

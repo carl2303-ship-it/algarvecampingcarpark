@@ -22,6 +22,7 @@ import {
   getMoloniSecrets,
   saveMoloniSettings,
   type MoloniProductMap,
+  type MoloniSecrets,
 } from "@/lib/moloni-settings";
 import {
   MoloniApiError,
@@ -51,7 +52,7 @@ function pickPaymentMethodId(methods: { payment_method_id: number; name?: string
   return ranked?.payment_method_id ?? methods[0]?.payment_method_id ?? null;
 }
 
-export async function syncMoloniCatalog(): Promise<{
+export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promise<{
   company_id: number;
   document_set_id: number | null;
   payment_method_id: number | null;
@@ -63,8 +64,8 @@ export async function syncMoloniCatalog(): Promise<{
   moloni_product_names: string[];
   companies: { company_id: number; name?: string }[];
 }> {
-  await moloniLogin();
-  const secrets = await getMoloniSecrets();
+  const secrets = secretsOverride ?? (await getMoloniSecrets());
+  await moloniLogin(secrets);
   const companies = await moloniCompanies();
   let companyId = secrets.companyId ?? companies[0]?.company_id;
   if (!companyId) throw new MoloniApiError("Nenhuma empresa encontrada na conta Moloni");
@@ -102,15 +103,18 @@ export async function syncMoloniCatalog(): Promise<{
     else missing.push(article.name);
   }
 
-  await saveMoloniSettings({
-    company_id: companyId,
-    document_set_id: secrets.documentSetId ?? sets[0]?.document_set_id ?? null,
-    payment_method_id: secrets.paymentMethodId ?? pickPaymentMethodId(methods),
-    tax_id_6: secrets.taxId6 ?? pickTaxId(taxes, 6),
-    tax_id_23: secrets.taxId23 ?? pickTaxId(taxes, 23),
-    consumer_customer_id: secrets.consumerCustomerId ?? consumers[0]?.customer_id ?? null,
-    product_map: productMap,
-  });
+  await saveMoloniSettings(
+    {
+      company_id: companyId,
+      document_set_id: secrets.documentSetId ?? sets[0]?.document_set_id ?? null,
+      payment_method_id: secrets.paymentMethodId ?? pickPaymentMethodId(methods),
+      tax_id_6: secrets.taxId6 ?? pickTaxId(taxes, 6),
+      tax_id_23: secrets.taxId23 ?? pickTaxId(taxes, 23),
+      consumer_customer_id: secrets.consumerCustomerId ?? consumers[0]?.customer_id ?? null,
+      product_map: productMap,
+    },
+    { requirePersist: false }
+  );
 
   return {
     company_id: companyId,

@@ -93,11 +93,13 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
       setPassword("");
       setMissing(data.catalog?.missing_articles ?? []);
       setMoloniNames(data.catalog?.moloni_product_names ?? []);
+      const syncMsg = data.catalog?.missing_articles?.length
+        ? adminT.moloni.syncedMissing
+        : adminT.moloni.synced;
       setMessage(
-        data.catalog?.missing_articles?.length
-          ? adminT.moloni.syncedMissing
-          : adminT.moloni.synced
+        data.persist_warning ? `${syncMsg} ${adminT.moloni.savePersistError}` : syncMsg
       );
+      if (data.persist_warning) setError(true);
     } else {
       setError(true);
       setMessage(typeof data.error === "string" ? data.error : adminT.moloni.syncError);

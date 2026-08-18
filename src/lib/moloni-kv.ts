@@ -40,7 +40,12 @@ export type MoloniPaymentSync = {
 };
 
 function hasStoredSecrets(row: MoloniSettingsRow | null): boolean {
-  return Boolean(row?.client_id?.trim() || row?.username?.trim());
+  return Boolean(
+    row?.client_id?.trim() &&
+      row?.client_secret?.trim() &&
+      row?.username?.trim() &&
+      row?.password
+  );
 }
 
 export async function loadMoloniKvRow(): Promise<MoloniSettingsRow | null> {
