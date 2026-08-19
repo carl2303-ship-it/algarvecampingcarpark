@@ -102,7 +102,9 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
       if (data.persist_warning) setError(true);
     } else {
       setError(true);
-      setMessage(typeof data.error === "string" ? data.error : adminT.moloni.syncError);
+      const errMsg = typeof data.error === "string" ? data.error : adminT.moloni.syncError;
+      const dbErr = data.db_error ? ` [DB: ${data.db_error}]` : "";
+      setMessage(errMsg + dbErr);
     }
   }
 

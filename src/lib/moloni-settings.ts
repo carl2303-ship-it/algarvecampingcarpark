@@ -1,4 +1,4 @@
-import { loadMoloniKvRow, saveMoloniKvRow } from "@/lib/moloni-kv";
+import { clearMoloniKvRow, loadMoloniKvRow, saveMoloniKvRow } from "@/lib/moloni-kv";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingRelationError } from "@/lib/schema-errors";
 import { maskSecret } from "@/lib/stripe-settings";
@@ -134,7 +134,16 @@ export function getMoloniLastDbError(): string | null {
 }
 
 async function loadMoloniDbRow(): Promise<MoloniSettingsRow | null> {
-  const supabase = createAdminClient();
+  let supabase: ReturnType<typeof createAdminClient>;
+  try {
+    supabase = createAdminClient();
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    lastDbReadError = msg;
+    console.error("[moloni-settings] createAdminClient failed:", msg);
+    moloniTableMissing = true;
+    return null;
+  }
   const { data, error } = await supabase
     .from("moloni_settings")
     .select("*")
@@ -159,11 +168,13 @@ async function loadMoloniRow(): Promise<MoloniSettingsRow | null> {
   try {
     const dbRow = await loadMoloniDbRow();
     if (moloniTableMissing) {
+      // DB unavailable — fallback to KV only
       const kvRow = await loadMoloniKvRow();
       return kvRow ? normalizeMoloniRow(kvRow) : null;
     }
-    const kvRow = await loadMoloniKvRow();
-    return mergeMoloniRows(dbRow, kvRow);
+    // DB is available — use only DB, never merge with KV
+    // (KV may contain stale or wrong data from previous fallback writes)
+    return dbRow;
   } catch (error) {
     if (isMissingRelationError(error)) {
       moloniTableMissing = true;
@@ -171,8 +182,7 @@ async function loadMoloniRow(): Promise<MoloniSettingsRow | null> {
       return kvRow ? normalizeMoloniRow(kvRow) : null;
     }
     console.warn("Moloni settings unavailable:", error);
-    const kvRow = await loadMoloniKvRow();
-    return kvRow ? normalizeMoloniRow(kvRow) : null;
+    return null;
   }
 }
 
@@ -214,13 +224,15 @@ async function persistMoloniRow(
         { onConflict: "id" }
       );
       if (error) {
+        console.error("[moloni-settings] upsert error:", error.code, error.message);
         if (isMissingRelationError(error)) {
           moloniTableMissing = true;
         } else {
-          throw new Error(error.message);
+          throw new Error(`Supabase upsert moloni_settings: ${error.message} (${error.code})`);
         }
       } else {
-        await saveMoloniKvRow(rowPayload).catch(() => undefined);
+        // Clear KV fallback so stale data never contaminates future reads
+        clearMoloniKvRow().catch(() => undefined);
         return "database";
       }
     } catch (error) {
@@ -392,8 +404,10 @@ export async function saveMoloniSettings(
   try {
     await persistMoloniRow(rowPayload, { requireSecrets: savingSecrets && requirePersist });
   } catch (error) {
-    if (!requirePersist && error instanceof MoloniSettingsPersistError) {
-      persistWarning = error.message;
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!requirePersist) {
+      persistWarning = msg;
+      console.warn("[moloni-settings] persist failed (non-blocking):", msg);
     } else {
       throw error;
     }

@@ -110,10 +110,16 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro na API Moloni";
+    const stack = error instanceof Error ? error.stack?.split("\n").slice(0, 5).join(" | ") : undefined;
     console.error("Moloni admin action failed:", error);
     const incomplete = /incompletas/i.test(message);
     return NextResponse.json(
-      { error: message, persist_warning: persistWarning },
+      {
+        error: message,
+        error_detail: stack,
+        persist_warning: persistWarning,
+        db_error: getMoloniLastDbError(),
+      },
       { status: incomplete ? 400 : 500 }
     );
   }
