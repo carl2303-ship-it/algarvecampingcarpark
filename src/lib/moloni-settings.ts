@@ -222,10 +222,17 @@ async function persistMoloniRow(
         .upsert({ id: true }, { onConflict: "id", ignoreDuplicates: true });
 
       // Then patch only the provided fields — never overwrite others with null
-      const { error } = await supabase
+      const patchKeys = Object.keys(patch);
+      console.log("[moloni-settings] updating fields:", patchKeys.join(", "));
+      const { error, data: updateData } = await supabase
         .from("moloni_settings")
         .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("id", true);
+        .eq("id", true)
+        .select("client_id, client_secret, username, password");
+      if (updateData?.[0]) {
+        const row = updateData[0] as Record<string, unknown>;
+        console.log("[moloni-settings] after update — has_client_id:", Boolean(row.client_id), "has_client_secret:", Boolean(row.client_secret), "has_username:", Boolean(row.username), "has_password:", Boolean(row.password));
+      }
 
       if (error) {
         console.error("[moloni-settings] update error:", error.code, error.message);
