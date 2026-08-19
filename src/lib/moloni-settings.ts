@@ -51,6 +51,7 @@ export type MoloniSettingsView = {
   product_map: MoloniProductMap;
   source: "database" | "environment" | "mixed" | "fallback" | null;
   table_missing: boolean;
+  db_error?: string | null;
 };
 
 export type MoloniSettingsRow = {
@@ -126,6 +127,12 @@ function mergeMoloniRows(
   });
 }
 
+let lastDbReadError: string | null = null;
+
+export function getMoloniLastDbError(): string | null {
+  return lastDbReadError;
+}
+
 async function loadMoloniDbRow(): Promise<MoloniSettingsRow | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -134,12 +141,15 @@ async function loadMoloniDbRow(): Promise<MoloniSettingsRow | null> {
     .eq("id", true)
     .maybeSingle();
   if (error) {
+    lastDbReadError = `code=${error.code} msg=${error.message}`;
+    console.error("[moloni-settings] DB read error:", error.code, error.message);
     if (isMissingRelationError(error)) {
       moloniTableMissing = true;
       return null;
     }
     throw new Error(error.message);
   }
+  lastDbReadError = null;
   moloniTableMissing = false;
   if (!data) return null;
   return normalizeMoloniRow(data as MoloniSettingsRow);
@@ -306,6 +316,7 @@ export async function getMoloniSettingsView(): Promise<MoloniSettingsView> {
     product_map: secrets.productMap,
     source,
     table_missing: moloniTableMissing,
+    db_error: lastDbReadError,
   };
 }
 

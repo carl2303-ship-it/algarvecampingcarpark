@@ -260,6 +260,12 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
           <p className="text-sm text-amber-600 dark:text-amber-400">{adminT.moloni.tableMissing}</p>
         ) : null}
 
+        {view.db_error ? (
+          <p className="text-sm text-destructive font-mono break-all">
+            DB error: {view.db_error}
+          </p>
+        ) : null}
+
         <p className="text-xs text-muted-foreground">{adminT.moloni.developerHint}</p>
       </CardContent>
     </Card>

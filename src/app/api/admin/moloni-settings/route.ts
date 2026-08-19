@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getAdminUser } from "@/lib/supabase/server";
 import {
   getMoloniSettingsView,
+  getMoloniLastDbError,
   MoloniSettingsPersistError,
   resolveMoloniSecrets,
   saveMoloniSettings,
@@ -18,7 +19,8 @@ export async function GET() {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const settings = await getMoloniSettingsView();
-  return NextResponse.json({ settings });
+  const db_error = getMoloniLastDbError();
+  return NextResponse.json({ settings, db_error });
 }
 
 const updateSchema = z.object({
