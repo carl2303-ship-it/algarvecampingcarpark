@@ -148,29 +148,27 @@ export function pickMatchingProductForArticle(
   }
 
   // 3. Night articles: match by price filtered to night-named products
-  //    (handles NOITE 9 €, NOITE 10 €, etc.)
+  //    (handles NOITE 9 €, nuit ete 2P, etc.)
+  //    Only match if result is UNIQUE — never guess when ambiguous
   if (sku.startsWith("noite-")) {
-    const byNightPrice = pickByCatalogPrice(
+    return pickByCatalogPrice(
       article.unitAmountCents,
       article.vatPercent,
       products,
       NIGHT_ARTICLE_NAME
     );
-    if (byNightPrice) return byNightPrice;
-    // Last resort: unique price match among all products
-    return pickByCatalogPrice(article.unitAmountCents, article.vatPercent, products);
+    // Note: no fallback to unfiltered price — avoids mapping elec articles to night skus
   }
 
-  // 4. Electricity articles: match by price filtered to elec-named products
+  // 4. Electricity articles: match by price filtered to elec-named products only
   if (sku.startsWith("elec-")) {
-    const byElecPrice = pickByCatalogPrice(
+    return pickByCatalogPrice(
       article.unitAmountCents,
       article.vatPercent,
       products,
       ELEC_ARTICLE_NAME
     );
-    if (byElecPrice) return byElecPrice;
-    return pickByCatalogPrice(article.unitAmountCents, article.vatPercent, products);
+    // Note: no fallback to unfiltered price — avoids mapping night articles to elec skus
   }
 
   return null;
