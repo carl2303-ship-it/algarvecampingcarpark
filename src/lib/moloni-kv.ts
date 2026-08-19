@@ -86,6 +86,21 @@ export async function saveMoloniKvRow(row: MoloniSettingsRow): Promise<boolean> 
   }
 }
 
+/** Delete the KV settings entry (called when DB is available and authoritative). */
+export async function clearMoloniKvRow(): Promise<void> {
+  try {
+    const store = openBlobStore();
+    await store.delete(SETTINGS_KEY);
+  } catch {
+    // ignore — best effort
+  }
+  try {
+    await fs.unlink(LOCAL_FILE);
+  } catch {
+    // ignore — file may not exist
+  }
+}
+
 export async function loadMoloniPaymentSync(
   stripeSessionId: string
 ): Promise<MoloniPaymentSync | null> {
