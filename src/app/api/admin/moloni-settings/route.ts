@@ -10,14 +10,48 @@ import {
 } from "@/lib/moloni-settings";
 import { moloniLogin } from "@/lib/moloni-client";
 import { syncMoloniCatalog } from "@/lib/moloni-invoice";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getAdminUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const url = new URL(request.url);
+  if (url.searchParams.get("raw") === "1") {
+    // Raw DB read — shows exactly what is in the table, no processing
+    try {
+      const supabase = createAdminClient();
+      const { data, error } = await supabase
+        .from("moloni_settings")
+        .select("id, client_id, username, company_id, enabled, updated_at, client_secret, password, access_token")
+        .eq("id", true)
+        .maybeSingle();
+      return NextResponse.json({
+        raw_db: data
+          ? {
+              has_client_id: Boolean(data.client_id),
+              client_id_len: data.client_id?.length ?? 0,
+              has_client_secret: Boolean(data.client_secret),
+              has_username: Boolean(data.username),
+              username: data.username,
+              has_password: Boolean(data.password),
+              has_access_token: Boolean(data.access_token),
+              company_id: data.company_id,
+              enabled: data.enabled,
+              updated_at: data.updated_at,
+            }
+          : null,
+        db_error: error ? `${error.code}: ${error.message}` : null,
+      });
+    } catch (err) {
+      return NextResponse.json({ raw_db: null, db_error: String(err) });
+    }
+  }
+
   const settings = await getMoloniSettingsView();
   const db_error = getMoloniLastDbError();
   return NextResponse.json({ settings, db_error });
