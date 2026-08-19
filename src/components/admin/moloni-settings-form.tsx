@@ -148,12 +148,16 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
           <p className="text-xs text-muted-foreground">{adminT.moloni.savedHint}</p>
         ) : null}
 
+        {/* Hidden dummy fields — trick browsers into autofilling here instead of the real fields */}
+        <input type="text" name="fake_user" style={{ display: "none" }} aria-hidden="true" readOnly />
+        <input type="password" name="fake_pass" style={{ display: "none" }} aria-hidden="true" readOnly />
+
         <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="moloni_client_id">{adminT.moloni.clientId}</Label>
             <Input
               id="moloni_client_id"
-              autoComplete="off"
+              autoComplete="one-time-code"
               placeholder={view.client_id_preview ?? "Developer ID"}
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
@@ -164,7 +168,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
             <Input
               id="moloni_client_secret"
               type="password"
-              autoComplete="off"
+              autoComplete="new-password"
               placeholder={
                 view.client_secret_configured ? adminT.common.leaveBlankToKeep : "Client Secret"
               }
@@ -176,7 +180,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
             <Label htmlFor="moloni_username">{adminT.moloni.username}</Label>
             <Input
               id="moloni_username"
-              autoComplete="off"
+              autoComplete="one-time-code"
               placeholder={view.username_preview ?? "email@moloni.pt"}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -187,7 +191,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
             <Input
               id="moloni_password"
               type="password"
-              autoComplete="off"
+              autoComplete="new-password"
               placeholder={
                 view.password_configured ? adminT.common.leaveBlankToKeep : adminT.common.password
               }
