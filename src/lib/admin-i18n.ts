@@ -738,6 +738,53 @@ export const adminT = {
     saveError: "Erreur lors de l'enregistrement des identifiants.",
     footer: "Obtenez les clés sur",
     webhookNote: ". Le webhook doit pointer vers",
+    moloniTitle: "Articles Moloni (Stripe)",
+    moloniDescription:
+      "Ces produits sont créés dans Stripe avec IVA inclus (6 % hébergement, 23 % électricité et personne extra). Kapta/Moloni peut les mapper par nom. Le checkout décompose chaque séjour en ces lignes.",
+    moloniSync: "Créer / mettre à jour dans Stripe",
+    moloniSyncing: "Synchronisation…",
+    moloniSynced: "Articles synchronisés dans le catalogue Stripe.",
+    moloniSyncError: "Impossible de synchroniser les articles Stripe.",
+    moloniColName: "Article",
+    moloniColPrice: "TTC / nuit",
+    moloniColVat: "IVA",
+    moloniProductsLink: "Voir les produits Stripe",
+  },
+  moloni: {
+    title: "Moloni (facturation auto)",
+    description:
+      "Après un paiement Stripe réussi, une facture-reçu est émise dans Moloni avec les articles (nuit, électricité, personne extra, +10 m) et l'IVA 6 % / 23 %.",
+    clientId: "Developer ID (client_id)",
+    clientSecret: "Client Secret",
+    username: "E-mail Moloni",
+    password: "Mot de passe Moloni",
+    enable: "Émettre automatiquement les factures-reçus",
+    closeDocuments: "Clôturer le document (communication AT)",
+    save: "Enregistrer Moloni",
+    saved: "Paramètres Moloni enregistrés.",
+    saveError: "Erreur lors de l'enregistrement Moloni.",
+    savePersistError:
+      "Les identifiants n'ont pas été enregistrés de façon permanente. Exécutez la migration 031 dans Supabase (SQL Editor).",
+    sync: "Tester et synchroniser articles / IVA / série",
+    syncing: "Connexion Moloni…",
+    synced: "Connexion OK. Articles, taxes et série synchronisés.",
+    syncedMissing: "Connexion OK, mais certains articles Moloni n'ont pas été trouvés par nom.",
+    syncError: "Impossible de se connecter à l'API Moloni.",
+    syncHint:
+      "Remplissez Developer ID, Client Secret, e-mail et mot de passe Moloni, puis cliquez ci-dessous. Les noms des articles doivent correspondre à la liste.",
+    configured: "Identifiants présents",
+    savedHint:
+      "Les champs secrets restent vides après enregistrement (comme Stripe). Les valeurs sont conservées — laissez vide pour les garder.",
+    fallbackStorage: "Stockage temporaire",
+    autoOn: "Automatisation ON",
+    autoOff: "Automatisation OFF",
+    missingArticles: "Articles introuvables dans Moloni",
+    foundInMoloni: "Articles actuellement dans Moloni",
+    noneInMoloni: "Aucun article n'a été renvoyé par l'API Moloni pour cette entreprise.",
+    developerHint:
+      "Moloni → Área de Cliente → Configuração da API. Developer ID + Client Secret. L'URI de callback peut être https://algarvecampingcarpark.pt/",
+    tableMissing:
+      "La table moloni_settings n'existe pas encore dans Supabase. Sans elle, les identifiants ne survivent pas à un rechargement. Exécutez la migration 031 (SQL Editor).",
   },
   email: {
     title: "E-mail (Resend)",

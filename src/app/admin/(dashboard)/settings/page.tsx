@@ -4,6 +4,8 @@ import { GateQrGenerator } from "@/components/admin/gate-qr-generator";
 import { ReceptionQrGenerator } from "@/components/admin/reception-qr-generator";
 import { OnlineBookingSettings } from "@/components/admin/online-booking-settings";
 import { StripeSettingsForm } from "@/components/admin/stripe-settings-form";
+import { MoloniStripeCatalogCard } from "@/components/admin/moloni-stripe-catalog-card";
+import { MoloniSettingsForm } from "@/components/admin/moloni-settings-form";
 import { EmailSettingsForm } from "@/components/admin/email-settings-form";
 import { BlockedDatesManager } from "@/components/admin/blocked-dates-manager";
 import { StaffAccessManager } from "@/components/admin/staff-access-manager";
@@ -12,13 +14,15 @@ import { getPitchMapSpots } from "@/lib/pitch-map";
 import { getParkSettings } from "@/lib/park-settings";
 import { getStripeSettingsView } from "@/lib/stripe-settings";
 import { getEmailSettingsView } from "@/lib/email-settings";
+import { getMoloniSettingsView } from "@/lib/moloni-settings";
 
 export default async function SettingsPage() {
   const pitches = await getPitchMapSpots();
-  const [parkSettings, stripeSettings, emailSettings] = await Promise.all([
+  const [parkSettings, stripeSettings, emailSettings, moloniSettings] = await Promise.all([
     getParkSettings(),
     getStripeSettingsView(),
     getEmailSettingsView(),
+    getMoloniSettingsView(),
   ]);
 
   return (
@@ -42,6 +46,10 @@ export default async function SettingsPage() {
       <EmailSettingsForm initial={emailSettings} />
 
       <StripeSettingsForm initial={stripeSettings} />
+
+      <MoloniStripeCatalogCard />
+
+      <MoloniSettingsForm initial={moloniSettings} />
     </div>
   );
 }

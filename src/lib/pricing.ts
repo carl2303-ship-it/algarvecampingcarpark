@@ -1,6 +1,15 @@
 import { differenceInCalendarDays, eachDayOfInterval, format, parseISO } from "date-fns";
 import type { ZoneRate } from "@/types/database";
 import {
+  accountingLinesFromNights,
+  accountingLinesTotalCents,
+  occupancyBucket,
+  ELECTRICITY_6A_CENTS_PER_NIGHT,
+  ELECTRICITY_10A_CENTS_PER_NIGHT,
+  type AccountingLine,
+  type StayNightParts,
+} from "@/lib/moloni-articles";
+import {
   computeSupplementsCentsPerNight,
   getExtraGuestSupplement,
   type PricingContext,
@@ -10,6 +19,8 @@ import {
 export const EXTRA_GUEST_CENTS_PER_NIGHT = 150;
 export const LONG_MOTORHOME_CENTS_PER_NIGHT = 200;
 export const ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT = 50;
+export { ELECTRICITY_6A_CENTS_PER_NIGHT, ELECTRICITY_10A_CENTS_PER_NIGHT };
+export type { AccountingLine };
 
 export type ElectricityAmperage = 6 | 10;
 
@@ -102,16 +113,33 @@ function nightlySupplementsFromLegacy(options?: PricingOptions): number {
   return motorhomeSurcharge + electricitySurcharge;
 }
 
+export type StayPricing = {
+  totalCents: number;
+  nights: number;
+  minNights: number;
+  pricePerNightCents: number;
+  /** Moloni/Stripe invoice lines (tax-inclusive). Sum equals totalCents. */
+  lines: AccountingLine[];
+};
+
+export const EMPTY_STAY_PRICING: StayPricing = {
+  totalCents: 0,
+  nights: 0,
+  minNights: 1,
+  pricePerNightCents: 0,
+  lines: [],
+};
+
 export function calculateTotalPrice(
   rates: ZoneRate[],
   checkIn: string,
   checkOut: string,
   numGuests = 2,
   options?: PricingOptions
-): { totalCents: number; nights: number; minNights: number; pricePerNightCents: number } {
+): StayPricing {
   const nights = calculateNights(checkIn, checkOut);
   if (nights <= 0) {
-    return { totalCents: 0, nights: 0, minNights: 1, pricePerNightCents: 0 };
+    return EMPTY_STAY_PRICING;
   }
 
   const days = eachDayOfInterval({
@@ -127,6 +155,20 @@ export function calculateTotalPrice(
     ? computeSupplementsCentsPerNight(supplements, context)
     : nightlySupplementsFromLegacy(options);
 
+  const amperage = options?.electricityAmperage ?? null;
+  const hasElectricity = amperage === 6 || amperage === 10;
+  const surcharge10a = supplements.find(
+    (item) => item.trigger_type === "electricity_10a" && item.active
+  )?.amount_cents_per_night ?? ELECTRICITY_10A_SURCHARGE_CENTS_PER_NIGHT;
+  const over10mCents =
+    supplements.find((item) => item.trigger_type === "motorhome_over_9m" && item.active)
+      ?.amount_cents_per_night ?? LONG_MOTORHOME_CENTS_PER_NIGHT;
+  const manualIds = new Set(context.manualSupplementIds ?? []);
+  const extraGuestCount = Math.max(0, numGuests - guestThreshold);
+  const occupancyGuests = Math.min(numGuests, guestThreshold);
+  const occupancy = occupancyBucket(numGuests);
+
+  const nightParts: StayNightParts[] = [];
   let totalCents = 0;
   let minNights = 1;
   let lastNightCents = 0;
@@ -137,12 +179,51 @@ export function calculateTotalPrice(
     if (!rate) {
       throw new Error(`Sem tarifa definida para ${dateStr}`);
     }
+    const occupancyCents = getNightlyPriceCents(
+      rate,
+      occupancyGuests,
+      extraGuestCents,
+      guestThreshold
+    );
     const nightCents =
       getNightlyPriceCents(rate, numGuests, extraGuestCents, guestThreshold) +
       supplementsPerNight;
     totalCents += nightCents;
     minNights = Math.max(minNights, rate.min_nights);
     lastNightCents = nightCents;
+
+    const electricity6aCents = hasElectricity ? ELECTRICITY_6A_CENTS_PER_NIGHT : 0;
+    nightParts.push({
+      season: rate.season,
+      occupancy,
+      extraGuestCount,
+      extraGuestUnitCents: extraGuestCents,
+      electricityAmperage: hasElectricity ? amperage : null,
+      electricity6aCents: ELECTRICITY_6A_CENTS_PER_NIGHT,
+      electricity10aCents: ELECTRICITY_6A_CENTS_PER_NIGHT + surcharge10a,
+      nightCentsWithoutElectricity: hasElectricity
+        ? Math.max(0, occupancyCents - electricity6aCents)
+        : occupancyCents,
+      over10m: Boolean(context.motorhomeOver9m),
+      over10mCents,
+      manuals: supplements
+        .filter(
+          (item) =>
+            item.active &&
+            item.trigger_type === "manual_per_night" &&
+            manualIds.has(item.id)
+        )
+        .map((item) => ({
+          name: item.name_pt,
+          amountCents: item.amount_cents_per_night,
+        })),
+    });
+  }
+
+  const lines = accountingLinesFromNights(nightParts);
+  const linesTotal = accountingLinesTotalCents(lines);
+  if (linesTotal !== totalCents) {
+    console.warn("Moloni line items do not match stay total", { linesTotal, totalCents, lines });
   }
 
   return {
@@ -150,6 +231,7 @@ export function calculateTotalPrice(
     nights,
     minNights,
     pricePerNightCents: lastNightCents,
+    lines: linesTotal === totalCents ? lines : [],
   };
 }
 

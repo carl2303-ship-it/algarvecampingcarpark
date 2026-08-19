@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npx --yes tsx --test src/lib/moloni-articles.test.ts src/lib/pricing-lines.test.ts src/lib/moloni-invoice.test.ts",
+    "db:apply-moloni": "node scripts/apply-migration-031.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -48,6 +50,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "pg": "^8.16.3",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

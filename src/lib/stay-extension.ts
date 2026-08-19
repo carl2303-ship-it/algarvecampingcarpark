@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findPitchOverlapConflict, getZoneRates } from "@/lib/availability";
 import { calculateTotalPrice } from "@/lib/pricing";
+import type { AccountingLine } from "@/lib/moloni-articles";
 import { getPricingSupplements } from "@/lib/pricing-supplements";
 
 export type ExtensionQuote = {
@@ -16,6 +17,7 @@ export type ExtensionQuote = {
   newTotalCents: number;
   extensionCents: number;
   nightsAdded: number;
+  lines: AccountingLine[];
   error?: string;
 };
 
@@ -33,6 +35,26 @@ type ReservationForExtend = {
   manual_supplement_ids?: string[] | null;
 };
 
+function emptyQuote(
+  reservation: ReservationForExtend,
+  newCheckOut: string,
+  error: string,
+  conflict: ExtensionQuote["conflict"] = null
+): ExtensionQuote {
+  return {
+    available: false,
+    conflict,
+    oldCheckOut: reservation.check_out,
+    newCheckOut,
+    oldTotalCents: reservation.total_cents,
+    newTotalCents: reservation.total_cents,
+    extensionCents: 0,
+    nightsAdded: 0,
+    lines: [],
+    error,
+  };
+}
+
 export async function quoteStayExtension(params: {
   reservation: ReservationForExtend;
   newCheckOut: string;
@@ -40,45 +62,15 @@ export async function quoteStayExtension(params: {
   const { reservation, newCheckOut } = params;
 
   if (!["confirmed", "checked_in"].includes(reservation.status)) {
-    return {
-      available: false,
-      conflict: null,
-      oldCheckOut: reservation.check_out,
-      newCheckOut,
-      oldTotalCents: reservation.total_cents,
-      newTotalCents: reservation.total_cents,
-      extensionCents: 0,
-      nightsAdded: 0,
-      error: "Reserva não pode ser prolongada neste estado",
-    };
+    return emptyQuote(reservation, newCheckOut, "Reserva não pode ser prolongada neste estado");
   }
 
   if (newCheckOut <= reservation.check_in) {
-    return {
-      available: false,
-      conflict: null,
-      oldCheckOut: reservation.check_out,
-      newCheckOut,
-      oldTotalCents: reservation.total_cents,
-      newTotalCents: reservation.total_cents,
-      extensionCents: 0,
-      nightsAdded: 0,
-      error: "Data de partida inválida",
-    };
+    return emptyQuote(reservation, newCheckOut, "Data de partida inválida");
   }
 
   if (newCheckOut <= reservation.check_out) {
-    return {
-      available: false,
-      conflict: null,
-      oldCheckOut: reservation.check_out,
-      newCheckOut,
-      oldTotalCents: reservation.total_cents,
-      newTotalCents: reservation.total_cents,
-      extensionCents: 0,
-      nightsAdded: 0,
-      error: "A nova data de partida deve ser posterior à atual",
-    };
+    return emptyQuote(reservation, newCheckOut, "A nova data de partida deve ser posterior à atual");
   }
 
   if (reservation.pitch_code) {
@@ -90,37 +82,40 @@ export async function quoteStayExtension(params: {
     });
 
     if (conflict) {
-      return {
-        available: false,
-        conflict: {
+      return emptyQuote(
+        reservation,
+        newCheckOut,
+        `O lugar ${reservation.pitch_code} não está disponível até ${newCheckOut}`,
+        {
           guest_name: conflict.guest_name,
           check_in: conflict.check_in,
           check_out: conflict.check_out,
-        },
-        oldCheckOut: reservation.check_out,
-        newCheckOut,
-        oldTotalCents: reservation.total_cents,
-        newTotalCents: reservation.total_cents,
-        extensionCents: 0,
-        nightsAdded: 0,
-        error: `O lugar ${reservation.pitch_code} não está disponível até ${newCheckOut}`,
-      };
+        }
+      );
     }
   }
 
   const rates = await getZoneRates(reservation.zone_id);
   const supplements = await getPricingSupplements();
+  const pricingOptions = {
+    motorhomeOver9m: Boolean(reservation.motorhome_over_9m),
+    electricityAmperage: reservation.electricity_amperage ?? null,
+    manualSupplementIds: reservation.manual_supplement_ids ?? [],
+    supplements,
+  };
   const newPricing = calculateTotalPrice(
     rates,
     reservation.check_in,
     newCheckOut,
     reservation.num_guests,
-    {
-      motorhomeOver9m: Boolean(reservation.motorhome_over_9m),
-      electricityAmperage: reservation.electricity_amperage ?? null,
-      manualSupplementIds: reservation.manual_supplement_ids ?? [],
-      supplements,
-    }
+    pricingOptions
+  );
+  const extraNightsPricing = calculateTotalPrice(
+    rates,
+    reservation.check_out,
+    newCheckOut,
+    reservation.num_guests,
+    pricingOptions
   );
   const extensionCents = Math.max(0, newPricing.totalCents - reservation.total_cents);
 
@@ -140,6 +135,7 @@ export async function quoteStayExtension(params: {
     newTotalCents: newPricing.totalCents,
     extensionCents,
     nightsAdded,
+    lines: extraNightsPricing.totalCents === extensionCents ? extraNightsPricing.lines : [],
   };
 }
 

@@ -315,6 +315,7 @@ export async function POST(request: Request) {
         payment_status: "pending",
         electricity: withElectricity,
         electricity_amperage: withElectricity ? (data.electricity_amperage ?? 6) : null,
+        motorhome_over_9m: data.over_9m ?? false,
         expires_at: expiresAt,
         locale: data.locale,
       })
@@ -353,6 +354,7 @@ export async function POST(request: Request) {
       vehiclePlate: plate,
       locale: data.locale,
       gateEntry,
+      accountingLines: pricing.lines,
     });
 
     await supabase
