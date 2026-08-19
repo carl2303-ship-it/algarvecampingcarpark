@@ -346,12 +346,16 @@ export async function moloniProductsForArticleSync(companyId: number): Promise<M
 
   const primary = await parallelProductSearches(companyId, [
     "Noite",
+    "nuit",
+    "ete",
+    "aout",
     "Inverno",
     "Agosto",
     "Verao",
     "Verão",
     "Elec",
     "PESSOA",
+    "pessoa",
     "1.50",
     "10m",
     "9m",

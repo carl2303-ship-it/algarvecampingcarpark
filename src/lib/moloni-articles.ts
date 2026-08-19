@@ -173,47 +173,58 @@ export const MOLONI_ARTICLE_ALIASES: Partial<Record<MoloniArticleSku, string[]>>
     "Noite 2 pessoas 9",
   ],
   "noite-inverno-34": [
+    // Moloni: "NOITE 10 € (3/4 PAX)" — price is actually 11€ gross (ref says 9€ net)
+    "NOITE 10 € (3/4 PAX)",
+    "NOITE 10€ (3/4 PAX)",
+    "NOITE 9 € (3/4 PAX)",
     "NOITE 11 €",
     "Noite 11€",
-    "Noite 11 €",
-    "NOITE 11",
     "Noite Inverno 3/4p",
     "Noite Inverno 3 4 pax",
     "Noite 3 4 pessoas 11",
-    // Note: "NOITE 10 € (3/4 PAX)" is 10€ in Moloni — do NOT map here to avoid wrong price
   ],
   "noite-agosto-2": [
+    // Moloni: "nuit aout 2P 11€"
+    "nuit aout 2P 11€",
+    "nuit aout 2 P 11€",
+    "nuit aout 2P",
+    "nuit août 2P 11€",
+    "nuit août 2 P 11€",
     "NOITE 11 € Agosto",
     "Noite Agosto 2p",
-    "Noite Agosto 2 pax",
   ],
   "noite-agosto-34": [
+    // Moloni: "nuit aout 3P ou 4P 13€"
+    "nuit aout 3P ou 4P 13€",
+    "nuit aout 3 P ou 4 P 13€",
+    "nuit aout 3P ou 4P",
+    "nuit août 3P ou 4P 13€",
     "NOITE 13 € Agosto",
     "Noite Agosto 3/4p",
-    "Noite Agosto 3 4 pax",
   ],
   "noite-verao-2": [
-    // "NOITE 10 € (3/4 PAX)" is the only 10€ night article — use it for verao-2 (also 10€)
+    // Moloni: "nuit ete 2P 10€"
+    "nuit ete 2P 10€",
+    "nuit ete 2 P 10€",
+    "nuit ete 2P",
+    "nuit été 2P 10€",
+    "nuit été 2 P 10€",
     "NOITE 10 €",
-    "NOITE 10 € (3/4 PAX)",
-    "NOITE 10€ (3/4 PAX)",
     "Noite 10€",
-    "Noite 10 €",
-    "NOITE 10",
     "Noite Verao 2p",
     "Noite Verão 2p",
-    "Noite Verao 2 pax",
-    "Noite 2 pessoas 10",
   ],
   "noite-verao-34": [
+    // Moloni: "nuit ete 3P ou 4P 12€"
+    "nuit ete 3P ou 4P 12€",
+    "nuit ete 3 P ou 4 P 12€",
+    "nuit ete 3P ou 4P",
+    "nuit été 3P ou 4P 12€",
+    "nuit été 3 P ou 4 P 12€",
     "NOITE 12 €",
     "Noite 12€",
-    "Noite 12 €",
-    "NOITE 12",
     "Noite Verao 3/4p",
     "Noite Verão 3/4p",
-    "Noite Verao 3 4 pax",
-    "Noite 3 4 pessoas 12",
   ],
 };
 
