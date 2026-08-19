@@ -85,5 +85,38 @@ describe("Moloni invoice payload", () => {
       ),
       5
     );
+
+    // Night articles matched by alias
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["noite-inverno-2"],
+        [{ product_id: 10, name: "NOITE 9 €", price: 7.56 }],
+        ["NOITE 9 €", "Noite 9€"]
+      ),
+      10
+    );
+
+    // Night articles matched by price (noite-verao-2 = 10€ gross, 9.43€ net @6%)
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["noite-verao-2"],
+        [
+          { product_id: 11, name: "NOITE 10 €", price: 9.43 },
+          { product_id: 12, name: "Noite Agosto 2 pessoas 11", price: 10.38 },
+        ],
+        []
+      ),
+      11
+    );
+
+    // Elec alias matching
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["elec-6a"],
+        [{ product_id: 20, name: "Elec 3,50 €", price: 2.85 }],
+        ["Elec 3,50 €"]
+      ),
+      20
+    );
   });
 });

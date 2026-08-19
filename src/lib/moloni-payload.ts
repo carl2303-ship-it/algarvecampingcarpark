@@ -108,6 +108,9 @@ export function pickMatchingProductId(
 const LENGTH_SUPPLEMENT_NAME =
   /(?:\+|mais|de|superior).*(?:9|10)\s*m|(?:9|10)\s*m(?:et|$)|(?:9|10)\s*metros/i;
 
+const NIGHT_ARTICLE_NAME = /noite|nuit|night/i;
+const ELEC_ARTICLE_NAME = /elec|eletric|electric/i;
+
 function pickByCatalogPrice(
   grossCents: number,
   vatPercent: VatPercent,
@@ -127,15 +130,50 @@ function pickByCatalogPrice(
 }
 
 export function pickMatchingProductForArticle(
-  article: { name: string; unitAmountCents: number; vatPercent: VatPercent },
+  article: { sku?: string; name: string; unitAmountCents: number; vatPercent: VatPercent },
   products: MoloniProductCandidate[],
   aliases: string[] = []
 ): number | null {
+  // 1. Try exact/fingerprint/partial name match on all aliases
   for (const name of [article.name, ...aliases]) {
     const id = pickMatchingProductId(name, products);
     if (id) return id;
   }
-  return pickByCatalogPrice(article.unitAmountCents, article.vatPercent, products, LENGTH_SUPPLEMENT_NAME);
+
+  const sku = article.sku ?? "";
+
+  // 2. Length supplement: match by price with name filter
+  if (sku === "over-10m") {
+    return pickByCatalogPrice(article.unitAmountCents, article.vatPercent, products, LENGTH_SUPPLEMENT_NAME);
+  }
+
+  // 3. Night articles: match by price filtered to night-named products
+  //    (handles NOITE 9 €, NOITE 10 €, etc.)
+  if (sku.startsWith("noite-")) {
+    const byNightPrice = pickByCatalogPrice(
+      article.unitAmountCents,
+      article.vatPercent,
+      products,
+      NIGHT_ARTICLE_NAME
+    );
+    if (byNightPrice) return byNightPrice;
+    // Last resort: unique price match among all products
+    return pickByCatalogPrice(article.unitAmountCents, article.vatPercent, products);
+  }
+
+  // 4. Electricity articles: match by price filtered to elec-named products
+  if (sku.startsWith("elec-")) {
+    const byElecPrice = pickByCatalogPrice(
+      article.unitAmountCents,
+      article.vatPercent,
+      products,
+      ELEC_ARTICLE_NAME
+    );
+    if (byElecPrice) return byElecPrice;
+    return pickByCatalogPrice(article.unitAmountCents, article.vatPercent, products);
+  }
+
+  return null;
 }
 
 export function buildMoloniInvoicePayload(input: {
