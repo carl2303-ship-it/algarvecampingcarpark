@@ -145,6 +145,87 @@ export const MOLONI_ARTICLE_ALIASES: Partial<Record<MoloniArticleSku, string[]>>
     "superior a 10m",
     "superior a 9m",
   ],
+  "elec-6a": [
+    "Elec 3,50 €",
+    "Elec 3.50",
+    "Electricidade 6A",
+    "Electricidade 3.50",
+    "Eletricidade 3.50",
+    "Elec 6A",
+    "6A",
+  ],
+  "elec-10a": [
+    "Elec 4,00 €",
+    "Elec 4.00",
+    "Elec 4€",
+    "Electricidade 10A",
+    "Eletricidade 10A",
+    "Elec 10A",
+    "10A",
+  ],
+  "noite-inverno-2": [
+    "NOITE 9 €",
+    "Noite 9€",
+    "Noite 9 €",
+    "NOITE 9",
+    "Noite Inverno 2p",
+    "Noite Inverno 2 pax",
+    "Noite 2 pessoas 9",
+  ],
+  "noite-inverno-34": [
+    // Moloni: "NOITE 10 € (3/4 PAX)" — price is actually 11€ gross (ref says 9€ net)
+    "NOITE 10 € (3/4 PAX)",
+    "NOITE 10€ (3/4 PAX)",
+    "NOITE 9 € (3/4 PAX)",
+    "NOITE 11 €",
+    "Noite 11€",
+    "Noite Inverno 3/4p",
+    "Noite Inverno 3 4 pax",
+    "Noite 3 4 pessoas 11",
+  ],
+  "noite-agosto-2": [
+    // Moloni: "nuit aout 2P 11€"
+    "nuit aout 2P 11€",
+    "nuit aout 2 P 11€",
+    "nuit aout 2P",
+    "nuit août 2P 11€",
+    "nuit août 2 P 11€",
+    "NOITE 11 € Agosto",
+    "Noite Agosto 2p",
+  ],
+  "noite-agosto-34": [
+    // Moloni: "nuit aout 3P ou 4P 13€"
+    "nuit aout 3P ou 4P 13€",
+    "nuit aout 3 P ou 4 P 13€",
+    "nuit aout 3P ou 4P",
+    "nuit août 3P ou 4P 13€",
+    "NOITE 13 € Agosto",
+    "Noite Agosto 3/4p",
+  ],
+  "noite-verao-2": [
+    // Moloni: "nuit ete 2P 10€"
+    "nuit ete 2P 10€",
+    "nuit ete 2 P 10€",
+    "nuit ete 2P",
+    "nuit été 2P 10€",
+    "nuit été 2 P 10€",
+    "NOITE 10 €",
+    "Noite 10€",
+    "Noite Verao 2p",
+    "Noite Verão 2p",
+  ],
+  "noite-verao-34": [
+    // Moloni: "nuit ete 3P ou 4P 12€"
+    "nuit ete 3P ou 4P 12€",
+    "nuit ete 3 P ou 4 P 12€",
+    "nuit ete 3P ou 4P",
+    "nuit été 3P ou 4P 12€",
+    "nuit été 3 P ou 4 P 12€",
+    "NOITE 12 €",
+    "Noite 12€",
+    "Noite Verao 3/4p",
+    "Noite Verão 3/4p",
+  ],
 };
 
 export function splitInclusiveVat(

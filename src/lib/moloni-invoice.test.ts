@@ -85,5 +85,68 @@ describe("Moloni invoice payload", () => {
       ),
       5
     );
+
+    // noite-inverno-2: "NOITE 9 €" (9€ gross, 8.49€ net @6%)
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["noite-inverno-2"],
+        [{ product_id: 10, name: "NOITE 9 €", price: 8.49 }],
+        ["NOITE 9 €"]
+      ),
+      10
+    );
+
+    // noite-inverno-34: "NOITE 10 € (3/4 PAX)" (11€ gross, 10.38€ net @6%)
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["noite-inverno-34"],
+        [{ product_id: 11, name: "NOITE 10 € (3/4 PAX)", price: 10.38 }],
+        ["NOITE 10 € (3/4 PAX)"]
+      ),
+      11
+    );
+
+    // noite-verao-2: "nuit ete 2P 10€" (10€ gross, 9.43€ net @6%)
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["noite-verao-2"],
+        [
+          { product_id: 12, name: "nuit ete 2P 10€", price: 9.43 },
+          { product_id: 13, name: "NOITE 10 € (3/4 PAX)", price: 10.38 },
+        ],
+        ["nuit ete 2P 10€", "nuit ete 2 P 10€"]
+      ),
+      12
+    );
+
+    // noite-verao-34: "nuit ete 3P ou 4P 12€" (12€ gross, 11.32€ net @6%)
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["noite-verao-34"],
+        [{ product_id: 14, name: "nuit ete 3P ou 4P 12€", price: 11.32 }],
+        ["nuit ete 3P ou 4P 12€"]
+      ),
+      14
+    );
+
+    // noite-agosto-2: "nuit aout 2P 11€"
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["noite-agosto-2"],
+        [{ product_id: 15, name: "nuit aout 2P 11€", price: 10.38 }],
+        ["nuit aout 2P 11€"]
+      ),
+      15
+    );
+
+    // Elec alias matching
+    assert.equal(
+      pickMatchingProductForArticle(
+        MOLONI_ARTICLES["elec-6a"],
+        [{ product_id: 20, name: "Elec 3,50 €", price: 2.85 }],
+        ["Elec 3,50 €"]
+      ),
+      20
+    );
   });
 });
