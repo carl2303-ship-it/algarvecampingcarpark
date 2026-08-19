@@ -180,8 +180,7 @@ export const MOLONI_ARTICLE_ALIASES: Partial<Record<MoloniArticleSku, string[]>>
     "Noite Inverno 3/4p",
     "Noite Inverno 3 4 pax",
     "Noite 3 4 pessoas 11",
-    "NOITE 10 € (3/4 PAX)",
-    "NOITE 10€ (3/4 PAX)",
+    // Note: "NOITE 10 € (3/4 PAX)" is 10€ in Moloni — do NOT map here to avoid wrong price
   ],
   "noite-agosto-2": [
     "NOITE 11 € Agosto",
@@ -194,7 +193,10 @@ export const MOLONI_ARTICLE_ALIASES: Partial<Record<MoloniArticleSku, string[]>>
     "Noite Agosto 3 4 pax",
   ],
   "noite-verao-2": [
+    // "NOITE 10 € (3/4 PAX)" is the only 10€ night article — use it for verao-2 (also 10€)
     "NOITE 10 €",
+    "NOITE 10 € (3/4 PAX)",
+    "NOITE 10€ (3/4 PAX)",
     "Noite 10€",
     "Noite 10 €",
     "NOITE 10",
