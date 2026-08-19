@@ -17,6 +17,9 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
   const [clientSecret, setClientSecret] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [companyIdInput, setCompanyIdInput] = useState(
+    initial.company_id ? String(initial.company_id) : ""
+  );
   const [enabled, setEnabled] = useState(initial.enabled);
   const [closeDocuments, setCloseDocuments] = useState(initial.close_documents);
   const [saving, setSaving] = useState(false);
@@ -25,6 +28,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
   const [error, setError] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
   const [moloniNames, setMoloniNames] = useState<string[]>([]);
+  const [companies, setCompanies] = useState<{ company_id: number; name?: string }[]>([]);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
@@ -39,6 +43,8 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
     if (clientSecret.trim()) payload.client_secret = clientSecret.trim();
     if (username.trim()) payload.username = username.trim();
     if (password) payload.password = password;
+    const parsedCompanyId = parseInt(companyIdInput, 10);
+    if (!isNaN(parsedCompanyId) && parsedCompanyId > 0) payload.company_id = parsedCompanyId;
 
     const res = await fetch("/api/admin/moloni-settings", {
       method: "PUT",
@@ -51,6 +57,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
       setView(data.settings);
       setEnabled(data.settings.enabled);
       setCloseDocuments(data.settings.close_documents);
+      if (data.settings.company_id) setCompanyIdInput(String(data.settings.company_id));
       setClientId("");
       setClientSecret("");
       setUsername("");
@@ -75,6 +82,8 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
     if (clientSecret.trim()) payload.client_secret = clientSecret.trim();
     if (username.trim()) payload.username = username.trim();
     if (password) payload.password = password;
+    const parsedCompanyId = parseInt(companyIdInput, 10);
+    if (!isNaN(parsedCompanyId) && parsedCompanyId > 0) payload.company_id = parsedCompanyId;
 
     const res = await fetch("/api/admin/moloni-settings", {
       method: "POST",
@@ -93,6 +102,8 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
       setPassword("");
       setMissing(data.catalog?.missing_articles ?? []);
       setMoloniNames(data.catalog?.moloni_product_names ?? []);
+      setCompanies(data.catalog?.companies ?? []);
+      if (data.settings.company_id) setCompanyIdInput(String(data.settings.company_id));
       const syncMsg = data.catalog?.missing_articles?.length
         ? adminT.moloni.syncedMissing
         : adminT.moloni.synced;
@@ -185,6 +196,18 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="moloni_company_id">{adminT.moloni.companyId}</Label>
+            <Input
+              id="moloni_company_id"
+              autoComplete="off"
+              placeholder={view.company_id ? String(view.company_id) : "ex: 12345"}
+              value={companyIdInput}
+              onChange={(e) => setCompanyIdInput(e.target.value.replace(/\D/g, ""))}
+            />
+            <p className="text-xs text-muted-foreground">{adminT.moloni.companyIdHint}</p>
+          </div>
+
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -229,6 +252,28 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
               {view.tax_id_6 ? ` · IVA 6% #${view.tax_id_6}` : ""}
               {view.tax_id_23 ? ` · IVA 23% #${view.tax_id_23}` : ""}
             </p>
+          ) : null}
+          {companies.length > 1 ? (
+            <div className="space-y-1">
+              <p className="text-xs font-medium">{adminT.moloni.companiesFound}:</p>
+              <ul className="text-xs text-muted-foreground space-y-0.5">
+                {companies.map((c) => (
+                  <li key={c.company_id}>
+                    <button
+                      type="button"
+                      className="underline hover:no-underline"
+                      onClick={() => setCompanyIdInput(String(c.company_id))}
+                    >
+                      {c.company_id}
+                    </button>
+                    {c.name ? ` — ${c.name}` : ""}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                ↑ Cliquer sur le bon ID entreprise, puis &quot;Enregistrer Moloni&quot; et &quot;Tester et synchroniser&quot;.
+              </p>
+            </div>
           ) : null}
           <ul className="text-xs text-muted-foreground space-y-1">
             {MOLONI_ARTICLE_LIST.map((article) => (

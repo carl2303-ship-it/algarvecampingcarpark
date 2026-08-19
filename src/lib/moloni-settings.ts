@@ -250,15 +250,15 @@ async function persistMoloniRow(
   return "fallback";
 }
 
-export function mergeMoloniSecrets(
-  base: MoloniSecrets,
-  input?: {
-    client_id?: string;
-    client_secret?: string;
-    username?: string;
-    password?: string;
-  }
-): MoloniSecrets {
+export type MoloniSecretsInput = {
+  client_id?: string;
+  client_secret?: string;
+  username?: string;
+  password?: string;
+  company_id?: number | null;
+};
+
+export function mergeMoloniSecrets(base: MoloniSecrets, input?: MoloniSecretsInput): MoloniSecrets {
   if (!input) return base;
   return {
     ...base,
@@ -266,15 +266,14 @@ export function mergeMoloniSecrets(
     clientSecret: input.client_secret?.trim() || base.clientSecret,
     username: input.username?.trim() || base.username,
     password: input.password || base.password,
+    companyId:
+      input.company_id !== undefined && input.company_id !== null
+        ? input.company_id
+        : base.companyId,
   };
 }
 
-export async function resolveMoloniSecrets(input?: {
-  client_id?: string;
-  client_secret?: string;
-  username?: string;
-  password?: string;
-}): Promise<MoloniSecrets> {
+export async function resolveMoloniSecrets(input?: MoloniSecretsInput): Promise<MoloniSecrets> {
   return mergeMoloniSecrets(await getMoloniSecrets(), input);
 }
 
