@@ -134,7 +134,16 @@ export function getMoloniLastDbError(): string | null {
 }
 
 async function loadMoloniDbRow(): Promise<MoloniSettingsRow | null> {
-  const supabase = createAdminClient();
+  let supabase: ReturnType<typeof createAdminClient>;
+  try {
+    supabase = createAdminClient();
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    lastDbReadError = msg;
+    console.error("[moloni-settings] createAdminClient failed:", msg);
+    moloniTableMissing = true;
+    return null;
+  }
   const { data, error } = await supabase
     .from("moloni_settings")
     .select("*")
@@ -214,10 +223,11 @@ async function persistMoloniRow(
         { onConflict: "id" }
       );
       if (error) {
+        console.error("[moloni-settings] upsert error:", error.code, error.message);
         if (isMissingRelationError(error)) {
           moloniTableMissing = true;
         } else {
-          throw new Error(error.message);
+          throw new Error(`Supabase upsert moloni_settings: ${error.message} (${error.code})`);
         }
       } else {
         await saveMoloniKvRow(rowPayload).catch(() => undefined);
@@ -392,8 +402,10 @@ export async function saveMoloniSettings(
   try {
     await persistMoloniRow(rowPayload, { requireSecrets: savingSecrets && requirePersist });
   } catch (error) {
-    if (!requirePersist && error instanceof MoloniSettingsPersistError) {
-      persistWarning = error.message;
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!requirePersist) {
+      persistWarning = msg;
+      console.warn("[moloni-settings] persist failed (non-blocking):", msg);
     } else {
       throw error;
     }
