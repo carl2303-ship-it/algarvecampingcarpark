@@ -207,31 +207,34 @@ type PersistMoloniOptions = {
 };
 
 async function persistMoloniRow(
-  rowPayload: MoloniSettingsRow,
+  patch: Partial<MoloniSettingsRow>,
   options: PersistMoloniOptions = {}
 ): Promise<"database" | "fallback"> {
-  const requireSecrets = options.requireSecrets ?? rowHasSecrets(rowPayload);
+  const requireSecrets = options.requireSecrets ?? false;
 
   if (!moloniTableMissing) {
     try {
       const supabase = createAdminClient();
-      const { error } = await supabase.from("moloni_settings").upsert(
-        {
-          id: true,
-          ...rowPayload,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      );
+
+      // First ensure the singleton row exists
+      await supabase
+        .from("moloni_settings")
+        .upsert({ id: true }, { onConflict: "id", ignoreDuplicates: true });
+
+      // Then patch only the provided fields — never overwrite others with null
+      const { error } = await supabase
+        .from("moloni_settings")
+        .update({ ...patch, updated_at: new Date().toISOString() })
+        .eq("id", true);
+
       if (error) {
-        console.error("[moloni-settings] upsert error:", error.code, error.message);
+        console.error("[moloni-settings] update error:", error.code, error.message);
         if (isMissingRelationError(error)) {
           moloniTableMissing = true;
         } else {
-          throw new Error(`Supabase upsert moloni_settings: ${error.message} (${error.code})`);
+          throw new Error(`Supabase update moloni_settings: ${error.message} (${error.code})`);
         }
       } else {
-        // Clear KV fallback so stale data never contaminates future reads
         clearMoloniKvRow().catch(() => undefined);
         return "database";
       }
@@ -241,7 +244,29 @@ async function persistMoloniRow(
     }
   }
 
-  const kvSaved = await saveMoloniKvRow(rowPayload);
+  // Fallback: need a full row for KV storage — load current and merge
+  const current = await loadMoloniKvRow();
+  const merged: MoloniSettingsRow = {
+    client_id: null,
+    client_secret: null,
+    username: null,
+    password: null,
+    company_id: null,
+    document_set_id: null,
+    payment_method_id: null,
+    tax_id_6: null,
+    tax_id_23: null,
+    consumer_customer_id: null,
+    access_token: null,
+    refresh_token: null,
+    token_expires_at: null,
+    product_map: {},
+    enabled: false,
+    close_documents: true,
+    ...current,
+    ...patch,
+  };
+  const kvSaved = await saveMoloniKvRow(merged);
   if (requireSecrets && !kvSaved) {
     throw new MoloniSettingsPersistError(
       "Não foi possível guardar as credenciais Moloni. Execute a migração 031 no Supabase (SQL Editor) — é a forma persistente em produção."
@@ -360,37 +385,29 @@ export async function saveMoloniSettings(
   options: SaveMoloniSettingsOptions = {}
 ): Promise<MoloniSettingsView & { persist_warning?: string }> {
   const requirePersist = options.requirePersist !== false;
-  const current = await loadMoloniRow();
 
-  const rowPayload: MoloniSettingsRow = {
-    client_id: input.client_id?.trim() || current?.client_id || null,
-    client_secret: input.client_secret?.trim() || current?.client_secret || null,
-    username: input.username?.trim() || current?.username || null,
-    password: input.password || current?.password || null,
-    company_id: input.company_id !== undefined ? input.company_id : current?.company_id ?? null,
-    document_set_id:
-      input.document_set_id !== undefined ? input.document_set_id : current?.document_set_id ?? null,
-    payment_method_id:
-      input.payment_method_id !== undefined
-        ? input.payment_method_id
-        : current?.payment_method_id ?? null,
-    tax_id_6: input.tax_id_6 !== undefined ? input.tax_id_6 : current?.tax_id_6 ?? null,
-    tax_id_23: input.tax_id_23 !== undefined ? input.tax_id_23 : current?.tax_id_23 ?? null,
-    consumer_customer_id:
-      input.consumer_customer_id !== undefined
-        ? input.consumer_customer_id
-        : current?.consumer_customer_id ?? null,
-    product_map: input.product_map ?? current?.product_map ?? {},
-    enabled: input.enabled ?? current?.enabled ?? false,
-    close_documents: input.close_documents ?? current?.close_documents ?? true,
-    access_token: input.access_token !== undefined ? input.access_token : current?.access_token ?? null,
-    refresh_token:
-      input.refresh_token !== undefined ? input.refresh_token : current?.refresh_token ?? null,
-    token_expires_at:
-      input.token_expires_at !== undefined
-        ? input.token_expires_at
-        : current?.token_expires_at ?? null,
-  };
+  // Build a patch with ONLY the fields explicitly provided — never set others to null
+  const patch: Partial<MoloniSettingsRow> = {};
+  if (input.client_id?.trim()) patch.client_id = input.client_id.trim();
+  if (input.client_secret?.trim()) patch.client_secret = input.client_secret.trim();
+  if (input.username?.trim()) patch.username = input.username.trim();
+  if (input.password) patch.password = input.password;
+  if (input.company_id !== undefined) patch.company_id = input.company_id;
+  if (input.document_set_id !== undefined) patch.document_set_id = input.document_set_id;
+  if (input.payment_method_id !== undefined) patch.payment_method_id = input.payment_method_id;
+  if (input.tax_id_6 !== undefined) patch.tax_id_6 = input.tax_id_6;
+  if (input.tax_id_23 !== undefined) patch.tax_id_23 = input.tax_id_23;
+  if (input.consumer_customer_id !== undefined) patch.consumer_customer_id = input.consumer_customer_id;
+  if (input.product_map !== undefined) patch.product_map = input.product_map;
+  if (input.enabled !== undefined) patch.enabled = input.enabled;
+  if (input.close_documents !== undefined) patch.close_documents = input.close_documents;
+  if (input.access_token !== undefined) patch.access_token = input.access_token;
+  if (input.refresh_token !== undefined) patch.refresh_token = input.refresh_token;
+  if (input.token_expires_at !== undefined) patch.token_expires_at = input.token_expires_at;
+
+  if (Object.keys(patch).length === 0) {
+    return getMoloniSettingsView();
+  }
 
   const savingSecrets = Boolean(
     input.client_id?.trim() ||
@@ -401,7 +418,7 @@ export async function saveMoloniSettings(
 
   let persistWarning: string | undefined;
   try {
-    await persistMoloniRow(rowPayload, { requireSecrets: savingSecrets && requirePersist });
+    await persistMoloniRow(patch, { requireSecrets: savingSecrets && requirePersist });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     if (!requirePersist) {
