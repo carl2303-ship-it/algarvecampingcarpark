@@ -28,6 +28,7 @@ import {
   MoloniApiError,
   moloniCompanies,
   moloniCustomersByVat,
+  moloniInsertCustomer,
   moloniDocumentSets,
   moloniInsertInvoiceReceipt,
   moloniInvoiceReceiptsByReference,
@@ -72,6 +73,32 @@ function matchArticlesToProducts(
   }
 
   return { productMap, missing };
+}
+
+const CONSUMER_FINAL_NAMES = /consumidor\s+final|consommateur\s+final|final\s+consumer/i;
+
+async function resolveConsumerFinalId(
+  companyId: number,
+  existingId: number | null,
+  candidates: { customer_id: number; name?: string }[]
+): Promise<number | null> {
+  // If we already have an ID, verify it's the right one
+  if (existingId) {
+    const existing = candidates.find((c) => c.customer_id === existingId);
+    if (existing && CONSUMER_FINAL_NAMES.test(existing.name ?? "")) return existingId;
+  }
+
+  // Look for "Consumidor Final" among candidates
+  const cf = candidates.find((c) => CONSUMER_FINAL_NAMES.test(c.name ?? ""));
+  if (cf) return cf.customer_id;
+
+  // None found — create it
+  const created = await moloniInsertCustomer(companyId, {
+    name: "Consumidor Final",
+    vat: MOLONI_CONSUMER_VAT,
+    number: "CF",
+  });
+  return created?.customer_id ?? candidates[0]?.customer_id ?? null;
 }
 
 async function loadProductsForCompany(companyId: number): Promise<MoloniProduct[]> {
@@ -145,6 +172,9 @@ export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promis
 
   const { productMap, missing } = matchArticlesToProducts(products, secrets.productMap);
 
+  // Pick "Consumidor Final" by name — avoid picking a real customer that shares the VAT
+  const consumerFinalId = await resolveConsumerFinalId(companyId, secrets.consumerCustomerId, consumers);
+
   await saveMoloniSettings(
     {
       company_id: companyId,
@@ -152,7 +182,7 @@ export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promis
       payment_method_id: secrets.paymentMethodId ?? pickPaymentMethodId(methods),
       tax_id_6: secrets.taxId6 ?? pickTaxId(taxes, 6),
       tax_id_23: secrets.taxId23 ?? pickTaxId(taxes, 23),
-      consumer_customer_id: secrets.consumerCustomerId ?? consumers[0]?.customer_id ?? null,
+      consumer_customer_id: consumerFinalId,
       product_map: productMap,
     },
     { requirePersist: false }
@@ -164,7 +194,7 @@ export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promis
     payment_method_id: secrets.paymentMethodId ?? pickPaymentMethodId(methods),
     tax_id_6: secrets.taxId6 ?? pickTaxId(taxes, 6),
     tax_id_23: secrets.taxId23 ?? pickTaxId(taxes, 23),
-    consumer_customer_id: secrets.consumerCustomerId ?? consumers[0]?.customer_id ?? null,
+    consumer_customer_id: consumerFinalId,
     product_map: productMap,
     missing_articles: missing,
     moloni_product_names: products
@@ -350,8 +380,8 @@ export async function issueMoloniInvoiceFromCheckout(
   const amountCents = session.amount_total ?? accountingLinesTotalCents(lines);
   const plate = reservation?.vehicle_plate?.trim();
   const notes = [
+    plate ? plate : null,
     reservation?.guest_name,
-    plate ? `Matrícula ${plate}` : null,
     reservation ? `${reservation.check_in} → ${reservation.check_out}` : null,
     reservation?.pitch_code ? `Lugar ${reservation.pitch_code}` : null,
   ]

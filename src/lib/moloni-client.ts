@@ -270,6 +270,33 @@ export async function moloniCustomersByVat(companyId: number, vat: string): Prom
   return asList<MoloniCustomer>(data);
 }
 
+export async function moloniInsertCustomer(
+  companyId: number,
+  customer: { name: string; vat: string; number?: string }
+): Promise<MoloniCustomer | null> {
+  try {
+    const data = await moloniPost<{ customer_id?: number } & MoloniCustomer>(
+      "/customers/insert/",
+      {
+        company_id: companyId,
+        name: customer.name,
+        vat: customer.vat,
+        number: customer.number ?? "CF",
+        email: "",
+        address: "",
+        zip_code: "",
+        city: "",
+        country_id: 1, // Portugal
+      }
+    );
+    if (data?.customer_id) return data as MoloniCustomer;
+    return null;
+  } catch (error) {
+    console.warn("Moloni insert customer failed:", error);
+    return null;
+  }
+}
+
 export async function moloniProductsBySearch(companyId: number, search: string): Promise<MoloniProduct[]> {
   const cleaned = search.replace(/^[+]+/, "").trim();
   const data = await moloniPost<unknown>("/products/getBySearch/", {
