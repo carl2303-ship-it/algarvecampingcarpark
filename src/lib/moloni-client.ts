@@ -381,6 +381,7 @@ export async function moloniProductsForArticleSync(companyId: number): Promise<M
     "Verao",
     "Verão",
     "Elec",
+    "edp",
     "PESSOA",
     "pessoa",
     "1.50",

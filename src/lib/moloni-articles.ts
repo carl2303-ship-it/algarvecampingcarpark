@@ -155,6 +155,10 @@ export const MOLONI_ARTICLE_ALIASES: Partial<Record<MoloniArticleSku, string[]>>
     "6A",
   ],
   "elec-10a": [
+    "edp 4€",
+    "edp 4 €",
+    "EDP 4€",
+    "EDP 4 €",
     "Elec 4,00 €",
     "Elec 4.00",
     "Elec 4€",
