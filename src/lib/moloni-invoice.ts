@@ -428,9 +428,6 @@ export async function issueMoloniInvoiceFromCheckout(
   });
 
   const result = await moloniInsertInvoiceReceipt(payload);
-  if (!result.document_id) {
-    throw new MoloniApiError("Moloni não devolveu document_id", undefined, result);
-  }
 
   await markPaymentMoloni(session.id, {
     moloni_document_id: result.document_id,

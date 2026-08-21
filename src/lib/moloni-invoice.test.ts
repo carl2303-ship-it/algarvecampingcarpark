@@ -169,4 +169,16 @@ describe("Moloni invoice payload", () => {
       null
     );
   });
+
+  it("treats Moloni validation error arrays as errors", () => {
+    assert.match(String(extractMoloniError(["1 customer_id", "2 products"])), /customer_id/);
+    assert.match(
+      String(
+        extractMoloniError([
+          { code: "1 customer_id", description: "Field 'customer_id' is required" },
+        ])
+      ),
+      /customer_id/
+    );
+  });
 });

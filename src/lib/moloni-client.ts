@@ -86,13 +86,53 @@ function stringifyMoloniErrorValue(value: unknown): string | null {
 }
 
 /**
- * Detect Moloni API error payloads. Successful getAll responses are arrays of
- * entities (companies, products, …) and must NOT be treated as errors.
+ * Detect Moloni API error payloads.
+ * - getAll success → array of entities ({ company_id }, { product_id }, …)
+ * - insert/update validation failure → array of strings ("1 name") or
+ *   { code, description } when human_errors=true
  */
 export function extractMoloniError(body: unknown): string | null {
   if (body == null) return null;
-  // Successful list endpoints return plain arrays — never treat as errors.
-  if (Array.isArray(body)) return null;
+
+  if (Array.isArray(body)) {
+    if (body.length === 0) return null;
+    const first = body[0];
+    // human_errors=true format
+    if (first && typeof first === "object" && !Array.isArray(first)) {
+      const row = first as Record<string, unknown>;
+      if ("code" in row || "description" in row) {
+        return body
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            const rec = item as Record<string, unknown>;
+            const description =
+              typeof rec.description === "string" ? rec.description.trim() : "";
+            const code = typeof rec.code === "string" ? rec.code.trim() : "";
+            return description || code || null;
+          })
+          .filter(Boolean)
+          .join("; ");
+      }
+      // Entity rows (companies, products, taxes, …)
+      if (
+        "company_id" in row ||
+        "product_id" in row ||
+        "customer_id" in row ||
+        "document_id" in row ||
+        "tax_id" in row ||
+        "payment_method_id" in row ||
+        "document_set_id" in row
+      ) {
+        return null;
+      }
+    }
+    // Classic validation errors: ["1 name", "2 qty 1 0", …]
+    if (typeof first === "string" || typeof first === "number") {
+      return stringifyMoloniErrorValue(body);
+    }
+    return null;
+  }
+
   if (typeof body !== "object") return null;
   const record = body as Record<string, unknown>;
   if (typeof record.error_description === "string" && record.error_description.trim()) {
@@ -104,6 +144,16 @@ export function extractMoloniError(body: unknown): string | null {
   }
   if (record.valid === 0 || record.valid === "0") {
     return "Pedido Moloni rejeitado (valid=0)";
+  }
+  // Indexed field errors as object: { "0": "1 products", "1": "…" }
+  const keys = Object.keys(record);
+  if (
+    keys.length > 0 &&
+    keys.every((key) => /^\d+$/.test(key)) &&
+    !("document_id" in record) &&
+    !("company_id" in record)
+  ) {
+    return stringifyMoloniErrorValue(Object.values(record));
   }
   return null;
 }
@@ -241,7 +291,7 @@ export async function moloniPost<T>(
   payload: Record<string, unknown>
 ): Promise<T> {
   const token = await getMoloniAccessToken();
-  const url = `${MOLONI_BASE}${path}?access_token=${encodeURIComponent(token)}&json=true`;
+  const url = `${MOLONI_BASE}${path}?access_token=${encodeURIComponent(token)}&json=true&human_errors=true`;
   const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -507,7 +557,18 @@ export type MoloniInsertResult = {
 export async function moloniInsertInvoiceReceipt(
   payload: Record<string, unknown>
 ): Promise<MoloniInsertResult> {
-  return moloniPost<MoloniInsertResult>("/invoiceReceipts/insert/", payload);
+  const result = await moloniPost<MoloniInsertResult>("/invoiceReceipts/insert/", payload);
+  const documentId = Number(result?.document_id);
+  if (Number.isFinite(documentId) && documentId > 0) {
+    return { ...result, document_id: documentId };
+  }
+  const detail =
+    result == null ? "null" : typeof result === "object" ? JSON.stringify(result) : String(result);
+  throw new MoloniApiError(
+    `Moloni não devolveu document_id. Resposta: ${detail.slice(0, 800)}`,
+    undefined,
+    result
+  );
 }
 
 export async function moloniInvoiceReceiptsByReference(
