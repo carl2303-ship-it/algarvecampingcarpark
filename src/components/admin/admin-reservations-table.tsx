@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { CheckInDialog } from "@/components/admin/check-in-dialog";
 import { CheckOutButton } from "@/components/admin/check-out-button";
 import { DeleteReservationButton } from "@/components/admin/delete-reservation-button";
 import {
+  adminDateLocale,
   adminT,
   formatAdminPaymentBalanceLabel,
 } from "@/lib/admin-i18n";
@@ -29,9 +31,15 @@ import { formatPrice } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { Pitch, Reservation } from "@/types/database";
 
+type ReservationPayment = {
+  created_at: string;
+  status: string;
+};
+
 type ReservationRow = Reservation & {
   zone?: { name: string } | null;
   pitch?: { code: string } | null;
+  payments?: ReservationPayment[] | null;
 };
 
 type SortKey =
@@ -40,6 +48,7 @@ type SortKey =
   | "check_in"
   | "check_out"
   | "status"
+  | "paid_at"
   | "pitch"
   | "vehicle_plate"
   | "total_cents";
@@ -83,6 +92,21 @@ function getPitchCode(row: ReservationRow) {
   return row.pitch_code ?? row.pitch?.code ?? "";
 }
 
+/** First succeeded payment on the reservation (booking payment date). */
+function getPaidAt(row: ReservationRow): string {
+  const dates = (row.payments ?? [])
+    .filter((payment) => payment.status === "succeeded")
+    .map((payment) => payment.created_at);
+
+  if (dates.length === 0) return "";
+  return dates.reduce((earliest, date) => (date < earliest ? date : earliest));
+}
+
+function formatPaidAt(iso: string) {
+  if (!iso) return "—";
+  return format(new Date(iso), "dd MMM yyyy", { locale: adminDateLocale });
+}
+
 function compareRows(a: ReservationRow, b: ReservationRow, key: SortKey, dir: SortDir) {
   let left: string | number = "";
   let right: string | number = "";
@@ -107,6 +131,13 @@ function compareRows(a: ReservationRow, b: ReservationRow, key: SortKey, dir: So
     case "status":
       left = formatAdminPaymentBalanceLabel(paymentTier(a)).toLowerCase();
       right = formatAdminPaymentBalanceLabel(paymentTier(b)).toLowerCase();
+      break;
+    case "paid_at":
+      left = getPaidAt(a);
+      right = getPaidAt(b);
+      if (!left && !right) return 0;
+      if (!left) return 1;
+      if (!right) return -1;
       break;
     case "pitch":
       left = getPitchCode(a).toLowerCase();
@@ -180,7 +211,7 @@ export function AdminReservationsTable({
       return;
     }
     setSortKey(key);
-    setSortDir(key === "check_in" || key === "check_out" ? "desc" : "asc");
+    setSortDir(key === "check_in" || key === "check_out" || key === "paid_at" ? "desc" : "asc");
   }
 
   const filtered = useMemo(
@@ -249,6 +280,12 @@ export function AdminReservationsTable({
                 onClick={() => toggleSort("status")}
               />
               <SortableHead
+                label={adminT.reservations.paymentDate}
+                active={sortKey === "paid_at"}
+                direction={sortDir}
+                onClick={() => toggleSort("paid_at")}
+              />
+              <SortableHead
                 label={adminT.reservations.zone}
                 active={sortKey === "zone"}
                 direction={sortDir}
@@ -273,7 +310,7 @@ export function AdminReservationsTable({
           <TableBody>
             {sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-10">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-10">
                   {emptyMessage}
                 </TableCell>
               </TableRow>
@@ -308,6 +345,9 @@ export function AdminReservationsTable({
                     <Badge className={BALANCE_BADGE_STYLES[tier]}>
                       {formatAdminPaymentBalanceLabel(tier)}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
+                    {formatPaidAt(getPaidAt(r))}
                   </TableCell>
                   <TableCell>{getZoneName(r) || "—"}</TableCell>
                   <TableCell>

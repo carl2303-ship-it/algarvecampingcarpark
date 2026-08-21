@@ -177,6 +177,7 @@ export const adminT = {
     dates: "Dates",
     total: "Total",
     status: "État",
+    paymentDate: "Date de paiement",
     pitch: "Emplacement",
     pitchUnassigned: "À attribuer",
     actions: "Actions",

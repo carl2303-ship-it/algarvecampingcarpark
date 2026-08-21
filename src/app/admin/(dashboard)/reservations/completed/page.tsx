@@ -16,7 +16,7 @@ export default async function CompletedReservationsPage() {
   const [{ data: reservations }, { data: pitches }] = await Promise.all([
     supabase
       .from("reservations")
-      .select("*, zone:zones(name), pitch:pitches(code)")
+      .select("*, zone:zones(name), pitch:pitches(code), payments(created_at, status)")
       .in("status", [...COMPLETED_RESERVATION_STATUSES])
       .order("check_out", { ascending: false })
       .limit(200),
