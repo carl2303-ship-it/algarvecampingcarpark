@@ -137,18 +137,19 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
         issued?: number;
         failed?: number;
         skipped?: number;
+        error_summary?: string[];
       } | undefined;
       if (!retry || retry.attempted === 0) {
         setMessage(adminT.moloni.retryEmpty);
         return;
       }
-      setMessage(
-        adminT.moloni.retried
-          .replace("{issued}", String(retry.issued ?? 0))
-          .replace("{failed}", String(retry.failed ?? 0))
-          .replace("{skipped}", String(retry.skipped ?? 0))
-          .replace("{attempted}", String(retry.attempted ?? 0))
-      );
+      const summary = adminT.moloni.retried
+        .replace("{issued}", String(retry.issued ?? 0))
+        .replace("{failed}", String(retry.failed ?? 0))
+        .replace("{skipped}", String(retry.skipped ?? 0))
+        .replace("{attempted}", String(retry.attempted ?? 0));
+      const details = (retry.error_summary ?? []).slice(0, 5).join("\n");
+      setMessage(details ? `${summary}\n\n${details}` : summary);
       if ((retry.failed ?? 0) > 0) setError(true);
     } else {
       setError(true);
@@ -350,7 +351,13 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
         </div>
 
         {message && (
-          <p className={`text-sm ${error ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>
+          <p
+            className={`text-sm whitespace-pre-wrap break-words ${
+              error ? "text-destructive" : "text-muted-foreground"
+            }`}
+          >
+            {message}
+          </p>
         )}
 
         {view.table_missing ? (

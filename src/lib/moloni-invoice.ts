@@ -455,6 +455,7 @@ export async function retryFailedMoloniInvoices(limit = 15): Promise<{
   issued: number;
   skipped: number;
   failed: number;
+  error_summary: string[];
   results: MoloniRetryResult[];
 }> {
   const supabase = createAdminClient();
@@ -474,6 +475,7 @@ export async function retryFailedMoloniInvoices(limit = 15): Promise<{
   let issued = 0;
   let skipped = 0;
   let failed = 0;
+  const errorCounts = new Map<string, number>();
 
   for (const payment of payments ?? []) {
     const stripeSessionId = payment.stripe_session_id as string | null;
@@ -484,26 +486,43 @@ export async function retryFailedMoloniInvoices(limit = 15): Promise<{
       if (result?.document_id && !result.skipped) {
         issued += 1;
         results.push({ stripe_session_id: stripeSessionId, document_id: result.document_id });
-      } else {
-        skipped += 1;
+      } else if (result?.skipped === "already_synced" && result.document_id) {
+        // Linked an existing Moloni document — treat as success for the admin summary.
+        issued += 1;
         results.push({
           stripe_session_id: stripeSessionId,
-          skipped: result?.skipped ?? "unknown",
+          document_id: result.document_id,
+          skipped: result.skipped,
+        });
+      } else {
+        skipped += 1;
+        const reason = result?.skipped ?? "unknown";
+        errorCounts.set(reason, (errorCounts.get(reason) ?? 0) + 1);
+        results.push({
+          stripe_session_id: stripeSessionId,
+          skipped: reason,
           document_id: result?.document_id,
         });
       }
     } catch (retryError) {
       failed += 1;
       const message = retryError instanceof Error ? retryError.message : String(retryError);
+      errorCounts.set(message, (errorCounts.get(message) ?? 0) + 1);
       results.push({ stripe_session_id: stripeSessionId, error: message });
+      await markPaymentMoloni(stripeSessionId, { moloni_error: message });
     }
   }
+
+  const error_summary = [...errorCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([message, count]) => (count > 1 ? `${message} (×${count})` : message));
 
   return {
     attempted: results.length,
     issued,
     skipped,
     failed,
+    error_summary,
     results,
   };
 }

@@ -244,7 +244,7 @@ export async function moloniPost<T>(
   const url = `${MOLONI_BASE}${path}?access_token=${encodeURIComponent(token)}&json=true`;
   const response = await fetchWithTimeout(url, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const body = (await response.json().catch(() => null)) as T | Record<string, unknown> | null;
