@@ -57,7 +57,22 @@ function stringifyMoloniErrorValue(value: unknown): string | null {
     return `Erro Moloni código ${value}`;
   }
   if (Array.isArray(value)) {
-    const parts = value.map((item) => stringifyMoloniErrorValue(item)).filter(Boolean);
+    const parts = value
+      .map((item) => {
+        if (typeof item === "string" || typeof item === "number") {
+          return stringifyMoloniErrorValue(item);
+        }
+        if (item && typeof item === "object" && !Array.isArray(item)) {
+          const record = item as Record<string, unknown>;
+          // Field validation errors look like { field: "code" } — not entity rows.
+          if ("company_id" in record || "product_id" in record || "customer_id" in record) {
+            return null;
+          }
+          return stringifyMoloniErrorValue(record);
+        }
+        return null;
+      })
+      .filter(Boolean);
     return parts.length ? parts.join("; ") : null;
   }
   if (typeof value === "object") {
@@ -70,16 +85,23 @@ function stringifyMoloniErrorValue(value: unknown): string | null {
   return String(value);
 }
 
+/**
+ * Detect Moloni API error payloads. Successful getAll responses are arrays of
+ * entities (companies, products, …) and must NOT be treated as errors.
+ */
 export function extractMoloniError(body: unknown): string | null {
   if (body == null) return null;
-  if (Array.isArray(body)) return stringifyMoloniErrorValue(body);
+  // Successful list endpoints return plain arrays — never treat as errors.
+  if (Array.isArray(body)) return null;
   if (typeof body !== "object") return null;
   const record = body as Record<string, unknown>;
   if (typeof record.error_description === "string" && record.error_description.trim()) {
     return record.error_description;
   }
-  const fromError = stringifyMoloniErrorValue(record.error);
-  if (fromError) return fromError;
+  if ("error" in record) {
+    const fromError = stringifyMoloniErrorValue(record.error);
+    if (fromError) return fromError;
+  }
   if (record.valid === 0 || record.valid === "0") {
     return "Pedido Moloni rejeitado (valid=0)";
   }

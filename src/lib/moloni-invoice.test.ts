@@ -159,4 +159,14 @@ describe("Moloni invoice payload", () => {
     assert.match(String(extractMoloniError({ error: { 0: "27" }, valid: 0 })), /27/);
     assert.equal(extractMoloniError({ valid: 0 }), "Pedido Moloni rejeitado (valid=0)");
   });
+
+  it("does not treat companies/getAll success arrays as errors", () => {
+    assert.equal(
+      extractMoloniError([
+        { email: "demo@moloni.com", company_id: 5, name: "Empresa Demonstração" },
+        { email: "algarvecampingcarpark@gmail.com", company_id: 14690, name: "RABAT E GALINIER LDA" },
+      ]),
+      null
+    );
+  });
 });

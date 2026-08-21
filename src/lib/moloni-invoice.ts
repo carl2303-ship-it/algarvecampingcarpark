@@ -141,7 +141,12 @@ export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promis
   const secrets = secretsOverride ?? (await getMoloniSecrets());
   await moloniLogin(secrets);
   const companies = await moloniCompanies();
-  let companyId = secrets.companyId ?? companies[0]?.company_id;
+  const preferred =
+    secrets.companyId ??
+    companies.find((company) => company.company_id !== 5 && !/demonstra/i.test(company.name ?? ""))
+      ?.company_id ??
+    companies[0]?.company_id;
+  let companyId = preferred;
   if (!companyId) throw new MoloniApiError("Nenhuma empresa encontrada na conta Moloni");
 
   let [products, taxes, sets, methods, consumers] = await Promise.all([
