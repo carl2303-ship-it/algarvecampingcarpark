@@ -240,6 +240,27 @@ export function splitInclusiveVat(
   return { netCents, vatCents: grossCents - netCents };
 }
 
+/**
+ * Unit net price (euros) so Moloni’s taxable + VAT for the line equals the
+ * tax-inclusive gross (avoids 29.02 vs 29.00 style drift).
+ */
+export function moloniUnitNetPrice(
+  grossCentsPerUnit: number,
+  quantity: number,
+  vatPercent: number
+): number {
+  const qty = Math.max(1, Math.round(quantity));
+  const targetGrossCents = grossCentsPerUnit * qty;
+  let netTotalCents = Math.round(targetGrossCents / (1 + vatPercent / 100));
+  for (let i = 0; i < 20; i++) {
+    const vatCents = Math.round((netTotalCents * vatPercent) / 100);
+    const diff = targetGrossCents - (netTotalCents + vatCents);
+    if (diff === 0) break;
+    netTotalCents += diff;
+  }
+  return netTotalCents / 100 / qty;
+}
+
 export function formatVatDescription(grossCents: number, vatPercent: number): string {
   const { netCents, vatCents } = splitInclusiveVat(grossCents, vatPercent);
   return `${(netCents / 100).toFixed(2)}€ Iva ${vatPercent}% ${(vatCents / 100).toFixed(2)}€`;

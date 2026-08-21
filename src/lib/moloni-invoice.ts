@@ -28,8 +28,9 @@ import {
   MoloniApiError,
   moloniCompanies,
   moloniCustomersByVat,
-  moloniInsertCustomer,
+  moloniCustomersBySearch,
   moloniDocumentSets,
+  moloniInsertCustomer,
   moloniInsertInvoiceReceipt,
   moloniInvoiceReceiptsByReference,
   moloniProductsForArticleSync,
@@ -109,6 +110,10 @@ function matchArticlesToProducts(
 
 const CONSUMER_FINAL_NAMES = /consumidor\s+final|consommateur\s+final|final\s+consumer/i;
 
+function normalizePlateForMoloni(plate: string | null | undefined): string {
+  return (plate ?? "").trim().toUpperCase().replace(/\s+/g, "");
+}
+
 async function resolveConsumerFinalId(
   companyId: number,
   existingId: number | null,
@@ -130,7 +135,45 @@ async function resolveConsumerFinalId(
     vat: MOLONI_CONSUMER_VAT,
     number: "CF",
   });
-  return created?.customer_id ?? candidates[0]?.customer_id ?? null;
+  return created?.customer_id ?? null;
+}
+
+/** Invoice customer: name = matrícula (CF VAT). Never reuse a random guest like "krister". */
+async function resolveInvoiceCustomerId(
+  companyId: number,
+  plate: string | null | undefined,
+  fallbackConsumerId: number | null
+): Promise<number> {
+  const normalized = normalizePlateForMoloni(plate);
+  if (normalized) {
+    try {
+      const found = await moloniCustomersBySearch(companyId, normalized);
+      const exact = found.find((customer) => {
+        const name = normalizePlateForMoloni(customer.name);
+        const number = normalizePlateForMoloni(customer.number);
+        return name === normalized || number === normalized;
+      });
+      if (exact?.customer_id) return exact.customer_id;
+    } catch (error) {
+      console.warn("Moloni customer search by plate failed:", error);
+    }
+
+    const created = await moloniInsertCustomer(companyId, {
+      name: normalized,
+      vat: MOLONI_CONSUMER_VAT,
+      number: normalized.slice(0, 30),
+    });
+    if (created?.customer_id) return created.customer_id;
+  }
+
+  const consumers = await moloniCustomersByVat(companyId, MOLONI_CONSUMER_VAT);
+  const cfId = await resolveConsumerFinalId(companyId, fallbackConsumerId, consumers);
+  if (!cfId) {
+    throw new MoloniApiError(
+      "Cliente Consumidor Final em falta na Moloni. Sincronize no admin ou crie o cliente 999999990."
+    );
+  }
+  return cfId;
 }
 
 async function loadProductsForCompany(companyId: number): Promise<MoloniProduct[]> {
@@ -445,19 +488,25 @@ export async function issueMoloniInvoiceFromCheckout(
     !secrets.documentSetId ||
     !secrets.paymentMethodId ||
     !secrets.taxId6 ||
-    !secrets.taxId23 ||
-    !secrets.consumerCustomerId
+    !secrets.taxId23
   ) {
     throw new MoloniApiError(
-      "IDs Moloni incompletos (série, método de pagamento, IVA ou consumidor final). Clique em Sincronizar no admin."
+      "IDs Moloni incompletos (série, método de pagamento ou IVA). Clique em Sincronizar no admin."
     );
   }
 
   const linesTotalCents = accountingLinesTotalCents(lines);
-  const amountCents = linesTotalCents > 0 ? linesTotalCents : (session.amount_total ?? 0);
+  const amountCents =
+    typeof session.amount_total === "number" && session.amount_total > 0
+      ? session.amount_total
+      : linesTotalCents;
   const plate = reservation?.vehicle_plate?.trim();
+  const customerId = await resolveInvoiceCustomerId(
+    secrets.companyId,
+    plate,
+    secrets.consumerCustomerId
+  );
   const notes = [
-    plate ? plate : null,
     reservation?.guest_name,
     reservation ? `${reservation.check_in} → ${reservation.check_out}` : null,
     reservation?.pitch_code ? `Lugar ${reservation.pitch_code}` : null,
@@ -468,7 +517,7 @@ export async function issueMoloniInvoiceFromCheckout(
   const payload = buildMoloniInvoicePayload({
     companyId: secrets.companyId,
     documentSetId: secrets.documentSetId,
-    customerId: secrets.consumerCustomerId,
+    customerId,
     paymentMethodId: secrets.paymentMethodId,
     taxId6: secrets.taxId6,
     taxId23: secrets.taxId23,

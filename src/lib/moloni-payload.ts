@@ -1,4 +1,4 @@
-import { splitInclusiveVat, type AccountingLine, type VatPercent } from "@/lib/moloni-articles";
+import { moloniUnitNetPrice, type AccountingLine, type VatPercent } from "@/lib/moloni-articles";
 
 export type MoloniProductMap = Record<string, number>;
 
@@ -49,7 +49,7 @@ export function lisbonDate(now = new Date()): string {
 }
 
 export function moloniNetPrice(grossCents: number, vatPercent: VatPercent): number {
-  return splitInclusiveVat(grossCents, vatPercent).netCents / 100;
+  return moloniUnitNetPrice(grossCents, 1, vatPercent);
 }
 
 function fingerprint(value: string): string {
@@ -207,7 +207,7 @@ export function buildMoloniInvoicePayload(input: {
         name: line.name,
         summary: line.description,
         qty: line.quantity,
-        price: moloniNetPrice(line.unitAmountCents, line.vatPercent),
+        price: moloniUnitNetPrice(line.unitAmountCents, line.quantity, line.vatPercent),
         discount: 0,
         order: index + 1,
         taxes: [{ tax_id: taxId, value: line.vatPercent, order: 1, cumulative: 0 }],

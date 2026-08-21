@@ -373,6 +373,19 @@ export async function moloniCustomersByVat(companyId: number, vat: string): Prom
   return asList<MoloniCustomer>(data);
 }
 
+export async function moloniCustomersBySearch(
+  companyId: number,
+  search: string
+): Promise<MoloniCustomer[]> {
+  const data = await moloniPost<unknown>("/customers/getBySearch/", {
+    company_id: companyId,
+    search: search.trim(),
+    qty: 50,
+    offset: 0,
+  });
+  return asList<MoloniCustomer>(data);
+}
+
 export async function moloniInsertCustomer(
   companyId: number,
   customer: { name: string; vat: string; number?: string }
@@ -384,11 +397,11 @@ export async function moloniInsertCustomer(
         company_id: companyId,
         name: customer.name,
         vat: customer.vat,
-        number: customer.number ?? "CF",
+        number: customer.number ?? customer.name.slice(0, 20),
         email: "",
-        address: "",
-        zip_code: "",
-        city: "",
+        address: "Desconhecido",
+        zip_code: "0000-000",
+        city: "Desconhecido",
         country_id: 1, // Portugal
       }
     );

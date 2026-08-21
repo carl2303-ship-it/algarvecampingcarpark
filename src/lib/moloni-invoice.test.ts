@@ -45,12 +45,54 @@ describe("Moloni invoice payload", () => {
     assert.equal(payload.products[0]?.price, 8.49);
     assert.equal(payload.products[0]?.taxes[0]?.tax_id, 60);
     assert.equal(payload.products[0]?.taxes[0]?.value, 6);
-    assert.equal(payload.products[1]?.price, 2.85);
+    assert.equal(payload.products[1]?.price, 2.845);
     assert.equal(payload.products[1]?.taxes[0]?.tax_id, 230);
     assert.equal(payload.products[1]?.taxes[0]?.value, 23);
     assert.equal(payload.payments[0]?.value, 25);
     assert.equal(payload.payments[0]?.date, "2026-08-18 12:00:00");
     assert.equal(moloniNetPrice(150, 23), 1.22);
+  });
+
+  it("uses line net prices that keep tax-inclusive totals exact", () => {
+    const payload = buildMoloniInvoicePayload({
+      companyId: 1,
+      documentSetId: 2,
+      customerId: 3,
+      paymentMethodId: 4,
+      taxId6: 60,
+      taxId23: 230,
+      productMap: {
+        "noite-agosto-2": 11,
+        "elec-6a": 12,
+      },
+      lines: [
+        {
+          sku: "elec-6a",
+          name: MOLONI_ARTICLES["elec-6a"].name,
+          description: "",
+          unitAmountCents: 350,
+          quantity: 2,
+          vatPercent: 23,
+        },
+        {
+          sku: "noite-agosto-2",
+          name: MOLONI_ARTICLES["noite-agosto-2"].name,
+          description: "",
+          unitAmountCents: 1100,
+          quantity: 2,
+          vatPercent: 6,
+        },
+      ],
+      yourReference: "stripe:cs_test",
+      close: false,
+      paymentValueEuros: 29,
+      date: "2026-08-21",
+    });
+
+    // 2×3.50€ @23% + 2×11€ @6% = 29.00€ TTC (not 29.02)
+    assert.equal(payload.products[0]?.price, 2.845);
+    assert.equal(payload.products[1]?.price, 10.375);
+    assert.equal(payload.payments[0]?.value, 29);
   });
 
   it("matches Moloni product names ignoring accents/case", () => {
