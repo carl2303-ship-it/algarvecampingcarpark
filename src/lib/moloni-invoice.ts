@@ -48,11 +48,43 @@ function pickTaxId(taxes: { tax_id: number; value?: number; saft_type?: number; 
   return match?.tax_id ?? null;
 }
 
-function pickPaymentMethodId(methods: { payment_method_id: number; name?: string }[]) {
+function pickPaymentMethodId(
+  methods: { payment_method_id: number; name?: string }[],
+  preferredId?: number | null
+) {
+  if (preferredId && methods.some((method) => method.payment_method_id === preferredId)) {
+    return preferredId;
+  }
   const ranked = methods.find((method) =>
     /stripe|cart[aã]o|credit|visa|mbway|multibanco/i.test(method.name ?? "")
   );
   return ranked?.payment_method_id ?? methods[0]?.payment_method_id ?? null;
+}
+
+/** Keep saved series only if it still exists for this company; prefer default / FR. */
+function pickDocumentSetId(
+  sets: { document_set_id: number; name?: string; active_by_default?: number }[],
+  preferredId?: number | null
+): number | null {
+  if (!sets.length) return null;
+  if (preferredId && sets.some((set) => set.document_set_id === preferredId)) {
+    return preferredId;
+  }
+  const byDefault = sets.find((set) => Number(set.active_by_default) === 1);
+  if (byDefault) return byDefault.document_set_id;
+  const invoiceLike = sets.find((set) =>
+    /fatura|recibo|fr\b|fs\b|invoice|receipt/i.test(set.name ?? "")
+  );
+  return invoiceLike?.document_set_id ?? sets[0]?.document_set_id ?? null;
+}
+
+function pickTaxIdOrKeep(
+  taxes: { tax_id: number; value?: number; saft_type?: number; type?: number }[],
+  percent: number,
+  preferredId?: number | null
+) {
+  if (preferredId && taxes.some((tax) => tax.tax_id === preferredId)) return preferredId;
+  return pickTaxId(taxes, percent);
 }
 
 function matchArticlesToProducts(
@@ -180,13 +212,18 @@ export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promis
   // Pick "Consumidor Final" by name — avoid picking a real customer that shares the VAT
   const consumerFinalId = await resolveConsumerFinalId(companyId, secrets.consumerCustomerId, consumers);
 
+  const documentSetId = pickDocumentSetId(sets, secrets.documentSetId);
+  const paymentMethodId = pickPaymentMethodId(methods, secrets.paymentMethodId);
+  const taxId6 = pickTaxIdOrKeep(taxes, 6, secrets.taxId6);
+  const taxId23 = pickTaxIdOrKeep(taxes, 23, secrets.taxId23);
+
   await saveMoloniSettings(
     {
       company_id: companyId,
-      document_set_id: secrets.documentSetId ?? sets[0]?.document_set_id ?? null,
-      payment_method_id: secrets.paymentMethodId ?? pickPaymentMethodId(methods),
-      tax_id_6: secrets.taxId6 ?? pickTaxId(taxes, 6),
-      tax_id_23: secrets.taxId23 ?? pickTaxId(taxes, 23),
+      document_set_id: documentSetId,
+      payment_method_id: paymentMethodId,
+      tax_id_6: taxId6,
+      tax_id_23: taxId23,
       consumer_customer_id: consumerFinalId,
       product_map: productMap,
     },
@@ -195,10 +232,10 @@ export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promis
 
   return {
     company_id: companyId,
-    document_set_id: secrets.documentSetId ?? sets[0]?.document_set_id ?? null,
-    payment_method_id: secrets.paymentMethodId ?? pickPaymentMethodId(methods),
-    tax_id_6: secrets.taxId6 ?? pickTaxId(taxes, 6),
-    tax_id_23: secrets.taxId23 ?? pickTaxId(taxes, 23),
+    document_set_id: documentSetId,
+    payment_method_id: paymentMethodId,
+    tax_id_6: taxId6,
+    tax_id_23: taxId23,
     consumer_customer_id: consumerFinalId,
     product_map: productMap,
     missing_articles: missing,
@@ -386,6 +423,22 @@ export async function issueMoloniInvoiceFromCheckout(
     throw new MoloniApiError(
       "Mapa de artigos Moloni vazio. Clique em «Tester et synchroniser» no admin."
     );
+  }
+
+  // Series IDs can go stale (e.g. after switching company). Re-validate before insert.
+  const documentSets = await moloniDocumentSets(secrets.companyId);
+  const documentSetId = pickDocumentSetId(documentSets, secrets.documentSetId);
+  if (!documentSetId) {
+    throw new MoloniApiError(
+      "Nenhuma série de documentos Moloni encontrada. Crie uma série de fatura-recibo na Moloni e sincronize."
+    );
+  }
+  if (documentSetId !== secrets.documentSetId) {
+    console.warn(
+      `Moloni document_set_id ${secrets.documentSetId} inválido; a usar ${documentSetId}`
+    );
+    await saveMoloniSettings({ document_set_id: documentSetId }, { requirePersist: false });
+    secrets.documentSetId = documentSetId;
   }
 
   if (

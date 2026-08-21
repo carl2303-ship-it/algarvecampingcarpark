@@ -317,7 +317,12 @@ export type MoloniTax = {
   type?: number;
   saft_type?: number;
 };
-export type MoloniDocumentSet = { document_set_id: number; name?: string };
+export type MoloniDocumentSet = {
+  document_set_id: number;
+  name?: string;
+  active_by_default?: number;
+  cash_vat_scheme_indicator?: number;
+};
 export type MoloniPaymentMethod = { payment_method_id: number; name?: string };
 export type MoloniCustomer = { customer_id: number; vat?: string; name?: string; number?: string };
 export type MoloniProduct = {
