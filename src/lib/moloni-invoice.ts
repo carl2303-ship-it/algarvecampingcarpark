@@ -292,8 +292,20 @@ export async function issueMoloniInvoiceFromCheckout(
   session: Stripe.Checkout.Session
 ): Promise<{ skipped?: string; document_id?: number } | null> {
   const secrets = await getMoloniSecrets();
-  if (!secrets.enabled) return { skipped: "disabled" };
-  if (!secrets.clientId || !secrets.password) return { skipped: "not_configured" };
+  if (!secrets.enabled) {
+    console.warn("Moloni invoice skipped: automation disabled");
+    await markPaymentMoloni(session.id, {
+      moloni_error: "Facturação Moloni desactivada. Active a opção em Paramètres → Moloni.",
+    });
+    return { skipped: "disabled" };
+  }
+  if (!secrets.clientId || !secrets.password) {
+    console.warn("Moloni invoice skipped: not configured");
+    await markPaymentMoloni(session.id, {
+      moloni_error: "Credenciais Moloni em falta. Guarde Developer ID e password no admin.",
+    });
+    return { skipped: "not_configured" };
+  }
 
   const reservationId = session.metadata?.reservation_id;
   const supabase = createAdminClient();
@@ -365,6 +377,12 @@ export async function issueMoloniInvoiceFromCheckout(
     throw new MoloniApiError("Não foi possível obter as linhas de artigos para o Moloni");
   }
 
+  if (Object.keys(secrets.productMap).length === 0) {
+    throw new MoloniApiError(
+      "Mapa de artigos Moloni vazio. Clique em «Tester et synchroniser» no admin."
+    );
+  }
+
   if (
     !secrets.documentSetId ||
     !secrets.paymentMethodId ||
@@ -377,7 +395,8 @@ export async function issueMoloniInvoiceFromCheckout(
     );
   }
 
-  const amountCents = session.amount_total ?? accountingLinesTotalCents(lines);
+  const linesTotalCents = accountingLinesTotalCents(lines);
+  const amountCents = linesTotalCents > 0 ? linesTotalCents : (session.amount_total ?? 0);
   const plate = reservation?.vehicle_plate?.trim();
   const notes = [
     plate ? plate : null,
@@ -416,4 +435,70 @@ export async function issueMoloniInvoiceFromCheckout(
   });
 
   return { document_id: result.document_id };
+}
+
+export type MoloniRetryResult = {
+  stripe_session_id: string;
+  document_id?: number;
+  skipped?: string;
+  error?: string;
+};
+
+/** Re-issue Moloni invoices for recent Stripe payments that never got a document_id. */
+export async function retryFailedMoloniInvoices(limit = 15): Promise<{
+  attempted: number;
+  issued: number;
+  skipped: number;
+  failed: number;
+  results: MoloniRetryResult[];
+}> {
+  const supabase = createAdminClient();
+  const { data: payments, error } = await supabase
+    .from("payments")
+    .select("stripe_session_id, moloni_document_id, moloni_error")
+    .eq("status", "succeeded")
+    .not("stripe_session_id", "is", null)
+    .is("moloni_document_id", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+
+  const stripe = await getStripe();
+  const results: MoloniRetryResult[] = [];
+  let issued = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const payment of payments ?? []) {
+    const stripeSessionId = payment.stripe_session_id as string | null;
+    if (!stripeSessionId) continue;
+    try {
+      const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
+      const result = await issueMoloniInvoiceFromCheckout(session);
+      if (result?.document_id && !result.skipped) {
+        issued += 1;
+        results.push({ stripe_session_id: stripeSessionId, document_id: result.document_id });
+      } else {
+        skipped += 1;
+        results.push({
+          stripe_session_id: stripeSessionId,
+          skipped: result?.skipped ?? "unknown",
+          document_id: result?.document_id,
+        });
+      }
+    } catch (retryError) {
+      failed += 1;
+      const message = retryError instanceof Error ? retryError.message : String(retryError);
+      results.push({ stripe_session_id: stripeSessionId, error: message });
+    }
+  }
+
+  return {
+    attempted: results.length,
+    issued,
+    skipped,
+    failed,
+    results,
+  };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Loader2, PlugZap, Save } from "lucide-react";
+import { FileText, Loader2, PlugZap, RefreshCw, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
   const [closeDocuments, setCloseDocuments] = useState(initial.close_documents);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
@@ -116,6 +117,42 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
       const errMsg = typeof data.error === "string" ? data.error : adminT.moloni.syncError;
       const dbErr = data.db_error ? ` [DB: ${data.db_error}]` : "";
       setMessage(errMsg + dbErr);
+    }
+  }
+
+  async function handleRetry() {
+    setRetrying(true);
+    setMessage(null);
+    setError(false);
+    const res = await fetch("/api/admin/moloni-settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "retry" }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setRetrying(false);
+    if (res.ok) {
+      const retry = data.retry as {
+        attempted?: number;
+        issued?: number;
+        failed?: number;
+        skipped?: number;
+      } | undefined;
+      if (!retry || retry.attempted === 0) {
+        setMessage(adminT.moloni.retryEmpty);
+        return;
+      }
+      setMessage(
+        adminT.moloni.retried
+          .replace("{issued}", String(retry.issued ?? 0))
+          .replace("{failed}", String(retry.failed ?? 0))
+          .replace("{skipped}", String(retry.skipped ?? 0))
+          .replace("{attempted}", String(retry.attempted ?? 0))
+      );
+      if ((retry.failed ?? 0) > 0) setError(true);
+    } else {
+      setError(true);
+      setMessage(typeof data.error === "string" ? data.error : adminT.moloni.syncError);
     }
   }
 
@@ -241,7 +278,7 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
 
         <div className="border-t pt-4 space-y-3">
           <p className="text-sm text-muted-foreground">{adminT.moloni.syncHint}</p>
-          <Button type="button" variant="secondary" onClick={handleSync} disabled={syncing}>
+          <Button type="button" variant="secondary" onClick={handleSync} disabled={syncing || retrying}>
             {syncing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
@@ -249,6 +286,15 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
             )}
             {syncing ? adminT.moloni.syncing : adminT.moloni.sync}
           </Button>
+          <Button type="button" variant="outline" onClick={handleRetry} disabled={retrying || syncing}>
+            {retrying ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            {retrying ? adminT.moloni.retrying : adminT.moloni.retry}
+          </Button>
+          <p className="text-xs text-muted-foreground">{adminT.moloni.retryHint}</p>
           {view.company_id ? (
             <p className="text-xs text-muted-foreground">
               Empresa {view.company_id}

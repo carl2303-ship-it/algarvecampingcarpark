@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MOLONI_ARTICLES } from "./moloni-articles";
+import { extractMoloniError } from "./moloni-client";
 import { buildMoloniInvoicePayload, moloniNetPrice, pickMatchingProductForArticle, pickMatchingProductId } from "./moloni-payload";
 
 describe("Moloni invoice payload", () => {
@@ -43,9 +44,12 @@ describe("Moloni invoice payload", () => {
     assert.equal(payload.status, 1);
     assert.equal(payload.products[0]?.price, 8.49);
     assert.equal(payload.products[0]?.taxes[0]?.tax_id, 60);
+    assert.equal(payload.products[0]?.taxes[0]?.value, 6);
     assert.equal(payload.products[1]?.price, 2.85);
     assert.equal(payload.products[1]?.taxes[0]?.tax_id, 230);
+    assert.equal(payload.products[1]?.taxes[0]?.value, 23);
     assert.equal(payload.payments[0]?.value, 25);
+    assert.equal(payload.payments[0]?.date, "2026-08-18 12:00:00");
     assert.equal(moloniNetPrice(150, 23), 1.22);
   });
 
@@ -148,5 +152,11 @@ describe("Moloni invoice payload", () => {
       ),
       20
     );
+  });
+
+  it("surfaces Moloni insert error objects instead of ignoring them", () => {
+    assert.equal(extractMoloniError({ error: 1 }), "Sessão Moloni inválida ou expirada. Volte a sincronizar.");
+    assert.match(String(extractMoloniError({ error: { 0: "27" }, valid: 0 })), /27/);
+    assert.equal(extractMoloniError({ valid: 0 }), "Pedido Moloni rejeitado (valid=0)");
   });
 });

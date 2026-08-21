@@ -19,6 +19,10 @@ import { isMissingColumnError } from "@/lib/schema-errors";
 import { issueMoloniInvoiceFromCheckout } from "@/lib/moloni-invoice";
 import type Stripe from "stripe";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const body = await request.text();
   const headersList = await headers();
@@ -292,13 +296,6 @@ export async function POST(request: Request) {
           });
         } catch (emailError) {
           console.error("Stripe webhook: confirmation email failed:", emailError);
-          return NextResponse.json(
-            {
-              error: "Confirmation email failed",
-              detail: emailError instanceof Error ? emailError.message : String(emailError),
-            },
-            { status: 500 }
-          );
         }
 
         try {
@@ -326,7 +323,12 @@ export async function POST(request: Request) {
     }
 
     try {
-      await issueMoloniInvoiceFromCheckout(session);
+      const moloniResult = await issueMoloniInvoiceFromCheckout(session);
+      if (moloniResult?.skipped) {
+        console.warn("Stripe webhook: Moloni invoice skipped:", moloniResult.skipped);
+      } else if (moloniResult?.document_id) {
+        console.log("Stripe webhook: Moloni invoice issued:", moloniResult.document_id);
+      }
     } catch (moloniError) {
       console.error("Stripe webhook: Moloni invoice failed:", moloniError);
       try {

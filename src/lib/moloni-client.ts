@@ -49,14 +49,40 @@ function moloniAuthMessage(body: TokenResponse, fallback: string): string {
   return description || body.error || fallback;
 }
 
-function extractMoloniError(body: unknown): string | null {
-  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+function stringifyMoloniErrorValue(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (typeof value === "number") {
+    if (value === 1) return "Sessão Moloni inválida ou expirada. Volte a sincronizar.";
+    return `Erro Moloni código ${value}`;
+  }
+  if (Array.isArray(value)) {
+    const parts = value.map((item) => stringifyMoloniErrorValue(item)).filter(Boolean);
+    return parts.length ? parts.join("; ") : null;
+  }
+  if (typeof value === "object") {
+    try {
+      return `Erro Moloni: ${JSON.stringify(value)}`;
+    } catch {
+      return "Erro Moloni (resposta inválida)";
+    }
+  }
+  return String(value);
+}
+
+export function extractMoloniError(body: unknown): string | null {
+  if (body == null) return null;
+  if (Array.isArray(body)) return stringifyMoloniErrorValue(body);
+  if (typeof body !== "object") return null;
   const record = body as Record<string, unknown>;
   if (typeof record.error_description === "string" && record.error_description.trim()) {
     return record.error_description;
   }
-  if (typeof record.error === "string" && record.error.trim()) return record.error;
-  if (record.error === 1) return "Sessão Moloni inválida ou expirada. Volte a sincronizar.";
+  const fromError = stringifyMoloniErrorValue(record.error);
+  if (fromError) return fromError;
+  if (record.valid === 0 || record.valid === "0") {
+    return "Pedido Moloni rejeitado (valid=0)";
+  }
   return null;
 }
 

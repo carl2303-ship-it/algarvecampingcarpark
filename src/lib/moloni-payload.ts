@@ -15,7 +15,9 @@ export type MoloniInvoiceProduct = {
   summary?: string;
   qty: number;
   price: number;
-  taxes: { tax_id: number }[];
+  discount: number;
+  order: number;
+  taxes: { tax_id: number; value: number; order: number; cumulative: number }[];
 };
 
 export type MoloniInvoicePayload = {
@@ -192,7 +194,7 @@ export function buildMoloniInvoicePayload(input: {
   const date = input.date ?? lisbonDate();
   const products: MoloniInvoiceProduct[] = input.lines
     .filter((line) => line.quantity > 0 && line.unitAmountCents > 0)
-    .map((line) => {
+    .map((line, index) => {
       const productId = input.productMap[line.sku];
       if (!productId) {
         throw new MoloniMappingError(
@@ -206,7 +208,9 @@ export function buildMoloniInvoicePayload(input: {
         summary: line.description,
         qty: line.quantity,
         price: moloniNetPrice(line.unitAmountCents, line.vatPercent),
-        taxes: [{ tax_id: taxId }],
+        discount: 0,
+        order: index + 1,
+        taxes: [{ tax_id: taxId, value: line.vatPercent, order: 1, cumulative: 0 }],
       };
     });
 
@@ -227,7 +231,7 @@ export function buildMoloniInvoicePayload(input: {
     payments: [
       {
         payment_method_id: input.paymentMethodId,
-        date,
+        date: `${date} 12:00:00`,
         value: Number(input.paymentValueEuros.toFixed(2)),
         notes: "Stripe",
       },

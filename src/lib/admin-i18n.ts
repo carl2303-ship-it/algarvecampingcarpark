@@ -773,6 +773,12 @@ export const adminT = {
     syncError: "Impossible de se connecter à l'API Moloni.",
     syncHint:
       "Remplissez Developer ID, Client Secret, e-mail et mot de passe Moloni, puis cliquez ci-dessous. Les noms des articles doivent correspondre à la liste.",
+    retry: "Réémettre les factures manquantes",
+    retrying: "Réémission Moloni…",
+    retried: "{issued} facture(s) émise(s), {failed} échec(s), {skipped} ignorée(s) sur {attempted}.",
+    retryEmpty: "Aucun paiement Stripe sans facture Moloni à réessayer.",
+    retryHint:
+      "Réessaie les paiements Stripe récents qui n'ont pas de document Moloni (erreur ou automatisation coupée).",
     configured: "Identifiants présents",
     savedHint:
       "Les champs secrets restent vides après enregistrement (comme Stripe). Les valeurs sont conservées — laissez vide pour les garder.",

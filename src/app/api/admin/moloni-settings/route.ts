@@ -9,7 +9,7 @@ import {
   saveMoloniSettings,
 } from "@/lib/moloni-settings";
 import { moloniLogin } from "@/lib/moloni-client";
-import { syncMoloniCatalog } from "@/lib/moloni-invoice";
+import { retryFailedMoloniInvoices, syncMoloniCatalog } from "@/lib/moloni-invoice";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -102,7 +102,8 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
-  const action = body?.action === "login" ? "login" : "sync";
+  const action =
+    body?.action === "login" ? "login" : body?.action === "retry" ? "retry" : "sync";
   const parsed = updateSchema.safeParse(body);
   const input = parsed.success ? parsed.data : {};
 
@@ -130,6 +131,16 @@ export async function POST(request: Request) {
       await moloniLogin(secrets);
       return NextResponse.json({
         ok: true,
+        settings: await getMoloniSettingsView(),
+        persist_warning: persistWarning,
+      });
+    }
+
+    if (action === "retry") {
+      const retry = await retryFailedMoloniInvoices();
+      return NextResponse.json({
+        ok: true,
+        retry,
         settings: await getMoloniSettingsView(),
         persist_warning: persistWarning,
       });
