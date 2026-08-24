@@ -332,11 +332,14 @@ export async function accountingLinesForReservation(
 }
 
 async function linesFromStripeSession(session: Stripe.Checkout.Session): Promise<AccountingLine[]> {
-  const stripe = await getStripe();
-  const full = await stripe.checkout.sessions.retrieve(session.id, {
-    expand: ["line_items.data.price.product"],
-  });
-  const items = full.line_items?.data ?? [];
+  let items = session.line_items?.data ?? [];
+  if (!items.length) {
+    const stripe = await getStripe();
+    const full = await stripe.checkout.sessions.retrieve(session.id, {
+      expand: ["line_items.data.price.product"],
+    });
+    items = full.line_items?.data ?? [];
+  }
   const lines: AccountingLine[] = [];
 
   for (const item of items) {
@@ -374,7 +377,8 @@ async function markPaymentMoloni(stripeSessionId: string | null, patch: MoloniPa
 }
 
 export async function issueMoloniInvoiceFromCheckout(
-  session: Stripe.Checkout.Session
+  session: Stripe.Checkout.Session,
+  options?: { documentSetId?: number | null }
 ): Promise<{ skipped?: string; document_id?: number } | null> {
   const secrets = await getMoloniSecrets();
   if (!secrets.enabled) {
@@ -468,21 +472,19 @@ export async function issueMoloniInvoiceFromCheckout(
     );
   }
 
-  // Series IDs can go stale (e.g. after switching company). Re-validate before insert.
-  const documentSets = await moloniDocumentSets(secrets.companyId);
-  const documentSetId = pickDocumentSetId(documentSets, secrets.documentSetId);
-  if (!documentSetId) {
-    throw new MoloniApiError(
-      "Nenhuma série de documentos Moloni encontrada. Crie uma série de fatura-recibo na Moloni e sincronize."
-    );
+  // Series IDs can go stale — refresh unless the batch already resolved a valid one.
+  let documentSetId = options?.documentSetId ?? secrets.documentSetId;
+  if (!options?.documentSetId) {
+    const documentSets = await moloniDocumentSets(secrets.companyId);
+    documentSetId = pickDocumentSetId(documentSets, secrets.documentSetId);
+    if (documentSetId && documentSetId !== secrets.documentSetId) {
+      console.warn(
+        `Moloni document_set_id ${secrets.documentSetId} inválido; a usar ${documentSetId}`
+      );
+      await saveMoloniSettings({ document_set_id: documentSetId }, { requirePersist: false });
+    }
   }
-  if (documentSetId !== secrets.documentSetId) {
-    console.warn(
-      `Moloni document_set_id ${secrets.documentSetId} inválido; a usar ${documentSetId}`
-    );
-    await saveMoloniSettings({ document_set_id: documentSetId }, { requirePersist: false });
-    secrets.documentSetId = documentSetId;
-  }
+  secrets.documentSetId = documentSetId ?? null;
 
   if (
     !secrets.documentSetId ||
@@ -548,15 +550,17 @@ export type MoloniRetryResult = {
   error?: string;
 };
 
-/** Re-issue Moloni invoices for recent Stripe payments that never got a document_id. */
-export async function retryFailedMoloniInvoices(limit = 15): Promise<{
+/** Re-issue Moloni invoices in small batches (Netlify gateway ~26s). */
+export async function retryFailedMoloniInvoices(limit = 3): Promise<{
   attempted: number;
   issued: number;
   skipped: number;
   failed: number;
+  remaining: number;
   error_summary: string[];
   results: MoloniRetryResult[];
 }> {
+  const batchSize = Math.min(Math.max(1, limit), 5);
   const supabase = createAdminClient();
   const { data: payments, error } = await supabase
     .from("payments")
@@ -565,9 +569,26 @@ export async function retryFailedMoloniInvoices(limit = 15): Promise<{
     .not("stripe_session_id", "is", null)
     .is("moloni_document_id", null)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(batchSize);
 
   if (error) throw new Error(error.message);
+
+  // Warm Moloni auth + series once for the whole batch (avoids 504).
+  const secrets = await getMoloniSecrets();
+  await moloniLogin(secrets);
+  let documentSetId = secrets.documentSetId;
+  if (secrets.companyId) {
+    const sets = await moloniDocumentSets(secrets.companyId);
+    documentSetId = pickDocumentSetId(sets, secrets.documentSetId);
+    if (documentSetId && documentSetId !== secrets.documentSetId) {
+      await saveMoloniSettings({ document_set_id: documentSetId }, { requirePersist: false });
+    }
+  }
+  if (!documentSetId) {
+    throw new MoloniApiError(
+      "Nenhuma série de documentos Moloni válida. Clique em «Tester et synchroniser»."
+    );
+  }
 
   const stripe = await getStripe();
   const results: MoloniRetryResult[] = [];
@@ -580,13 +601,14 @@ export async function retryFailedMoloniInvoices(limit = 15): Promise<{
     const stripeSessionId = payment.stripe_session_id as string | null;
     if (!stripeSessionId) continue;
     try {
-      const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
-      const result = await issueMoloniInvoiceFromCheckout(session);
+      const session = await stripe.checkout.sessions.retrieve(stripeSessionId, {
+        expand: ["line_items.data.price.product"],
+      });
+      const result = await issueMoloniInvoiceFromCheckout(session, { documentSetId });
       if (result?.document_id && !result.skipped) {
         issued += 1;
         results.push({ stripe_session_id: stripeSessionId, document_id: result.document_id });
       } else if (result?.skipped === "already_synced" && result.document_id) {
-        // Linked an existing Moloni document — treat as success for the admin summary.
         issued += 1;
         results.push({
           stripe_session_id: stripeSessionId,
@@ -612,6 +634,13 @@ export async function retryFailedMoloniInvoices(limit = 15): Promise<{
     }
   }
 
+  const { count: remaining } = await supabase
+    .from("payments")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "succeeded")
+    .not("stripe_session_id", "is", null)
+    .is("moloni_document_id", null);
+
   const error_summary = [...errorCounts.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([message, count]) => (count > 1 ? `${message} (×${count})` : message));
@@ -621,6 +650,7 @@ export async function retryFailedMoloniInvoices(limit = 15): Promise<{
     issued,
     skipped,
     failed,
+    remaining: remaining ?? 0,
     error_summary,
     results,
   };

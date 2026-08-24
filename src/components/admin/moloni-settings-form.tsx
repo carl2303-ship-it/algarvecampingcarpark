@@ -124,36 +124,80 @@ export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView })
     setRetrying(true);
     setMessage(null);
     setError(false);
-    const res = await fetch("/api/admin/moloni-settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "retry" }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setRetrying(false);
-    if (res.ok) {
-      const retry = data.retry as {
-        attempted?: number;
-        issued?: number;
-        failed?: number;
-        skipped?: number;
-        error_summary?: string[];
-      } | undefined;
-      if (!retry || retry.attempted === 0) {
-        setMessage(adminT.moloni.retryEmpty);
-        return;
+
+    let totalIssued = 0;
+    let totalFailed = 0;
+    let totalSkipped = 0;
+    let totalAttempted = 0;
+    const allErrors: string[] = [];
+    let remaining = 0;
+    let rounds = 0;
+    const maxRounds = 20;
+
+    try {
+      while (rounds < maxRounds) {
+        rounds += 1;
+        const res = await fetch("/api/admin/moloni-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "retry" }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(true);
+          const timeoutHint =
+            res.status === 504 || res.status === 408
+              ? " Timeout Netlify — cliquez à nouveau pour continuer le lot suivant."
+              : "";
+          setMessage(
+            (typeof data.error === "string" ? data.error : adminT.moloni.syncError) + timeoutHint
+          );
+          break;
+        }
+
+        const retry = data.retry as {
+          attempted?: number;
+          issued?: number;
+          failed?: number;
+          skipped?: number;
+          remaining?: number;
+          error_summary?: string[];
+        } | undefined;
+
+        if (!retry || (retry.attempted ?? 0) === 0) {
+          if (totalAttempted === 0) setMessage(adminT.moloni.retryEmpty);
+          break;
+        }
+
+        totalIssued += retry.issued ?? 0;
+        totalFailed += retry.failed ?? 0;
+        totalSkipped += retry.skipped ?? 0;
+        totalAttempted += retry.attempted ?? 0;
+        remaining = retry.remaining ?? 0;
+        for (const err of retry.error_summary ?? []) {
+          if (!allErrors.includes(err)) allErrors.push(err);
+        }
+
+        if (remaining <= 0) break;
+        // Brief pause between Netlify invocations
+        await new Promise((resolve) => setTimeout(resolve, 400));
       }
-      const summary = adminT.moloni.retried
-        .replace("{issued}", String(retry.issued ?? 0))
-        .replace("{failed}", String(retry.failed ?? 0))
-        .replace("{skipped}", String(retry.skipped ?? 0))
-        .replace("{attempted}", String(retry.attempted ?? 0));
-      const details = (retry.error_summary ?? []).slice(0, 5).join("\n");
-      setMessage(details ? `${summary}\n\n${details}` : summary);
-      if ((retry.failed ?? 0) > 0) setError(true);
-    } else {
-      setError(true);
-      setMessage(typeof data.error === "string" ? data.error : adminT.moloni.syncError);
+
+      if (totalAttempted > 0) {
+        let summary = adminT.moloni.retried
+          .replace("{issued}", String(totalIssued))
+          .replace("{failed}", String(totalFailed))
+          .replace("{skipped}", String(totalSkipped))
+          .replace("{attempted}", String(totalAttempted));
+        if (remaining > 0) {
+          summary += `\n${adminT.moloni.retryRemaining.replace("{remaining}", String(remaining))}`;
+        }
+        const details = allErrors.slice(0, 5).join("\n");
+        setMessage(details ? `${summary}\n\n${details}` : summary);
+        if (totalFailed > 0 || remaining > 0) setError(totalFailed > 0);
+      }
+    } finally {
+      setRetrying(false);
     }
   }
 
