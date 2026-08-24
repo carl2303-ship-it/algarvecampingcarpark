@@ -212,6 +212,17 @@ describe("Moloni invoice payload", () => {
     );
   });
 
+  it("does not treat languages/getAll success arrays as errors", () => {
+    assert.equal(
+      extractMoloniError([
+        { language_id: 1, code: "PT", title: "Português" },
+        { language_id: 2, code: "ES", title: "Español" },
+        { language_id: 3, code: "EN", title: "English" },
+      ]),
+      null
+    );
+  });
+
   it("treats Moloni validation error arrays as errors", () => {
     assert.match(String(extractMoloniError(["1 customer_id", "2 products"])), /customer_id/);
     assert.match(

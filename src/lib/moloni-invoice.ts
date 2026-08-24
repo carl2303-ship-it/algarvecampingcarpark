@@ -12,6 +12,8 @@ import { getPricingSupplements } from "@/lib/pricing-supplements";
 import {
   MOLONI_ARTICLE_ALIASES,
   MOLONI_ARTICLE_LIST,
+  MOLONI_ARTICLES,
+  VAT_ACCOMMODATION_PERCENT,
   accountingLinesTotalCents,
   type AccountingLine,
   type MoloniArticleSku,
@@ -27,17 +29,20 @@ import {
 import {
   MoloniApiError,
   moloniCompanies,
+  moloniCustomerInsertDefaults,
   moloniCustomersByVat,
   moloniCustomersBySearch,
   moloniDocumentSets,
   moloniInsertCustomer,
   moloniInsertInvoiceReceipt,
   moloniInvoiceReceiptsByReference,
+  moloniDocumentsForCustomer,
   moloniProductsForArticleSync,
   moloniProductsBySearch,
   moloniLogin,
   moloniPaymentMethods,
   moloniTaxes,
+  type MoloniDocumentSummary,
   type MoloniProduct,
 } from "@/lib/moloni-client";
 import { getStripe } from "@/lib/stripe";
@@ -114,60 +119,225 @@ function normalizePlateForMoloni(plate: string | null | undefined): string {
   return (plate ?? "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
+type CustomerCreateDefaults = {
+  languageId: number;
+  maturityDateId: number;
+  paymentMethodId: number;
+  deliveryMethodId: number;
+};
+
+async function findExactCustomer(
+  companyId: number,
+  needle: string
+): Promise<number | null> {
+  const normalized = normalizePlateForMoloni(needle);
+  const searchTerms = [...new Set([normalized, needle.trim(), needle.replace(/[-\s]/g, "")])].filter(
+    Boolean
+  );
+
+  for (const term of searchTerms) {
+    const found = await moloniCustomersBySearch(companyId, term);
+    const exact = found.find((customer) => {
+      const name = normalizePlateForMoloni(customer.name);
+      const number = normalizePlateForMoloni(customer.number);
+      return name === normalized || number === normalized;
+    });
+    if (exact?.customer_id) return exact.customer_id;
+  }
+  return null;
+}
+
+async function createMoloniCustomer(
+  companyId: number,
+  customer: { name: string; vat: string; number: string },
+  defaults: CustomerCreateDefaults
+): Promise<number> {
+  try {
+    const created = await moloniInsertCustomer(companyId, {
+      ...customer,
+      ...defaults,
+    });
+    return created.customer_id;
+  } catch (error) {
+    // Number already used — search again before failing
+    const byNumber = await findExactCustomer(companyId, customer.number).catch(() => null);
+    if (byNumber) return byNumber;
+    const byName = await findExactCustomer(companyId, customer.name).catch(() => null);
+    if (byName) return byName;
+    throw error;
+  }
+}
+
 async function resolveConsumerFinalId(
   companyId: number,
   existingId: number | null,
-  candidates: { customer_id: number; name?: string }[]
+  candidates: { customer_id: number; name?: string }[],
+  defaults: CustomerCreateDefaults
 ): Promise<number | null> {
-  // If we already have an ID, verify it's the right one
   if (existingId) {
     const existing = candidates.find((c) => c.customer_id === existingId);
     if (existing && CONSUMER_FINAL_NAMES.test(existing.name ?? "")) return existingId;
   }
 
-  // Look for "Consumidor Final" among candidates
   const cf = candidates.find((c) => CONSUMER_FINAL_NAMES.test(c.name ?? ""));
   if (cf) return cf.customer_id;
 
-  // None found — create it
-  const created = await moloniInsertCustomer(companyId, {
-    name: "Consumidor Final",
-    vat: MOLONI_CONSUMER_VAT,
-    number: "CF",
+  try {
+    const bySearch = await moloniCustomersBySearch(companyId, "Consumidor Final");
+    const named = bySearch.find((c) => CONSUMER_FINAL_NAMES.test(c.name ?? ""));
+    if (named?.customer_id) return named.customer_id;
+  } catch (error) {
+    console.warn("Moloni search Consumidor Final failed:", error);
+  }
+
+  let lastCreateError: string | null = null;
+  for (const number of ["CF", "999999990", "CONSUMIDOR"]) {
+    try {
+      return await createMoloniCustomer(
+        companyId,
+        { name: "Consumidor Final", vat: MOLONI_CONSUMER_VAT, number },
+        defaults
+      );
+    } catch (error) {
+      lastCreateError = error instanceof Error ? error.message : String(error);
+      console.warn(`Moloni create Consumidor Final (number=${number}) failed:`, error);
+    }
+  }
+  if (lastCreateError) {
+    throw new MoloniApiError(
+      `Não foi possível criar o cliente Consumidor Final na Moloni: ${lastCreateError}`
+    );
+  }
+  return null;
+}
+
+/** Staff always identifies the client by plate; payment may be "virement bancaire". */
+function amountsMatchEuros(docValue: number | undefined, amountCents: number): boolean {
+  if (!Number.isFinite(docValue) || amountCents <= 0) return false;
+  return Math.abs(Number(docValue) * 100 - amountCents) <= 2; // ≤ 0.02 €
+}
+
+function pickManualMoloniMatch(
+  docs: MoloniDocumentSummary[],
+  plate: string,
+  amountCents: number,
+  usedDocumentIds: Set<number>,
+  paymentCreatedMs?: number
+): MoloniDocumentSummary | null {
+  const normalized = normalizePlateForMoloni(plate);
+  // Docs were loaded for the plate customer — match by amount (payment method may be bank transfer).
+  const candidates = docs.filter((doc) => {
+    if (usedDocumentIds.has(doc.document_id)) return false;
+    return (
+      amountsMatchEuros(doc.net_value, amountCents) || amountsMatchEuros(doc.gross_value, amountCents)
+    );
   });
-  return created?.customer_id ?? null;
+
+  if (!candidates.length) return null;
+
+  candidates.sort((a, b) => {
+    const aPlate =
+      normalizePlateForMoloni(a.entity_name) === normalized ||
+      normalizePlateForMoloni(a.entity_number) === normalized
+        ? 0
+        : 1;
+    const bPlate =
+      normalizePlateForMoloni(b.entity_name) === normalized ||
+      normalizePlateForMoloni(b.entity_number) === normalized
+        ? 0
+        : 1;
+    if (aPlate !== bPlate) return aPlate - bPlate;
+
+    if (paymentCreatedMs) {
+      const aDate = a.date ? Date.parse(a.date) : NaN;
+      const bDate = b.date ? Date.parse(b.date) : NaN;
+      const aDelta = Number.isFinite(aDate) ? Math.abs(aDate - paymentCreatedMs) : Number.POSITIVE_INFINITY;
+      const bDelta = Number.isFinite(bDate) ? Math.abs(bDate - paymentCreatedMs) : Number.POSITIVE_INFINITY;
+      if (aDelta !== bDelta) return aDelta - bDelta;
+    }
+
+    const aStatus = a.status === 1 ? 0 : 1;
+    const bStatus = b.status === 1 ? 0 : 1;
+    return aStatus - bStatus;
+  });
+
+  return candidates[0] ?? null;
+}
+
+async function findExistingManualMoloniDocument(options: {
+  companyId: number;
+  plate: string | null | undefined;
+  amountCents: number;
+  usedDocumentIds?: Set<number>;
+  paymentCreatedMs?: number;
+}): Promise<MoloniDocumentSummary | null> {
+  const plate = normalizePlateForMoloni(options.plate);
+  if (!plate || options.amountCents <= 0) return null;
+
+  const customerId = await findExactCustomer(options.companyId, plate);
+  if (!customerId) return null;
+
+  const docs = await moloniDocumentsForCustomer(options.companyId, customerId);
+  return pickManualMoloniMatch(
+    docs,
+    plate,
+    options.amountCents,
+    options.usedDocumentIds ?? new Set(),
+    options.paymentCreatedMs
+  );
 }
 
 /** Invoice customer: name = matrícula (CF VAT). Never reuse a random guest like "krister". */
 async function resolveInvoiceCustomerId(
   companyId: number,
   plate: string | null | undefined,
-  fallbackConsumerId: number | null
+  fallbackConsumerId: number | null,
+  defaults: CustomerCreateDefaults
 ): Promise<number> {
   const normalized = normalizePlateForMoloni(plate);
   if (normalized) {
     try {
-      const found = await moloniCustomersBySearch(companyId, normalized);
-      const exact = found.find((customer) => {
-        const name = normalizePlateForMoloni(customer.name);
-        const number = normalizePlateForMoloni(customer.number);
-        return name === normalized || number === normalized;
-      });
-      if (exact?.customer_id) return exact.customer_id;
+      const exactId = await findExactCustomer(companyId, normalized);
+      if (exactId) return exactId;
     } catch (error) {
       console.warn("Moloni customer search by plate failed:", error);
     }
 
-    const created = await moloniInsertCustomer(companyId, {
-      name: normalized,
-      vat: MOLONI_CONSUMER_VAT,
-      number: normalized.slice(0, 30),
-    });
-    if (created?.customer_id) return created.customer_id;
+    try {
+      return await createMoloniCustomer(
+        companyId,
+        {
+          name: normalized,
+          // Empty VAT → Moloni assigns Consumidor Final (999999990) per named client
+          vat: "",
+          number: normalized.slice(0, 20),
+        },
+        defaults
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // Retry with explicit CF VAT (some accounts reject empty vat)
+      try {
+        return await createMoloniCustomer(
+          companyId,
+          {
+            name: normalized,
+            vat: MOLONI_CONSUMER_VAT,
+            number: normalized.slice(0, 20),
+          },
+          defaults
+        );
+      } catch (retryError) {
+        const retryMessage = retryError instanceof Error ? retryError.message : String(retryError);
+        throw new MoloniApiError(
+          `Não foi possível criar o cliente Moloni com a matrícula ${normalized}: ${retryMessage || message}`
+        );
+      }
+    }
   }
 
   const consumers = await moloniCustomersByVat(companyId, MOLONI_CONSUMER_VAT);
-  const cfId = await resolveConsumerFinalId(companyId, fallbackConsumerId, consumers);
+  const cfId = await resolveConsumerFinalId(companyId, fallbackConsumerId, consumers, defaults);
   if (!cfId) {
     throw new MoloniApiError(
       "Cliente Consumidor Final em falta na Moloni. Sincronize no admin ou crie o cliente 999999990."
@@ -252,13 +422,19 @@ export async function syncMoloniCatalog(secretsOverride?: MoloniSecrets): Promis
 
   const { productMap, missing } = matchArticlesToProducts(products, secrets.productMap);
 
-  // Pick "Consumidor Final" by name — avoid picking a real customer that shares the VAT
-  const consumerFinalId = await resolveConsumerFinalId(companyId, secrets.consumerCustomerId, consumers);
-
   const documentSetId = pickDocumentSetId(sets, secrets.documentSetId);
   const paymentMethodId = pickPaymentMethodId(methods, secrets.paymentMethodId);
   const taxId6 = pickTaxIdOrKeep(taxes, 6, secrets.taxId6);
   const taxId23 = pickTaxIdOrKeep(taxes, 23, secrets.taxId23);
+
+  const customerDefaults = await moloniCustomerInsertDefaults(companyId, paymentMethodId);
+  // Pick "Consumidor Final" by name — avoid picking a real customer that shares the VAT
+  const consumerFinalId = await resolveConsumerFinalId(
+    companyId,
+    secrets.consumerCustomerId,
+    consumers,
+    customerDefaults
+  );
 
   await saveMoloniSettings(
     {
@@ -331,6 +507,72 @@ export async function accountingLinesForReservation(
   return pricing.lines;
 }
 
+function normalizeArticleName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/,/g, ".")
+    .replace(/[+/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function skuFromStripeProductName(name: string): MoloniArticleSku | null {
+  const wanted = normalizeArticleName(name);
+  for (const article of MOLONI_ARTICLE_LIST) {
+    if (normalizeArticleName(article.name) === wanted) return article.sku;
+  }
+  for (const [sku, aliases] of Object.entries(MOLONI_ARTICLE_ALIASES)) {
+    if (aliases.some((alias) => normalizeArticleName(alias) === wanted)) {
+      return sku as MoloniArticleSku;
+    }
+  }
+  return null;
+}
+
+/** Single line for the paid amount when Stripe/reservation lines are missing or inconsistent. */
+function lumpSumAccountingLine(
+  amountCents: number,
+  productMap: MoloniProductMap,
+  description: string
+): AccountingLine {
+  const preferred: MoloniArticleSku[] = [
+    "noite-verao-2",
+    "noite-inverno-2",
+    "noite-agosto-2",
+    "noite-verao-34",
+    "noite-inverno-34",
+    "noite-agosto-34",
+  ];
+  const mappedSku =
+    preferred.find((sku) => productMap[sku]) ??
+    MOLONI_ARTICLE_LIST.map((article) => article.sku).find((sku) => productMap[sku]) ??
+    (Object.keys(productMap).find((key) => !key.startsWith("manual:")) as MoloniArticleSku | undefined);
+
+  if (!mappedSku || !productMap[mappedSku]) {
+    throw new MoloniApiError(
+      "Mapa de artigos Moloni vazio. Clique em «Tester et synchroniser» no admin."
+    );
+  }
+
+  const article = MOLONI_ARTICLES[mappedSku as MoloniArticleSku];
+  return {
+    sku: mappedSku,
+    name: article?.name ?? "Estadia",
+    description,
+    unitAmountCents: amountCents,
+    quantity: 1,
+    vatPercent: article?.vatPercent ?? VAT_ACCOMMODATION_PERCENT,
+  };
+}
+
+function linesMatchPaidAmount(lines: AccountingLine[], amountCents: number): boolean {
+  if (!lines.length) return false;
+  if (amountCents <= 0) return true;
+  return accountingLinesTotalCents(lines) === amountCents;
+}
+
 async function linesFromStripeSession(session: Stripe.Checkout.Session): Promise<AccountingLine[]> {
   let items = session.line_items?.data ?? [];
   if (!items.length) {
@@ -345,15 +587,18 @@ async function linesFromStripeSession(session: Stripe.Checkout.Session): Promise
   for (const item of items) {
     const product = item.price?.product;
     if (!product || typeof product === "string" || product.deleted) continue;
-    const sku = product.metadata?.moloni_sku || product.metadata?.sku;
+    const metaSku = product.metadata?.moloni_sku || product.metadata?.sku;
+    const sku =
+      (metaSku && metaSku in MOLONI_ARTICLES ? (metaSku as MoloniArticleSku) : null) ??
+      skuFromStripeProductName(product.name ?? "");
     const vatRaw = Number(product.metadata?.vat_percent);
-    const vatPercent: VatPercent = vatRaw === 23 ? 23 : 6;
+    const vatPercent: VatPercent = vatRaw === 23 ? 23 : sku ? MOLONI_ARTICLES[sku].vatPercent : 6;
     const unitAmount = item.price?.unit_amount ?? 0;
     const quantity = item.quantity ?? 1;
     if (!sku || unitAmount <= 0) continue;
     lines.push({
-      sku: sku as MoloniArticleSku,
-      name: product.name,
+      sku,
+      name: MOLONI_ARTICLES[sku].name,
       description: product.description ?? "",
       unitAmountCents: unitAmount,
       quantity,
@@ -378,7 +623,7 @@ async function markPaymentMoloni(stripeSessionId: string | null, patch: MoloniPa
 
 export async function issueMoloniInvoiceFromCheckout(
   session: Stripe.Checkout.Session,
-  options?: { documentSetId?: number | null }
+  options?: { documentSetId?: number | null; usedDocumentIds?: Set<number> }
 ): Promise<{ skipped?: string; document_id?: number } | null> {
   const secrets = await getMoloniSecrets();
   if (!secrets.enabled) {
@@ -429,7 +674,7 @@ export async function issueMoloniInvoiceFromCheckout(
       moloni_error: null,
       moloni_synced_at: new Date().toISOString(),
     });
-    return { document_id: existing[0].document_id };
+    return { document_id: existing[0].document_id, skipped: "already_synced" };
   }
 
   let reservation: ReservationForInvoice | null = null;
@@ -444,22 +689,75 @@ export async function issueMoloniInvoiceFromCheckout(
     reservation = data as ReservationForInvoice | null;
   }
 
+  const plate = normalizePlateForMoloni(
+    reservation?.vehicle_plate ||
+      session.metadata?.vehicle_plate ||
+      session.metadata?.vehiclePlate ||
+      ""
+  );
+  const paidCents =
+    typeof session.amount_total === "number" && session.amount_total > 0
+      ? session.amount_total
+      : 0;
+
+  // Staff invoices: client = plate, payment often "virement bancaire" (not Stripe reference)
+  const manualMatch = await findExistingManualMoloniDocument({
+    companyId: secrets.companyId,
+    plate,
+    amountCents: paidCents,
+    usedDocumentIds: options?.usedDocumentIds,
+    paymentCreatedMs: session.created ? session.created * 1000 : undefined,
+  });
+  if (manualMatch?.document_id) {
+    const ref =
+      manualMatch.our_reference ||
+      (manualMatch.number != null ? String(manualMatch.number) : null) ||
+      `moloni:${manualMatch.document_id}`;
+    await markPaymentMoloni(session.id, {
+      moloni_document_id: manualMatch.document_id,
+      moloni_document_ref: ref,
+      moloni_error: null,
+      moloni_synced_at: new Date().toISOString(),
+    });
+    options?.usedDocumentIds?.add(manualMatch.document_id);
+    return { document_id: manualMatch.document_id, skipped: "matched_manual" };
+  }
+
   const paymentType = session.metadata?.type ?? "booking_full";
   let lines = await linesFromStripeSession(session);
 
-  if ((!lines.length || accountingLinesTotalCents(lines) !== (session.amount_total ?? 0)) && reservation) {
+  if (!linesMatchPaidAmount(lines, paidCents) && reservation) {
     if (paymentType === "extension") {
       const oldCheckOut = session.metadata?.old_check_out;
       const newCheckOut = session.metadata?.new_check_out;
       if (oldCheckOut && newCheckOut) {
-        lines = await accountingLinesForReservation(reservation, {
+        const extensionLines = await accountingLinesForReservation(reservation, {
           checkIn: oldCheckOut,
           checkOut: newCheckOut,
         });
+        if (linesMatchPaidAmount(extensionLines, paidCents)) {
+          lines = extensionLines;
+        }
       }
     } else if (paymentType !== "booking_balance") {
-      lines = await accountingLinesForReservation(reservation);
+      const stayLines = await accountingLinesForReservation(reservation);
+      if (linesMatchPaidAmount(stayLines, paidCents)) {
+        lines = stayLines;
+      }
     }
+  }
+
+  if (!linesMatchPaidAmount(lines, paidCents) && paidCents > 0) {
+    const label =
+      [
+        reservation?.guest_name,
+        reservation ? `${reservation.check_in} → ${reservation.check_out}` : null,
+        paymentType === "booking_balance" ? "Solde" : null,
+        paymentType === "extension" ? "Extensão" : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || `Stripe ${session.id}`;
+    lines = [lumpSumAccountingLine(paidCents, secrets.productMap, label)];
   }
 
   if (!lines.length) {
@@ -498,17 +796,19 @@ export async function issueMoloniInvoiceFromCheckout(
   }
 
   const linesTotalCents = accountingLinesTotalCents(lines);
-  const amountCents =
-    typeof session.amount_total === "number" && session.amount_total > 0
-      ? session.amount_total
-      : linesTotalCents;
-  const plate = reservation?.vehicle_plate?.trim();
+  const amountCents = paidCents > 0 ? paidCents : linesTotalCents;
+  const customerDefaults = await moloniCustomerInsertDefaults(
+    secrets.companyId,
+    secrets.paymentMethodId
+  );
   const customerId = await resolveInvoiceCustomerId(
     secrets.companyId,
-    plate,
-    secrets.consumerCustomerId
+    plate || null,
+    secrets.consumerCustomerId,
+    customerDefaults
   );
   const notes = [
+    plate ? `Matrícula ${plate}` : null,
     reservation?.guest_name,
     reservation ? `${reservation.check_in} → ${reservation.check_out}` : null,
     reservation?.pitch_code ? `Lugar ${reservation.pitch_code}` : null,
@@ -573,6 +873,18 @@ export async function retryFailedMoloniInvoices(limit = 3): Promise<{
 
   if (error) throw new Error(error.message);
 
+  // Avoid linking the same staff invoice to two Stripe payments in one batch / DB.
+  const usedDocumentIds = new Set<number>();
+  const { data: linked } = await supabase
+    .from("payments")
+    .select("moloni_document_id")
+    .not("moloni_document_id", "is", null)
+    .limit(2000);
+  for (const row of linked ?? []) {
+    const id = Number((row as { moloni_document_id?: number | null }).moloni_document_id);
+    if (Number.isFinite(id) && id > 0) usedDocumentIds.add(id);
+  }
+
   // Warm Moloni auth + series once for the whole batch (avoids 504).
   const secrets = await getMoloniSecrets();
   await moloniLogin(secrets);
@@ -604,12 +916,13 @@ export async function retryFailedMoloniInvoices(limit = 3): Promise<{
       const session = await stripe.checkout.sessions.retrieve(stripeSessionId, {
         expand: ["line_items.data.price.product"],
       });
-      const result = await issueMoloniInvoiceFromCheckout(session, { documentSetId });
-      if (result?.document_id && !result.skipped) {
+      const result = await issueMoloniInvoiceFromCheckout(session, {
+        documentSetId,
+        usedDocumentIds,
+      });
+      if (result?.document_id && (!result.skipped || result.skipped === "matched_manual" || result.skipped === "already_synced")) {
         issued += 1;
-        results.push({ stripe_session_id: stripeSessionId, document_id: result.document_id });
-      } else if (result?.skipped === "already_synced" && result.document_id) {
-        issued += 1;
+        if (result.document_id) usedDocumentIds.add(result.document_id);
         results.push({
           stripe_session_id: stripeSessionId,
           document_id: result.document_id,

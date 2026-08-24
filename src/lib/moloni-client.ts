@@ -90,6 +90,8 @@ function stringifyMoloniErrorValue(value: unknown): string | null {
  * - getAll success → array of entities ({ company_id }, { product_id }, …)
  * - insert/update validation failure → array of strings ("1 name") or
  *   { code, description } when human_errors=true
+ *
+ * Note: languages/getAll rows also have `code` ("PT","ES",…) — that is NOT an error.
  */
 export function extractMoloniError(body: unknown): string | null {
   if (body == null) return null;
@@ -97,10 +99,26 @@ export function extractMoloniError(body: unknown): string | null {
   if (Array.isArray(body)) {
     if (body.length === 0) return null;
     const first = body[0];
-    // human_errors=true format
     if (first && typeof first === "object" && !Array.isArray(first)) {
       const row = first as Record<string, unknown>;
-      if ("code" in row || "description" in row) {
+      // Entity rows (companies, products, taxes, languages, maturity dates, …)
+      if (
+        "company_id" in row ||
+        "product_id" in row ||
+        "customer_id" in row ||
+        "document_id" in row ||
+        "tax_id" in row ||
+        "payment_method_id" in row ||
+        "document_set_id" in row ||
+        "language_id" in row ||
+        "maturity_date_id" in row ||
+        "category_id" in row ||
+        "delivery_method_id" in row
+      ) {
+        return null;
+      }
+      // human_errors=true format — prefer `description`; `code` alone is ambiguous
+      if ("description" in row || "code" in row) {
         return body
           .map((item) => {
             if (!item || typeof item !== "object") return null;
@@ -112,18 +130,6 @@ export function extractMoloniError(body: unknown): string | null {
           })
           .filter(Boolean)
           .join("; ");
-      }
-      // Entity rows (companies, products, taxes, …)
-      if (
-        "company_id" in row ||
-        "product_id" in row ||
-        "customer_id" in row ||
-        "document_id" in row ||
-        "tax_id" in row ||
-        "payment_method_id" in row ||
-        "document_set_id" in row
-      ) {
-        return null;
       }
     }
     // Classic validation errors: ["1 name", "2 qty 1 0", …]
@@ -324,6 +330,13 @@ export type MoloniDocumentSet = {
   cash_vat_scheme_indicator?: number;
 };
 export type MoloniPaymentMethod = { payment_method_id: number; name?: string };
+export type MoloniLanguage = { language_id: number; code?: string; title?: string };
+export type MoloniMaturityDate = {
+  maturity_date_id: number;
+  name?: string;
+  days?: number;
+};
+export type MoloniDeliveryMethod = { delivery_method_id: number; name?: string };
 export type MoloniCustomer = { customer_id: number; vat?: string; name?: string; number?: string };
 export type MoloniProduct = {
   product_id: number;
@@ -365,6 +378,71 @@ export async function moloniPaymentMethods(companyId: number): Promise<MoloniPay
   return asList<MoloniPaymentMethod>(data);
 }
 
+export async function moloniLanguages(): Promise<MoloniLanguage[]> {
+  const data = await moloniPost<unknown>("/languages/getAll/", {});
+  return asList<MoloniLanguage>(data);
+}
+
+export async function moloniMaturityDates(companyId: number): Promise<MoloniMaturityDate[]> {
+  const data = await moloniPost<unknown>("/maturityDates/getAll/", {
+    company_id: companyId,
+  });
+  return asList<MoloniMaturityDate>(data);
+}
+
+export async function moloniDeliveryMethods(companyId: number): Promise<MoloniDeliveryMethod[]> {
+  const data = await moloniPost<unknown>("/deliveryMethods/getAll/", {
+    company_id: companyId,
+  });
+  return asList<MoloniDeliveryMethod>(data);
+}
+
+/** Defaults required by customers/insert (language, maturity, payment method, delivery). */
+export async function moloniCustomerInsertDefaults(
+  companyId: number,
+  preferredPaymentMethodId?: number | null
+): Promise<{
+  languageId: number;
+  maturityDateId: number;
+  paymentMethodId: number;
+  deliveryMethodId: number;
+}> {
+  const [languages, maturities, methods, deliveries] = await Promise.all([
+    moloniLanguages(),
+    moloniMaturityDates(companyId),
+    preferredPaymentMethodId ? Promise.resolve([] as MoloniPaymentMethod[]) : moloniPaymentMethods(companyId),
+    moloniDeliveryMethods(companyId),
+  ]);
+
+  const languageId =
+    languages.find((lang) => /^pt/i.test(lang.code ?? "") || /portug/i.test(lang.title ?? ""))
+      ?.language_id ??
+    languages[0]?.language_id ??
+    1;
+
+  const maturityDateId =
+    maturities.find((row) => Number(row.days) === 0)?.maturity_date_id ??
+    maturities[0]?.maturity_date_id;
+
+  let paymentMethodId = preferredPaymentMethodId ?? null;
+  if (!paymentMethodId) {
+    paymentMethodId = methods[0]?.payment_method_id ?? null;
+  }
+  const deliveryMethodId = deliveries[0]?.delivery_method_id ?? 0;
+
+  if (!maturityDateId) {
+    throw new MoloniApiError(
+      "Nenhum prazo de pagamento (maturity date) na Moloni. Crie um em Definições → Prazos."
+    );
+  }
+  if (!paymentMethodId) {
+    throw new MoloniApiError(
+      "Nenhum método de pagamento na Moloni. Sincronize no admin ou crie um método."
+    );
+  }
+  return { languageId, maturityDateId, paymentMethodId, deliveryMethodId };
+}
+
 export async function moloniCustomersByVat(companyId: number, vat: string): Promise<MoloniCustomer[]> {
   const data = await moloniPost<unknown>("/customers/getByVat/", {
     company_id: companyId,
@@ -388,29 +466,41 @@ export async function moloniCustomersBySearch(
 
 export async function moloniInsertCustomer(
   companyId: number,
-  customer: { name: string; vat: string; number?: string }
-): Promise<MoloniCustomer | null> {
-  try {
-    const data = await moloniPost<{ customer_id?: number } & MoloniCustomer>(
-      "/customers/insert/",
-      {
-        company_id: companyId,
-        name: customer.name,
-        vat: customer.vat,
-        number: customer.number ?? customer.name.slice(0, 20),
-        email: "",
-        address: "Desconhecido",
-        zip_code: "0000-000",
-        city: "Desconhecido",
-        country_id: 1, // Portugal
-      }
-    );
-    if (data?.customer_id) return data as MoloniCustomer;
-    return null;
-  } catch (error) {
-    console.warn("Moloni insert customer failed:", error);
-    return null;
+  customer: {
+    name: string;
+    vat: string;
+    number?: string;
+    languageId: number;
+    maturityDateId: number;
+    paymentMethodId: number;
+    deliveryMethodId?: number;
   }
+): Promise<MoloniCustomer> {
+  const number = (customer.number ?? customer.name).slice(0, 20);
+  const data = await moloniPost<{ valid?: number; customer_id?: number } & MoloniCustomer>(
+    "/customers/insert/",
+    {
+      company_id: companyId,
+      name: customer.name,
+      vat: customer.vat,
+      number,
+      language_id: customer.languageId,
+      email: "",
+      address: "Desconhecido",
+      zip_code: "0000-000",
+      city: "Desconhecido",
+      country_id: 1, // Portugal
+      payment_method_id: customer.paymentMethodId,
+      maturity_date_id: customer.maturityDateId,
+      delivery_method_id: customer.deliveryMethodId ?? 0,
+      salesman_id: 0,
+      discount: 0,
+      credit_limit: 0,
+      payment_day: 0,
+    }
+  );
+  if (data?.customer_id) return data as MoloniCustomer;
+  throw new MoloniApiError("Moloni customers/insert não devolveu customer_id", undefined, data);
 }
 
 export async function moloniProductsBySearch(companyId: number, search: string): Promise<MoloniProduct[]> {
@@ -599,4 +689,74 @@ export async function moloniInvoiceReceiptsByReference(
     qty: 5,
   });
   return Array.isArray(data) ? data : [];
+}
+
+export type MoloniDocumentSummary = {
+  document_id: number;
+  number?: number;
+  date?: string;
+  your_reference?: string;
+  our_reference?: string;
+  entity_name?: string;
+  entity_number?: string;
+  net_value?: number;
+  gross_value?: number;
+  status?: number;
+  source: "invoiceReceipts" | "invoices" | "simplifiedInvoices";
+};
+
+async function moloniDocumentsByCustomer(
+  path: "/invoiceReceipts/getAll/" | "/invoices/getAll/" | "/simplifiedInvoices/getAll/",
+  source: MoloniDocumentSummary["source"],
+  companyId: number,
+  customerId: number
+): Promise<MoloniDocumentSummary[]> {
+  const docs: MoloniDocumentSummary[] = [];
+  try {
+    for (let offset = 0; offset < 200; offset += 50) {
+      const data = await moloniPost<unknown>(path, {
+        company_id: companyId,
+        customer_id: customerId,
+        qty: 50,
+        offset,
+      });
+      const rows = Array.isArray(data) ? data : [];
+      for (const row of rows) {
+        if (!row || typeof row !== "object") continue;
+        const rec = row as Record<string, unknown>;
+        const documentId = Number(rec.document_id);
+        if (!Number.isFinite(documentId) || documentId <= 0) continue;
+        docs.push({
+          document_id: documentId,
+          number: typeof rec.number === "number" ? rec.number : Number(rec.number) || undefined,
+          date: typeof rec.date === "string" ? rec.date : undefined,
+          your_reference: typeof rec.your_reference === "string" ? rec.your_reference : undefined,
+          our_reference: typeof rec.our_reference === "string" ? rec.our_reference : undefined,
+          entity_name: typeof rec.entity_name === "string" ? rec.entity_name : undefined,
+          entity_number: typeof rec.entity_number === "string" ? rec.entity_number : undefined,
+          net_value: typeof rec.net_value === "number" ? rec.net_value : Number(rec.net_value),
+          gross_value: typeof rec.gross_value === "number" ? rec.gross_value : Number(rec.gross_value),
+          status: typeof rec.status === "number" ? rec.status : Number(rec.status),
+          source,
+        });
+      }
+      if (rows.length < 50) break;
+    }
+  } catch (error) {
+    console.warn(`Moloni ${path} by customer failed:`, error);
+  }
+  return docs;
+}
+
+/** Staff invoices: customer = plate; payment method may be bank transfer, not Stripe. */
+export async function moloniDocumentsForCustomer(
+  companyId: number,
+  customerId: number
+): Promise<MoloniDocumentSummary[]> {
+  const [receipts, invoices, simplified] = await Promise.all([
+    moloniDocumentsByCustomer("/invoiceReceipts/getAll/", "invoiceReceipts", companyId, customerId),
+    moloniDocumentsByCustomer("/invoices/getAll/", "invoices", companyId, customerId),
+    moloniDocumentsByCustomer("/simplifiedInvoices/getAll/", "simplifiedInvoices", companyId, customerId),
+  ]);
+  return [...receipts, ...invoices, ...simplified];
 }
