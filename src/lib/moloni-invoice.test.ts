@@ -2,9 +2,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { MOLONI_ARTICLES } from "./moloni-articles";
 import { extractMoloniError } from "./moloni-client";
+import { moloniCustomerTitle } from "./moloni-invoice";
 import { buildMoloniInvoicePayload, moloniNetPrice, pickMatchingProductForArticle, pickMatchingProductId } from "./moloni-payload";
 
 describe("Moloni invoice payload", () => {
+  it("builds customer title as country · plate", () => {
+    assert.equal(moloniCustomerTitle("1800 CXB", "France"), "FRANCE · 1800CXB");
+    assert.equal(moloniCustomerTitle("dh070cc", null), "DH070CC");
+    assert.equal(moloniCustomerTitle("", "Portugal"), "");
+  });
   it("sends net prices and 6%/23% tax ids", () => {
     const payload = buildMoloniInvoicePayload({
       companyId: 1,

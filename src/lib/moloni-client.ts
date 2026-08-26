@@ -337,7 +337,25 @@ export type MoloniMaturityDate = {
   days?: number;
 };
 export type MoloniDeliveryMethod = { delivery_method_id: number; name?: string };
-export type MoloniCustomer = { customer_id: number; vat?: string; name?: string; number?: string };
+export type MoloniCustomer = {
+  customer_id: number;
+  vat?: string;
+  name?: string;
+  number?: string;
+  address?: string;
+  city?: string;
+  zip_code?: string;
+  country_id?: number;
+  email?: string;
+  language_id?: number;
+  maturity_date_id?: number;
+  payment_method_id?: number;
+  delivery_method_id?: number;
+  salesman_id?: number;
+  discount?: number;
+  credit_limit?: number;
+  payment_day?: number;
+};
 export type MoloniProduct = {
   product_id: number;
   name?: string;
@@ -462,6 +480,56 @@ export async function moloniCustomersBySearch(
     offset: 0,
   });
   return asList<MoloniCustomer>(data);
+}
+
+export async function moloniCustomerGetOne(
+  companyId: number,
+  customerId: number
+): Promise<MoloniCustomer | null> {
+  const data = await moloniPost<MoloniCustomer | MoloniCustomer[] | null>("/customers/getOne/", {
+    company_id: companyId,
+    customer_id: customerId,
+  });
+  if (Array.isArray(data)) return data[0] ?? null;
+  if (data && typeof data === "object" && data.customer_id) return data;
+  return null;
+}
+
+export async function moloniUpdateCustomer(
+  companyId: number,
+  customerId: number,
+  patch: { name: string },
+  defaults: {
+    languageId: number;
+    maturityDateId: number;
+    paymentMethodId: number;
+    deliveryMethodId: number;
+  }
+): Promise<void> {
+  const current = await moloniCustomerGetOne(companyId, customerId);
+  if (!current) {
+    throw new MoloniApiError(`Cliente Moloni ${customerId} não encontrado para actualizar`);
+  }
+  await moloniPost("/customers/update/", {
+    company_id: companyId,
+    customer_id: customerId,
+    name: patch.name,
+    vat: current.vat ?? "",
+    number: current.number ?? String(customerId).slice(0, 20),
+    language_id: current.language_id ?? defaults.languageId,
+    email: current.email ?? "",
+    address: current.address || "Desconhecido",
+    zip_code: current.zip_code || "0000-000",
+    city: current.city || "Desconhecido",
+    country_id: current.country_id ?? 1,
+    payment_method_id: current.payment_method_id ?? defaults.paymentMethodId,
+    maturity_date_id: current.maturity_date_id ?? defaults.maturityDateId,
+    delivery_method_id: current.delivery_method_id ?? defaults.deliveryMethodId,
+    salesman_id: current.salesman_id ?? 0,
+    discount: current.discount ?? 0,
+    credit_limit: current.credit_limit ?? 0,
+    payment_day: current.payment_day ?? 0,
+  });
 }
 
 export async function moloniInsertCustomer(

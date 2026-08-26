@@ -37,16 +37,20 @@ import {
   moloniInsertInvoiceReceipt,
   moloniInvoiceReceiptsByReference,
   moloniDocumentsForCustomer,
+  moloniUpdateCustomer,
   moloniProductsForArticleSync,
   moloniProductsBySearch,
   moloniLogin,
   moloniPaymentMethods,
   moloniTaxes,
+  type MoloniCustomer,
   type MoloniDocumentSummary,
   type MoloniProduct,
 } from "@/lib/moloni-client";
 import { getStripe } from "@/lib/stripe";
 import { buildMoloniInvoicePayload, pickMatchingProductForArticle } from "@/lib/moloni-payload";
+import { findGuestByPlate } from "@/lib/vehicle-plate-lookup";
+import { normalizeVehiclePlate } from "@/lib/admin-reservation-payments";
 
 function pickTaxId(taxes: { tax_id: number; value?: number; saft_type?: number; type?: number }[], percent: number) {
   const iva = taxes.filter((tax) => tax.saft_type === 1 || tax.type === 1 || tax.saft_type == null);
@@ -119,6 +123,27 @@ function normalizePlateForMoloni(plate: string | null | undefined): string {
   return (plate ?? "").trim().toUpperCase().replace(/\s+/g, "");
 }
 
+/** Moloni document entity title: "FRANCE · 1800CXB" (country + plate). */
+export function moloniCustomerTitle(
+  plate: string | null | undefined,
+  country?: string | null
+): string {
+  const normalized = normalizePlateForMoloni(plate);
+  if (!normalized) return "";
+  const countryLabel = (country ?? "").trim().replace(/\s+/g, " ").toUpperCase();
+  if (countryLabel) return `${countryLabel} · ${normalized}`;
+  return normalized;
+}
+
+function customerMatchesPlate(customer: { name?: string; number?: string }, plate: string): boolean {
+  const normalized = normalizePlateForMoloni(plate);
+  const number = normalizePlateForMoloni(customer.number);
+  const name = normalizePlateForMoloni(customer.name);
+  if (number === normalized || name === normalized) return true;
+  // Name may already be "FRANCE · PLATE"
+  return name.endsWith(normalized) || name.includes(normalized);
+}
+
 type CustomerCreateDefaults = {
   languageId: number;
   maturityDateId: number;
@@ -129,7 +154,7 @@ type CustomerCreateDefaults = {
 async function findExactCustomer(
   companyId: number,
   needle: string
-): Promise<number | null> {
+): Promise<MoloniCustomer | null> {
   const normalized = normalizePlateForMoloni(needle);
   const searchTerms = [...new Set([normalized, needle.trim(), needle.replace(/[-\s]/g, "")])].filter(
     Boolean
@@ -137,12 +162,8 @@ async function findExactCustomer(
 
   for (const term of searchTerms) {
     const found = await moloniCustomersBySearch(companyId, term);
-    const exact = found.find((customer) => {
-      const name = normalizePlateForMoloni(customer.name);
-      const number = normalizePlateForMoloni(customer.number);
-      return name === normalized || number === normalized;
-    });
-    if (exact?.customer_id) return exact.customer_id;
+    const exact = found.find((customer) => customerMatchesPlate(customer, normalized));
+    if (exact?.customer_id) return exact;
   }
   return null;
 }
@@ -161,9 +182,9 @@ async function createMoloniCustomer(
   } catch (error) {
     // Number already used — search again before failing
     const byNumber = await findExactCustomer(companyId, customer.number).catch(() => null);
-    if (byNumber) return byNumber;
+    if (byNumber?.customer_id) return byNumber.customer_id;
     const byName = await findExactCustomer(companyId, customer.name).catch(() => null);
-    if (byName) return byName;
+    if (byName?.customer_id) return byName.customer_id;
     throw error;
   }
 }
@@ -275,9 +296,9 @@ async function findExistingManualMoloniDocument(options: {
   if (!plate || options.amountCents <= 0) return null;
 
   const customerId = await findExactCustomer(options.companyId, plate);
-  if (!customerId) return null;
+  if (!customerId?.customer_id) return null;
 
-  const docs = await moloniDocumentsForCustomer(options.companyId, customerId);
+  const docs = await moloniDocumentsForCustomer(options.companyId, customerId.customer_id);
   return pickManualMoloniMatch(
     docs,
     plate,
@@ -287,18 +308,36 @@ async function findExistingManualMoloniDocument(options: {
   );
 }
 
-/** Invoice customer: name = matrícula (CF VAT). Never reuse a random guest like "krister". */
+/** Invoice customer title = "PAÍS · MATRÍCULA" (CF VAT). Never reuse a random guest like "krister". */
 async function resolveInvoiceCustomerId(
   companyId: number,
   plate: string | null | undefined,
+  country: string | null | undefined,
   fallbackConsumerId: number | null,
   defaults: CustomerCreateDefaults
 ): Promise<number> {
   const normalized = normalizePlateForMoloni(plate);
   if (normalized) {
+    const title = moloniCustomerTitle(normalized, country);
+
     try {
-      const exactId = await findExactCustomer(companyId, normalized);
-      if (exactId) return exactId;
+      const existing = await findExactCustomer(companyId, normalized);
+      if (existing?.customer_id) {
+        const currentName = (existing.name ?? "").trim();
+        if (title && currentName !== title && country?.trim()) {
+          try {
+            await moloniUpdateCustomer(
+              companyId,
+              existing.customer_id,
+              { name: title },
+              defaults
+            );
+          } catch (error) {
+            console.warn("Moloni update customer title failed:", error);
+          }
+        }
+        return existing.customer_id;
+      }
     } catch (error) {
       console.warn("Moloni customer search by plate failed:", error);
     }
@@ -307,7 +346,7 @@ async function resolveInvoiceCustomerId(
       return await createMoloniCustomer(
         companyId,
         {
-          name: normalized,
+          name: title,
           // Empty VAT → Moloni assigns Consumidor Final (999999990) per named client
           vat: "",
           number: normalized.slice(0, 20),
@@ -321,7 +360,7 @@ async function resolveInvoiceCustomerId(
         return await createMoloniCustomer(
           companyId,
           {
-            name: normalized,
+            name: title,
             vat: MOLONI_CONSUMER_VAT,
             number: normalized.slice(0, 20),
           },
@@ -474,6 +513,7 @@ type ReservationForInvoice = {
   num_guests: number;
   guest_name: string;
   guest_email: string;
+  guest_id?: string | null;
   vehicle_plate?: string | null;
   pitch_code?: string | null;
   electricity_amperage?: number | null;
@@ -481,6 +521,26 @@ type ReservationForInvoice = {
   manual_supplement_ids?: string[] | null;
   total_cents?: number;
 };
+
+async function loadGuestCountryForInvoice(
+  reservation: ReservationForInvoice | null,
+  plate: string
+): Promise<string | null> {
+  const supabase = createAdminClient();
+  if (reservation?.guest_id) {
+    const { data } = await supabase
+      .from("guests")
+      .select("country")
+      .eq("id", reservation.guest_id)
+      .maybeSingle();
+    const country = (data as { country?: string | null } | null)?.country?.trim();
+    if (country) return country;
+  }
+
+  if (!plate) return null;
+  const lookup = await findGuestByPlate(supabase, normalizeVehiclePlate(plate) || plate);
+  return lookup?.country?.trim() || null;
+}
 
 function asAmperage(value: unknown): 6 | 10 | null {
   return value === 10 ? 10 : value === 6 ? 6 : null;
@@ -682,7 +742,7 @@ export async function issueMoloniInvoiceFromCheckout(
     const { data } = await supabase
       .from("reservations")
       .select(
-        "id, zone_id, check_in, check_out, num_guests, guest_name, guest_email, vehicle_plate, pitch_code, electricity_amperage, motorhome_over_9m, manual_supplement_ids, total_cents"
+        "id, zone_id, check_in, check_out, num_guests, guest_name, guest_email, guest_id, vehicle_plate, pitch_code, electricity_amperage, motorhome_over_9m, manual_supplement_ids, total_cents"
       )
       .eq("id", reservationId)
       .maybeSingle();
@@ -797,6 +857,7 @@ export async function issueMoloniInvoiceFromCheckout(
 
   const linesTotalCents = accountingLinesTotalCents(lines);
   const amountCents = paidCents > 0 ? paidCents : linesTotalCents;
+  const guestCountry = await loadGuestCountryForInvoice(reservation, plate);
   const customerDefaults = await moloniCustomerInsertDefaults(
     secrets.companyId,
     secrets.paymentMethodId
@@ -804,11 +865,12 @@ export async function issueMoloniInvoiceFromCheckout(
   const customerId = await resolveInvoiceCustomerId(
     secrets.companyId,
     plate || null,
+    guestCountry,
     secrets.consumerCustomerId,
     customerDefaults
   );
   const notes = [
-    plate ? `Matrícula ${plate}` : null,
+    plate ? moloniCustomerTitle(plate, guestCountry) || `Matrícula ${plate}` : null,
     reservation?.guest_name,
     reservation ? `${reservation.check_in} → ${reservation.check_out}` : null,
     reservation?.pitch_code ? `Lugar ${reservation.pitch_code}` : null,
