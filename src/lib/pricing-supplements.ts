@@ -113,6 +113,31 @@ export function getManualSupplements(supplements: PricingSupplement[]): PricingS
   return supplements.filter((item) => item.trigger_type === "manual_per_night" && item.active);
 }
 
+/** Active supplements that should appear on the public prices page. */
+export function getPublicVisibleSupplements(supplements: PricingSupplement[]): PricingSupplement[] {
+  return supplements
+    .filter((item) => item.active && item.applies_online)
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+export function supplementDisplayName(
+  supplement: PricingSupplement,
+  locale: string
+): string {
+  if (locale === "en" && supplement.name_en?.trim()) return supplement.name_en.trim();
+  return supplement.name_pt;
+}
+
+/** Public label for the XL / +9 m pitch option (from admin pricing_supplements). */
+export async function getMotorhomeOver9mSupplementLabel(locale: string): Promise<string | null> {
+  const supplements = await getPricingSupplements();
+  const item =
+    supplements.find((row) => row.slug === "motorhome_over_9m" && row.active) ??
+    supplements.find((row) => row.trigger_type === "motorhome_over_9m" && row.active);
+  if (!item) return null;
+  return supplementDisplayName(item, locale);
+}
+
 export function computeSupplementsCentsPerNight(
   supplements: PricingSupplement[],
   context: PricingContext

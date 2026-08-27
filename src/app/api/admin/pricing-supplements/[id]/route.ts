@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { revalidatePublicPricesPages } from "@/lib/revalidate-prices";
 
 const updateSchema = z.object({
   name_pt: z.string().min(1).optional(),
@@ -46,6 +47,7 @@ export async function PATCH(
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    revalidatePublicPricesPages();
     return NextResponse.json({ supplement: data });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -85,5 +87,6 @@ export async function DELETE(
 
   const { error } = await supabase.from("pricing_supplements").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePublicPricesPages();
   return NextResponse.json({ success: true });
 }

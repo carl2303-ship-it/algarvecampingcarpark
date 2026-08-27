@@ -45,6 +45,7 @@ export function PricingSupplementsManager({
     name_en: "",
     amount_euros: "",
     description_pt: "",
+    applies_online: true,
   });
 
   const sorted = useMemo(
@@ -71,10 +72,16 @@ export function PricingSupplementsManager({
         amount_cents_per_night: Math.round(parseFloat(newSupplement.amount_euros || "0") * 100),
         trigger_type: "manual_per_night",
         applies_admin: true,
-        applies_online: false,
+        applies_online: newSupplement.applies_online,
       }),
     });
-    setNewSupplement({ name_pt: "", name_en: "", amount_euros: "", description_pt: "" });
+    setNewSupplement({
+      name_pt: "",
+      name_en: "",
+      amount_euros: "",
+      description_pt: "",
+      applies_online: true,
+    });
     setSaving(false);
     refreshSupplements();
   }
@@ -126,6 +133,7 @@ export function PricingSupplementsManager({
               <TableHead>{adminT.pricingSupplements.namePt}</TableHead>
               <TableHead>{adminT.pricingSupplements.trigger}</TableHead>
               <TableHead>{adminT.pricingSupplements.amountPerNight}</TableHead>
+              <TableHead>{adminT.pricingSupplements.appliesOnline}</TableHead>
               <TableHead>{adminT.pricing.active}</TableHead>
               <TableHead className="w-24" />
             </TableRow>
@@ -134,8 +142,8 @@ export function PricingSupplementsManager({
             {sorted.map((row) =>
               editRow.id === row.id ? (
                 <TableRow key={row.id}>
-                  <TableCell colSpan={5}>
-                    <div className="grid md:grid-cols-5 gap-3 items-end">
+                  <TableCell colSpan={6}>
+                    <div className="grid md:grid-cols-6 gap-3 items-end">
                       <div>
                         <Label className="text-xs">{adminT.pricingSupplements.namePt}</Label>
                         <Input
@@ -170,6 +178,19 @@ export function PricingSupplementsManager({
                           }
                         />
                       </div>
+                      <label className="flex items-center gap-2 text-sm pb-2">
+                        <input
+                          type="checkbox"
+                          checked={editRow.applies_online ?? true}
+                          onChange={(event) =>
+                            setEditRow((current) => ({
+                              ...current,
+                              applies_online: event.target.checked,
+                            }))
+                          }
+                        />
+                        {adminT.pricingSupplements.appliesOnline}
+                      </label>
                       <label className="flex items-center gap-2 text-sm pb-2">
                         <input
                           type="checkbox"
@@ -211,6 +232,9 @@ export function PricingSupplementsManager({
                   </TableCell>
                   <TableCell className="font-medium">
                     {formatPrice(row.amount_cents_per_night)}
+                  </TableCell>
+                  <TableCell>
+                    {row.applies_online ? adminT.common.yes : adminT.common.no}
                   </TableCell>
                   <TableCell>{row.active ? adminT.common.yes : adminT.common.no}</TableCell>
                   <TableCell>
@@ -276,7 +300,20 @@ export function PricingSupplementsManager({
               }
             />
           </div>
-          <div className="md:col-span-4">
+          <div className="md:col-span-4 flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={newSupplement.applies_online}
+                onChange={(event) =>
+                  setNewSupplement((current) => ({
+                    ...current,
+                    applies_online: event.target.checked,
+                  }))
+                }
+              />
+              {adminT.pricingSupplements.appliesOnline}
+            </label>
             <Button type="submit" disabled={saving}>
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

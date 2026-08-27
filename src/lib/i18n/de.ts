@@ -164,6 +164,7 @@ const de = {
     premium_electric_note:
       "Immer mit Strom inklusive. +{amount} pro Nacht gegenüber dem Tarif mit Strom.",
     rules_title: "Zuschläge",
+    supplement_line: "{amount} zusätzlich pro Nacht — {name}.",
     extra_person: "1,50 € zusätzlich pro weiterer Person.",
     long_motorhome: "2 € zusätzlich für Wohnmobile über 9 m.",
     electricity_10a: "0,50 € Aufpreis pro Nacht bei Wahl von 10A (statt 6A).",

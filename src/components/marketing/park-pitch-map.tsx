@@ -75,12 +75,14 @@ function formatDimensions(
 function zoneLabelForSlug(
   zoneSlug: ReturnType<typeof getSpotZoneSlug>,
   over9m: boolean,
-  mapT: ReturnType<typeof getTranslations>["about"]["pitch_map"]
+  mapT: ReturnType<typeof getTranslations>["about"]["pitch_map"],
+  over9mLabel?: string | null
 ) {
+  const longPitch = over9mLabel?.trim() || mapT.zone_long_pitch;
   if (over9m) {
     return zoneSlug === "sem-eletricidade"
-      ? `${mapT.zone_long_pitch} · ${mapT.zone_no_electric}`
-      : `${mapT.zone_long_pitch} · ${mapT.zone_electric}`;
+      ? `${longPitch} · ${mapT.zone_no_electric}`
+      : `${longPitch} · ${mapT.zone_electric}`;
   }
   if (zoneSlug === "sem-eletricidade") return mapT.zone_no_electric;
   return mapT.zone_electric;
@@ -93,6 +95,7 @@ function SpotDetailDialog({
   onOpenChange,
   mode = "about",
   onSelectPitch,
+  over9mLabel = null,
 }: {
   locale: Locale;
   spot: PitchMapSpot | null;
@@ -100,6 +103,7 @@ function SpotDetailDialog({
   onOpenChange: (open: boolean) => void;
   mode?: "about" | "booking";
   onSelectPitch?: (spot: PitchMapSpot) => void;
+  over9mLabel?: string | null;
 }) {
   const t = getTranslations(locale);
   const mapT = t.about.pitch_map;
@@ -114,12 +118,12 @@ function SpotDetailDialog({
     separator: mapT.dimensions_separator,
   });
   const zoneSlug = getSpotZoneSlug(pitch);
-  const zoneLabel = zoneLabelForSlug(zoneSlug, spotIsOver9m(pitch), mapT);
+  const zoneLabel = zoneLabelForSlug(zoneSlug, spotIsOver9m(pitch), mapT, over9mLabel);
   const bookHref = `${localePath(locale, "/book")}?pitch=${encodeURIComponent(pitch.code)}`;
   const visualType = getSpotVisualType(pitch);
   const traitLabel =
     visualType === "long-pitch"
-      ? mapT.long_pitch
+      ? over9mLabel?.trim() || mapT.long_pitch
       : visualType === "electric"
         ? mapT.electric
         : mapT.no_electric;
@@ -207,6 +211,7 @@ export function ParkPitchMap({
   selectedPitchCode = null,
   onSelectPitch,
   hideHeader = false,
+  over9mLabel = null,
 }: {
   locale: Locale;
   spots: PitchMapSpot[];
@@ -216,12 +221,15 @@ export function ParkPitchMap({
   selectedPitchCode?: string | null;
   onSelectPitch?: (spot: PitchMapSpot) => void;
   hideHeader?: boolean;
+  /** Admin-configured name for long pitches (e.g. "Lugar XL"). */
+  over9mLabel?: string | null;
 }) {
   const t = getTranslations(locale);
   const mapT = t.about.pitch_map;
   const facilitiesT = t.about.facilities_map;
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const selectedSpot = spots.find((spot) => spot.code === selectedCode) ?? null;
+  const longPitchLegend = over9mLabel?.trim() || mapT.legend_long_pitch;
 
   const title = showFacilities ? facilitiesT.title : mapT.title;
   const subtitle = showFacilities ? facilitiesT.combined_subtitle : mapT.subtitle;
@@ -274,7 +282,7 @@ export function ParkPitchMap({
             [
               ["electric", mapT.legend_electric],
               ["no-electric", mapT.legend_no_electric],
-              ["long-pitch", mapT.legend_long_pitch],
+              ["long-pitch", longPitchLegend],
             ] as const satisfies ReadonlyArray<[SpotVisualType, string]>
           ).map(([type, label]) => (
             <span key={type} className="inline-flex items-center gap-2">
@@ -319,6 +327,7 @@ export function ParkPitchMap({
         onOpenChange={(open) => !open && setSelectedCode(null)}
         mode={mode}
         onSelectPitch={onSelectPitch}
+        over9mLabel={over9mLabel}
       />
     </div>
   );

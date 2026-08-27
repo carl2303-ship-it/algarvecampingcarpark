@@ -15,6 +15,7 @@ import { getTranslations } from "@/lib/i18n";
 import { getTermsContent } from "@/lib/legal/terms-content";
 import { getPitchMapSpotByCode } from "@/lib/pitch-map";
 import { getParkSettings } from "@/lib/park-settings";
+import { getMotorhomeOver9mSupplementLabel } from "@/lib/pricing-supplements";
 import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
 import { ClipboardList, QrCode } from "lucide-react";
 
@@ -37,6 +38,7 @@ export default async function BookPageContent({
 
   const t = getTranslations(locale);
   const termsContent = getTermsContent(locale, parkSettings);
+  const over9mLabel = await getMotorhomeOver9mSupplementLabel(locale);
   const preferredSpot: PitchMapSpot | null =
     !receptionEntry && params.pitch
       ? await getPitchMapSpotByCode(params.pitch.toUpperCase())
@@ -84,6 +86,7 @@ export default async function BookPageContent({
             locale={locale}
             parkSettings={parkSettings}
             termsContent={termsContent}
+            over9mLabel={over9mLabel}
           />
         ) : (
           <BookingWizard
@@ -92,6 +95,7 @@ export default async function BookPageContent({
             parkSettings={parkSettings}
             gateEntry={gateEntry}
             termsContent={termsContent}
+            over9mLabel={over9mLabel}
           />
         )}
       </div>

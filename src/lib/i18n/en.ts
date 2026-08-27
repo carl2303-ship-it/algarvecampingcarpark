@@ -162,6 +162,7 @@ const en = {
     premium_electric_note:
       "Always includes electricity. +{amount} per night on top of the electric rate.",
     rules_title: "Supplements",
+    supplement_line: "{amount} extra per night — {name}.",
     extra_person: "€1.50 extra per additional person.",
     long_motorhome: "€2 extra for motorhomes over 9 m.",
     electricity_10a: "€0.50 extra per night when choosing 10A (instead of 6A).",

@@ -686,11 +686,11 @@ export const adminT = {
   pricingSupplements: {
     title: "Suppléments automatiques",
     description:
-      "Gérez les suppléments par nuit appliqués aux réservations. Les suppléments système ne peuvent pas être supprimés.",
+      "Gérez les suppléments par nuit appliqués aux réservations. Les suppléments système ne peuvent pas être supprimés. Les montants actifs avec « visible sur le site » apparaissent sur la page Tarifs.",
     extraGuest: "Par personne supplémentaire (au-delà de 4) · € / nuit",
     longMotorhome: "Camping-car +9 m · € / nuit",
     electricity10a: "Électricité 10A · € / nuit",
-    hint: "Montants en euros par nuit. Les suppléments manuels apparaissent dans le formulaire de réservation admin.",
+    hint: "Montants en euros par nuit. Cochez « visible sur le site » pour afficher le supplément sur la page Tarifs et dans le calcul en ligne.",
     save: "Enregistrer les suppléments",
     saved: "Suppléments enregistrés.",
     saveError: "Erreur lors de l'enregistrement des suppléments.",
@@ -699,6 +699,7 @@ export const adminT = {
     descriptionPt: "Description PT",
     trigger: "Déclenchement",
     amountPerNight: "€ / nuit",
+    appliesOnline: "Visible sur le site",
     addManual: "Ajouter un supplément manuel",
     deleteConfirm: "Supprimer ce supplément ?",
     deleteError: "Impossible de supprimer ce supplément.",

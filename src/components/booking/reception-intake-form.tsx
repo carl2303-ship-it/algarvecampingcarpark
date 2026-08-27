@@ -20,13 +20,16 @@ export function ReceptionIntakeForm({
   locale,
   parkSettings,
   termsContent,
+  over9mLabel = null,
 }: {
   locale: Locale;
   parkSettings: ParkSettings;
   termsContent: TermsContent;
+  over9mLabel?: string | null;
 }) {
   const tr = getTranslations(locale);
   const dateLocale = dateFnsLocale(locale);
+  const longPitchCheckboxLabel = over9mLabel?.trim() || tr.book.over_9m_label;
 
   const [checkIn, setCheckIn] = useState<Date | undefined>();
   const [checkOut, setCheckOut] = useState<Date | undefined>();
@@ -315,7 +318,7 @@ export function ReceptionIntakeForm({
                 className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
               />
               <span>
-                <span className="font-medium text-sm">{tr.book.over_9m_label}</span>
+                <span className="font-medium text-sm">{longPitchCheckboxLabel}</span>
                 <span className="block text-muted-foreground text-xs mt-0.5">
                   {tr.book.over_9m_hint}
                 </span>
