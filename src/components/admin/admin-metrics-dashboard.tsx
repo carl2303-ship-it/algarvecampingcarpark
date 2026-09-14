@@ -129,14 +129,18 @@ export function AdminMetricsDashboard({
   async function generateNow() {
     setGenerating(true);
     try {
+      // Same behaviour as the 13h cron: create today's PDF if missing, otherwise reuse it.
+      // (Previously force:true always regenerated and could 500 on WinAnsi names while cron still "worked".)
       const res = await fetch("/api/admin/metrics/daily-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force: true }),
+        body: JSON.stringify({ force: false }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? adminT.metrics.pdfGenerateError);
-      toast.success(adminT.metrics.pdfGenerated);
+      toast.success(
+        data.created === false ? adminT.metrics.pdfAlreadyExists : adminT.metrics.pdfGenerated
+      );
       await refreshReports();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : adminT.metrics.pdfGenerateError);

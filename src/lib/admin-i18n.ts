@@ -254,6 +254,7 @@ export const adminT = {
       "Généré chaque jour à 13h (Lisbonne) avec les paiements des dernières 24 h : immatriculation, nom, pays, montant, méthode.",
     pdfGenerateNow: "Générer maintenant",
     pdfGenerated: "PDF quotidien généré.",
+    pdfAlreadyExists: "Le PDF du jour existe déjà (même logique que le cron 13h).",
     pdfGenerateError: "Impossible de générer le PDF.",
     pdfEmpty: "Aucun rapport PDF pour l'instant.",
     pdfDate: "Date",

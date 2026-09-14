@@ -1,7 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { paymentMethodLabel } from "@/lib/admin-payment-methods";
-import { formatPrice } from "@/lib/pricing";
 
 export type MetricsPeriod = {
   start: string;
@@ -321,6 +320,22 @@ function formatLisbonDateTime(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** Helvetica/WinAnsi cannot encode em-dashes, euros, or most accents — sanitize for pdf-lib. */
+function sanitizePdfText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[—–−]/g, "-")
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[“”„‟]/g, '"')
+    .replace(/€/g, "EUR")
+    .replace(/[^\x20-\x7E]/g, "?");
+}
+
+function formatPdfMoney(cents: number): string {
+  return `${(cents / 100).toFixed(2)} EUR`;
+}
+
 export async function fetchTransactionsForWindow(
   supabase: SupabaseClient,
   periodStart: Date,
@@ -371,14 +386,14 @@ export async function buildDailyTransactionsPdf(params: {
     }
   };
 
-  page.drawText("Algarve Camping Car Park — Transactions 24h", {
+  page.drawText(sanitizePdfText("Algarve Camping Car Park - Transactions 24h"), {
     x: margin,
     y,
     size: 14,
     font: bold,
   });
   y -= 18;
-  page.drawText(`Rapport du ${params.reportDate} (heure de Lisbonne)`, {
+  page.drawText(sanitizePdfText(`Rapport du ${params.reportDate} (heure de Lisbonne)`), {
     x: margin,
     y,
     size: 10,
@@ -386,13 +401,17 @@ export async function buildDailyTransactionsPdf(params: {
   });
   y -= 14;
   page.drawText(
-    `Periode : ${formatLisbonDateTime(params.periodStart.toISOString())} -> ${formatLisbonDateTime(params.periodEnd.toISOString())}`,
+    sanitizePdfText(
+      `Periode : ${formatLisbonDateTime(params.periodStart.toISOString())} -> ${formatLisbonDateTime(params.periodEnd.toISOString())}`
+    ),
     { x: margin, y, size: 9, font }
   );
   y -= 14;
   const total = params.transactions.reduce((sum, row) => sum + row.amount_cents, 0);
   page.drawText(
-    `${params.transactions.length} transaction(s) — Total ${formatPrice(total)}`,
+    sanitizePdfText(
+      `${params.transactions.length} transaction(s) - Total ${formatPdfMoney(total)}`
+    ),
     { x: margin, y, size: 10, font: bold }
   );
   y -= 20;
@@ -408,7 +427,7 @@ export async function buildDailyTransactionsPdf(params: {
 
   ensureSpace(24);
   for (const col of cols) {
-    page.drawText(col.label, {
+    page.drawText(sanitizePdfText(col.label), {
       x: col.x,
       y,
       size: 8,
@@ -426,7 +445,7 @@ export async function buildDailyTransactionsPdf(params: {
   y -= 14;
 
   if (params.transactions.length === 0) {
-    page.drawText("Aucune transaction sur les dernieres 24 heures.", {
+    page.drawText(sanitizePdfText("Aucune transaction sur les dernieres 24 heures."), {
       x: margin,
       y,
       size: 10,
@@ -437,12 +456,12 @@ export async function buildDailyTransactionsPdf(params: {
       ensureSpace(16);
       const values = [
         formatLisbonDateTime(row.created_at),
-        row.vehicle_plate || "—",
-        row.guest_name || "—",
-        row.country || "—",
-        formatPrice(row.amount_cents),
-        paymentMethodLabel(row.payment_method),
-      ];
+        row.vehicle_plate || "-",
+        row.guest_name || "-",
+        row.country || "-",
+        formatPdfMoney(row.amount_cents),
+        paymentMethodLabel(row.payment_method).replace(/—/g, "-"),
+      ].map(sanitizePdfText);
       values.forEach((value, index) => {
         const col = cols[index];
         const clipped = value.length > 28 ? `${value.slice(0, 27)}...` : value;
@@ -499,12 +518,18 @@ export async function generateAndStoreDailyPaymentReport(
   }
 
   const transactions = await fetchTransactionsForWindow(supabase, periodStart, periodEnd);
-  const pdfBytes = await buildDailyTransactionsPdf({
-    reportDate,
-    periodStart,
-    periodEnd,
-    transactions,
-  });
+  let pdfBytes: Uint8Array;
+  try {
+    pdfBytes = await buildDailyTransactionsPdf({
+      reportDate,
+      periodStart,
+      periodEnd,
+      transactions,
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Échec génération PDF du rapport journalier: ${detail}`);
+  }
   const totalCents = transactions.reduce((sum, row) => sum + row.amount_cents, 0);
   const payload = {
     report_date: reportDate,
@@ -521,7 +546,14 @@ export async function generateAndStoreDailyPaymentReport(
     .select("id, report_date, transaction_count, total_cents")
     .single();
 
-  if (error || !data) throw error ?? new Error("Impossible d'enregistrer le rapport PDF");
+  if (error || !data) {
+    if (error && /could not find the table|relation .* does not exist|schema cache/i.test(error.message)) {
+      throw new Error(
+        "La table daily_payment_reports n'existe pas encore. Exécutez la migration 027 dans Supabase (SQL Editor)."
+      );
+    }
+    throw error ?? new Error("Impossible d'enregistrer le rapport PDF");
+  }
 
   return {
     id: data.id,
@@ -542,7 +574,14 @@ export async function listDailyPaymentReports(
     .order("report_date", { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) {
+    if (/could not find the table|relation .* does not exist|schema cache/i.test(error.message)) {
+      throw new Error(
+        "La table daily_payment_reports n'existe pas encore. Exécutez la migration 027 dans Supabase (SQL Editor)."
+      );
+    }
+    throw error;
+  }
   return (data ?? []) as DailyReportRow[];
 }
 

@@ -7,6 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminUser } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+// Same runtime as /api/cron/daily-payments-pdf — pdf-lib needs Node (Buffer).
+export const runtime = "nodejs";
 
 export async function GET() {
   const user = await getAdminUser();
@@ -29,6 +31,8 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json().catch(() => ({}));
+    // Default matches the 13h cron: reuse today's report if it already exists.
+    // Only regenerate when the client explicitly sends { force: true }.
     const force = Boolean(body?.force);
     const supabase = createAdminClient();
     const result = await generateAndStoreDailyPaymentReport(supabase, { force });
