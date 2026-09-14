@@ -34,4 +34,25 @@ describe("buildDailyTransactionsPdf", () => {
     assert.ok(bytes.byteLength > 100);
     assert.equal(String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]), "%PDF");
   });
+
+  it("builds a PDF with WinAnsi-unsafe guest names (Polish, ZWSP, emoji)", async () => {
+    const bytes = await buildDailyTransactionsPdf({
+      reportDate: "2026-09-14",
+      periodStart: new Date("2026-09-13T12:00:00.000Z"),
+      periodEnd: new Date("2026-09-14T12:00:00.000Z"),
+      transactions: [
+        {
+          id: "pay_2",
+          amount_cents: 1800,
+          payment_method: "cash",
+          created_at: "2026-09-14T11:00:00.000Z",
+          vehicle_plate: "WW\u200B12345",
+          guest_name: "Paweł\u200B Łukasz 🙂",
+          country: "Polska",
+        },
+      ],
+    });
+    assert.ok(bytes.byteLength > 100);
+    assert.equal(String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]), "%PDF");
+  });
 });
