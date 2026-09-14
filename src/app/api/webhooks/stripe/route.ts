@@ -14,7 +14,14 @@ import { resolveLocale } from "@/lib/email-i18n";
 import { getParkSettings } from "@/lib/park-settings";
 import { syncReservationPaymentState } from "@/lib/admin-reservation-payments";
 import { maybeSendPreArrivalAfterFullPayment } from "@/lib/balance-payment";
+import { saveMoloniPaymentSync } from "@/lib/moloni-kv";
+import { isMissingColumnError } from "@/lib/schema-errors";
+import { issueMoloniInvoiceFromCheckout } from "@/lib/moloni-invoice";
 import type Stripe from "stripe";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -289,13 +296,6 @@ export async function POST(request: Request) {
           });
         } catch (emailError) {
           console.error("Stripe webhook: confirmation email failed:", emailError);
-          return NextResponse.json(
-            {
-              error: "Confirmation email failed",
-              detail: emailError instanceof Error ? emailError.message : String(emailError),
-            },
-            { status: 500 }
-          );
         }
 
         try {
@@ -319,6 +319,32 @@ export async function POST(request: Request) {
         if (balanceCents === 0) {
           await maybeSendPreArrivalAfterFullPayment(reservation.id);
         }
+      }
+    }
+
+    try {
+      const moloniResult = await issueMoloniInvoiceFromCheckout(session);
+      if (moloniResult?.skipped) {
+        console.warn("Stripe webhook: Moloni invoice skipped:", moloniResult.skipped);
+      } else if (moloniResult?.document_id) {
+        console.log("Stripe webhook: Moloni invoice issued:", moloniResult.document_id);
+      }
+    } catch (moloniError) {
+      console.error("Stripe webhook: Moloni invoice failed:", moloniError);
+      try {
+        const moloniErrorMessage =
+          moloniError instanceof Error ? moloniError.message : String(moloniError);
+        const { error: persistError } = await supabase
+          .from("payments")
+          .update({ moloni_error: moloniErrorMessage })
+          .eq("stripe_session_id", session.id);
+        if (persistError && isMissingColumnError(persistError)) {
+          await saveMoloniPaymentSync(session.id, { moloni_error: moloniErrorMessage });
+        } else if (persistError) {
+          console.error("Stripe webhook: could not store Moloni error:", persistError);
+        }
+      } catch (persistError) {
+        console.error("Stripe webhook: could not store Moloni error:", persistError);
       }
     }
   }

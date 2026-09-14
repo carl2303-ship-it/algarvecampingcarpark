@@ -5,6 +5,7 @@ import {
   accountingLinesFromNights,
   accountingLinesTotalCents,
   formatVatDescription,
+  moloniUnitNetPrice,
   nightArticleForSeason,
   occupancyBucket,
   splitInclusiveVat,
@@ -22,6 +23,13 @@ describe("Moloni VAT split (tax-inclusive)", () => {
     assert.deepEqual(splitInclusiveVat(1100, 6), { netCents: 1038, vatCents: 62 });
     assert.deepEqual(splitInclusiveVat(1200, 6), { netCents: 1132, vatCents: 68 });
     assert.deepEqual(splitInclusiveVat(1300, 6), { netCents: 1226, vatCents: 74 });
+  });
+
+  it("keeps multi-qty lines equal to the tax-inclusive gross", () => {
+    // 2 × 3.50€ @ 23% → 7.00€ TTC
+    assert.equal(moloniUnitNetPrice(350, 2, 23), 2.845);
+    // 2 × 11€ @ 6% → 22.00€ TTC
+    assert.equal(moloniUnitNetPrice(1100, 2, 6), 10.375);
   });
 
   it("formats descriptions like Moloni", () => {

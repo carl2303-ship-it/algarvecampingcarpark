@@ -163,6 +163,7 @@ const pt = {
     premium_electric_note:
       "Sempre com eletricidade incluída. +{amount} por noite em relação à tarifa com eletricidade.",
     rules_title: "Suplementos",
+    supplement_line: "{amount} adicionais por noite — {name}.",
     extra_person: "1,50€ adicionais por pessoa suplementar.",
     long_motorhome: "2€ adicionais para motorhomes com mais de 9 m.",
     electricity_10a: "0,50€ adicionais por noite ao escolher 10A (em vez de 6A).",

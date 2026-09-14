@@ -54,15 +54,20 @@ export function BookingWizard({
   parkSettings,
   gateEntry = false,
   termsContent,
+  over9mLabel = null,
 }: {
   locale: Locale;
   preferredSpot?: PitchMapSpot | null;
   parkSettings: ParkSettings;
   gateEntry?: boolean;
   termsContent: TermsContent;
+  /** Admin-configured name (e.g. "Lugar XL") for the long-pitch option. */
+  over9mLabel?: string | null;
 }) {
   const tr = getTranslations(locale);
   const dateLocale = dateFnsLocale(locale);
+  const longPitchLabel = over9mLabel?.trim() || tr.book.type_over_9m;
+  const longPitchCheckboxLabel = over9mLabel?.trim() || tr.book.over_9m_label;
 
   const preferredSlug = preferredSpot ? getSpotZoneSlug(preferredSpot) : null;
 
@@ -304,7 +309,7 @@ export function BookingWizard({
   }
 
   const typeSummary = [
-    over9m ? tr.book.type_over_9m : null,
+    over9m ? longPitchLabel : null,
     withElectricity ? tr.book.type_with_electricity : tr.book.type_without_electricity,
   ]
     .filter(Boolean)
@@ -519,7 +524,7 @@ export function BookingWizard({
                   className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
                 />
                 <span className="text-sm">
-                  <span className="font-medium text-foreground">{tr.book.over_9m_label}</span>
+                  <span className="font-medium text-foreground">{longPitchCheckboxLabel}</span>
                   <span className="block text-muted-foreground mt-0.5">
                     {tr.book.over_9m_hint}
                   </span>
@@ -591,6 +596,7 @@ export function BookingWizard({
             mode="booking"
             showFacilities
             hideHeader
+            over9mLabel={longPitchLabel}
             selectedPitchCode={selectedPitch?.code ?? null}
             onSelectPitch={(spot) => {
               const match = pitches.find((p) => p.code === spot.code);

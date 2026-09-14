@@ -8,6 +8,7 @@ import { ParkPitchMap } from "@/components/marketing/park-pitch-map";
 import { buttonVariants } from "@/components/ui/button";
 import { getGalleryImages } from "@/lib/gallery";
 import { getPitchMapSpots } from "@/lib/pitch-map";
+import { getMotorhomeOver9mSupplementLabel } from "@/lib/pricing-supplements";
 import { getTranslations } from "@/lib/i18n";
 import { localePath } from "@/lib/locale-path";
 import type { Locale } from "@/lib/constants";
@@ -17,6 +18,7 @@ export default async function AboutPageContent({ locale }: { locale: Locale }) {
   const bookHref = localePath(locale, "/book");
   const galleryImages = await getGalleryImages();
   const pitchMapSpots = await getPitchMapSpots();
+  const over9mLabel = await getMotorhomeOver9mSupplementLabel(locale);
 
   return (
     <MarketingLayout locale={locale}>
@@ -49,7 +51,12 @@ export default async function AboutPageContent({ locale }: { locale: Locale }) {
 
       <section className="pb-20 md:pb-28">
         <div className="container mx-auto px-4 max-w-[1440px]">
-          <ParkPitchMap locale={locale} spots={pitchMapSpots} showFacilities />
+          <ParkPitchMap
+            locale={locale}
+            spots={pitchMapSpots}
+            showFacilities
+            over9mLabel={over9mLabel}
+          />
         </div>
       </section>
 

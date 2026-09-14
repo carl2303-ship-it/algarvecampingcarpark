@@ -1,0 +1,421 @@
+"use client";
+
+import { useState } from "react";
+import { FileText, Loader2, PlugZap, RefreshCw, Save } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { adminT } from "@/lib/admin-i18n";
+import { MOLONI_ARTICLE_LIST } from "@/lib/moloni-articles";
+import type { MoloniSettingsView } from "@/lib/moloni-settings";
+
+export function MoloniSettingsForm({ initial }: { initial: MoloniSettingsView }) {
+  const [view, setView] = useState(initial);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [companyIdInput, setCompanyIdInput] = useState(
+    initial.company_id ? String(initial.company_id) : ""
+  );
+  const [enabled, setEnabled] = useState(initial.enabled);
+  const [closeDocuments, setCloseDocuments] = useState(initial.close_documents);
+  const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const [missing, setMissing] = useState<string[]>([]);
+  const [moloniNames, setMoloniNames] = useState<string[]>([]);
+  const [companies, setCompanies] = useState<{ company_id: number; name?: string }[]>([]);
+
+  async function handleSave(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    setError(false);
+    const payload: Record<string, unknown> = {
+      enabled,
+      close_documents: closeDocuments,
+    };
+    if (clientId.trim()) payload.client_id = clientId.trim();
+    if (clientSecret.trim()) payload.client_secret = clientSecret.trim();
+    if (username.trim()) payload.username = username.trim();
+    if (password) payload.password = password;
+    const parsedCompanyId = parseInt(companyIdInput, 10);
+    if (!isNaN(parsedCompanyId) && parsedCompanyId > 0) payload.company_id = parsedCompanyId;
+
+    const res = await fetch("/api/admin/moloni-settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    setSaving(false);
+    if (res.ok) {
+      setView(data.settings);
+      setEnabled(data.settings.enabled);
+      setCloseDocuments(data.settings.close_documents);
+      if (data.settings.company_id) setCompanyIdInput(String(data.settings.company_id));
+      setClientId("");
+      setClientSecret("");
+      setUsername("");
+      setPassword("");
+      setMessage(adminT.moloni.saved);
+    } else {
+      setError(true);
+      setMessage(typeof data.error === "string" ? data.error : adminT.moloni.saveError);
+    }
+  }
+
+  async function handleSync() {
+    setSyncing(true);
+    setMessage(null);
+    setError(false);
+    const payload: Record<string, unknown> = {
+      action: "sync",
+      enabled,
+      close_documents: closeDocuments,
+    };
+    if (clientId.trim()) payload.client_id = clientId.trim();
+    if (clientSecret.trim()) payload.client_secret = clientSecret.trim();
+    if (username.trim()) payload.username = username.trim();
+    if (password) payload.password = password;
+    const parsedCompanyId = parseInt(companyIdInput, 10);
+    if (!isNaN(parsedCompanyId) && parsedCompanyId > 0) payload.company_id = parsedCompanyId;
+
+    const res = await fetch("/api/admin/moloni-settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    setSyncing(false);
+    if (res.ok) {
+      setView(data.settings);
+      setEnabled(data.settings.enabled);
+      setCloseDocuments(data.settings.close_documents);
+      setClientId("");
+      setClientSecret("");
+      setUsername("");
+      setPassword("");
+      setMissing(data.catalog?.missing_articles ?? []);
+      setMoloniNames(data.catalog?.moloni_product_names ?? []);
+      setCompanies(data.catalog?.companies ?? []);
+      if (data.settings.company_id) setCompanyIdInput(String(data.settings.company_id));
+      const syncMsg = data.catalog?.missing_articles?.length
+        ? adminT.moloni.syncedMissing
+        : adminT.moloni.synced;
+      setMessage(
+        data.persist_warning ? `${syncMsg} ${adminT.moloni.savePersistError}` : syncMsg
+      );
+      if (data.persist_warning) setError(true);
+    } else {
+      setError(true);
+      const errMsg = typeof data.error === "string" ? data.error : adminT.moloni.syncError;
+      const dbErr = data.db_error ? ` [DB: ${data.db_error}]` : "";
+      setMessage(errMsg + dbErr);
+    }
+  }
+
+  async function handleRetry() {
+    setRetrying(true);
+    setMessage(null);
+    setError(false);
+
+    let totalIssued = 0;
+    let totalFailed = 0;
+    let totalSkipped = 0;
+    let totalAttempted = 0;
+    const allErrors: string[] = [];
+    let remaining = 0;
+    let rounds = 0;
+    const maxRounds = 20;
+
+    try {
+      while (rounds < maxRounds) {
+        rounds += 1;
+        const res = await fetch("/api/admin/moloni-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "retry" }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(true);
+          const timeoutHint =
+            res.status === 504 || res.status === 408
+              ? " Timeout Netlify — cliquez à nouveau pour continuer le lot suivant."
+              : "";
+          setMessage(
+            (typeof data.error === "string" ? data.error : adminT.moloni.syncError) + timeoutHint
+          );
+          break;
+        }
+
+        const retry = data.retry as {
+          attempted?: number;
+          issued?: number;
+          failed?: number;
+          skipped?: number;
+          remaining?: number;
+          error_summary?: string[];
+        } | undefined;
+
+        if (!retry || (retry.attempted ?? 0) === 0) {
+          if (totalAttempted === 0) setMessage(adminT.moloni.retryEmpty);
+          break;
+        }
+
+        totalIssued += retry.issued ?? 0;
+        totalFailed += retry.failed ?? 0;
+        totalSkipped += retry.skipped ?? 0;
+        totalAttempted += retry.attempted ?? 0;
+        remaining = retry.remaining ?? 0;
+        for (const err of retry.error_summary ?? []) {
+          if (!allErrors.includes(err)) allErrors.push(err);
+        }
+
+        if (remaining <= 0) break;
+        // Brief pause between Netlify invocations
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
+
+      if (totalAttempted > 0) {
+        let summary = adminT.moloni.retried
+          .replace("{issued}", String(totalIssued))
+          .replace("{failed}", String(totalFailed))
+          .replace("{skipped}", String(totalSkipped))
+          .replace("{attempted}", String(totalAttempted));
+        if (remaining > 0) {
+          summary += `\n${adminT.moloni.retryRemaining.replace("{remaining}", String(remaining))}`;
+        }
+        const details = allErrors.slice(0, 5).join("\n");
+        setMessage(details ? `${summary}\n\n${details}` : summary);
+        if (totalFailed > 0 || remaining > 0) setError(totalFailed > 0);
+      }
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          {adminT.moloni.title}
+        </CardTitle>
+        <CardDescription>{adminT.moloni.description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Badge variant={view.configured ? "default" : "outline"}>
+            {view.configured ? adminT.moloni.configured : adminT.common.missing}
+          </Badge>
+          <Badge variant={view.enabled ? "default" : "secondary"}>
+            {view.enabled ? adminT.moloni.autoOn : adminT.moloni.autoOff}
+          </Badge>
+          {view.source === "database" ? (
+            <Badge variant="secondary">{adminT.common.inApp}</Badge>
+          ) : null}
+          {view.source === "fallback" ? (
+            <Badge variant="outline">{adminT.moloni.fallbackStorage}</Badge>
+          ) : null}
+        </div>
+
+        {view.configured ? (
+          <p className="text-xs text-muted-foreground">{adminT.moloni.savedHint}</p>
+        ) : null}
+
+        {/* Hidden dummy fields — trick browsers into autofilling here instead of the real fields */}
+        <input type="text" name="fake_user" style={{ display: "none" }} aria-hidden="true" readOnly />
+        <input type="password" name="fake_pass" style={{ display: "none" }} aria-hidden="true" readOnly />
+
+        <form onSubmit={handleSave} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="moloni_client_id">{adminT.moloni.clientId}</Label>
+            <Input
+              id="moloni_client_id"
+              autoComplete="one-time-code"
+              placeholder={view.client_id_preview ?? "Developer ID"}
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="moloni_client_secret">{adminT.moloni.clientSecret}</Label>
+            <Input
+              id="moloni_client_secret"
+              type="password"
+              autoComplete="new-password"
+              placeholder={
+                view.client_secret_configured ? adminT.common.leaveBlankToKeep : "Client Secret"
+              }
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="moloni_username">{adminT.moloni.username}</Label>
+            <Input
+              id="moloni_username"
+              autoComplete="one-time-code"
+              placeholder={view.username_preview ?? "email@moloni.pt"}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="moloni_password">{adminT.moloni.password}</Label>
+            <Input
+              id="moloni_password"
+              type="password"
+              autoComplete="new-password"
+              placeholder={
+                view.password_configured ? adminT.common.leaveBlankToKeep : adminT.common.password
+              }
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="moloni_company_id">{adminT.moloni.companyId}</Label>
+            <Input
+              id="moloni_company_id"
+              autoComplete="off"
+              placeholder={view.company_id ? String(view.company_id) : "ex: 12345"}
+              value={companyIdInput}
+              onChange={(e) => setCompanyIdInput(e.target.value.replace(/\D/g, ""))}
+            />
+            <p className="text-xs text-muted-foreground">{adminT.moloni.companyIdHint}</p>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+            />
+            {adminT.moloni.enable}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={closeDocuments}
+              onChange={(e) => setCloseDocuments(e.target.checked)}
+            />
+            {adminT.moloni.closeDocuments}
+          </label>
+
+          <Button type="submit" disabled={saving}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {adminT.moloni.save}
+          </Button>
+        </form>
+
+        <div className="border-t pt-4 space-y-3">
+          <p className="text-sm text-muted-foreground">{adminT.moloni.syncHint}</p>
+          <Button type="button" variant="secondary" onClick={handleSync} disabled={syncing || retrying}>
+            {syncing ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <PlugZap className="h-4 w-4 mr-2" />
+            )}
+            {syncing ? adminT.moloni.syncing : adminT.moloni.sync}
+          </Button>
+          <Button type="button" variant="outline" onClick={handleRetry} disabled={retrying || syncing}>
+            {retrying ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            {retrying ? adminT.moloni.retrying : adminT.moloni.retry}
+          </Button>
+          <p className="text-xs text-muted-foreground">{adminT.moloni.retryHint}</p>
+          {view.company_id ? (
+            <p className="text-xs text-muted-foreground">
+              Empresa {view.company_id}
+              {view.document_set_id ? ` · série ${view.document_set_id}` : ""}
+              {view.tax_id_6 ? ` · IVA 6% #${view.tax_id_6}` : ""}
+              {view.tax_id_23 ? ` · IVA 23% #${view.tax_id_23}` : ""}
+            </p>
+          ) : null}
+          {companies.length > 1 ? (
+            <div className="space-y-1">
+              <p className="text-xs font-medium">{adminT.moloni.companiesFound}:</p>
+              <ul className="text-xs text-muted-foreground space-y-0.5">
+                {companies.map((c) => (
+                  <li key={c.company_id}>
+                    <button
+                      type="button"
+                      className="underline hover:no-underline"
+                      onClick={() => setCompanyIdInput(String(c.company_id))}
+                    >
+                      {c.company_id}
+                    </button>
+                    {c.name ? ` — ${c.name}` : ""}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                ↑ Cliquer sur le bon ID entreprise, puis &quot;Enregistrer Moloni&quot; et &quot;Tester et synchroniser&quot;.
+              </p>
+            </div>
+          ) : null}
+          <ul className="text-xs text-muted-foreground space-y-1">
+            {MOLONI_ARTICLE_LIST.map((article) => (
+              <li key={article.sku}>
+                {article.name}
+                {view.product_map[article.sku] ? ` → #${view.product_map[article.sku]}` : " —"}
+              </li>
+            ))}
+          </ul>
+          {missing.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-sm text-destructive">
+                {adminT.moloni.missingArticles}: {missing.join(", ")}
+              </p>
+              {moloniNames.length > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {adminT.moloni.foundInMoloni}: {moloniNames.join(" · ")}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">{adminT.moloni.noneInMoloni}</p>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {message && (
+          <p
+            className={`text-sm whitespace-pre-wrap break-words ${
+              error ? "text-destructive" : "text-muted-foreground"
+            }`}
+          >
+            {message}
+          </p>
+        )}
+
+        {view.table_missing ? (
+          <p className="text-sm text-amber-600 dark:text-amber-400">{adminT.moloni.tableMissing}</p>
+        ) : null}
+
+        {view.db_error ? (
+          <p className="text-sm text-destructive font-mono break-all">
+            DB error: {view.db_error}
+          </p>
+        ) : null}
+
+        <p className="text-xs text-muted-foreground">{adminT.moloni.developerHint}</p>
+      </CardContent>
+    </Card>
+  );
+}

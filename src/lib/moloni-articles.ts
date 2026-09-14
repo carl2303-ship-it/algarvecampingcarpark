@@ -128,12 +128,137 @@ export const MOLONI_ARTICLES: Record<MoloniArticleSku, MoloniArticle> = {
 
 export const MOLONI_ARTICLE_LIST: MoloniArticle[] = Object.values(MOLONI_ARTICLES);
 
+/** Alternate Moloni product titles (park uses +9 m in the app, Moloni may say + de 9m). */
+export const MOLONI_ARTICLE_ALIASES: Partial<Record<MoloniArticleSku, string[]>> = {
+  "over-10m": [
+    "+ de 9m",
+    "+ de 10 m",
+    "+ de 10 metros",
+    "+ de 9 metros",
+    "+9m",
+    "+ 9m",
+    "+10m",
+    "+ 10m",
+    "mais de 10m",
+    "mais de 9m",
+    "+ de 10 M",
+    "superior a 10m",
+    "superior a 9m",
+  ],
+  "elec-6a": [
+    "Elec 3,50 €",
+    "Elec 3.50",
+    "Electricidade 6A",
+    "Electricidade 3.50",
+    "Eletricidade 3.50",
+    "Elec 6A",
+    "6A",
+  ],
+  "elec-10a": [
+    "edp 4€",
+    "edp 4 €",
+    "EDP 4€",
+    "EDP 4 €",
+    "Elec 4,00 €",
+    "Elec 4.00",
+    "Elec 4€",
+    "Electricidade 10A",
+    "Eletricidade 10A",
+    "Elec 10A",
+    "10A",
+  ],
+  "noite-inverno-2": [
+    "NOITE 9 €",
+    "Noite 9€",
+    "Noite 9 €",
+    "NOITE 9",
+    "Noite Inverno 2p",
+    "Noite Inverno 2 pax",
+    "Noite 2 pessoas 9",
+  ],
+  "noite-inverno-34": [
+    // Moloni: "NOITE 10 € (3/4 PAX)" — price is actually 11€ gross (ref says 9€ net)
+    "NOITE 10 € (3/4 PAX)",
+    "NOITE 10€ (3/4 PAX)",
+    "NOITE 9 € (3/4 PAX)",
+    "NOITE 11 €",
+    "Noite 11€",
+    "Noite Inverno 3/4p",
+    "Noite Inverno 3 4 pax",
+    "Noite 3 4 pessoas 11",
+  ],
+  "noite-agosto-2": [
+    // Moloni: "nuit aout 2P 11€"
+    "nuit aout 2P 11€",
+    "nuit aout 2 P 11€",
+    "nuit aout 2P",
+    "nuit août 2P 11€",
+    "nuit août 2 P 11€",
+    "NOITE 11 € Agosto",
+    "Noite Agosto 2p",
+  ],
+  "noite-agosto-34": [
+    // Moloni: "nuit aout 3P ou 4P 13€"
+    "nuit aout 3P ou 4P 13€",
+    "nuit aout 3 P ou 4 P 13€",
+    "nuit aout 3P ou 4P",
+    "nuit août 3P ou 4P 13€",
+    "NOITE 13 € Agosto",
+    "Noite Agosto 3/4p",
+  ],
+  "noite-verao-2": [
+    // Moloni: "nuit ete 2P 10€"
+    "nuit ete 2P 10€",
+    "nuit ete 2 P 10€",
+    "nuit ete 2P",
+    "nuit été 2P 10€",
+    "nuit été 2 P 10€",
+    "NOITE 10 €",
+    "Noite 10€",
+    "Noite Verao 2p",
+    "Noite Verão 2p",
+  ],
+  "noite-verao-34": [
+    // Moloni: "nuit ete 3P ou 4P 12€"
+    "nuit ete 3P ou 4P 12€",
+    "nuit ete 3 P ou 4 P 12€",
+    "nuit ete 3P ou 4P",
+    "nuit été 3P ou 4P 12€",
+    "nuit été 3 P ou 4 P 12€",
+    "NOITE 12 €",
+    "Noite 12€",
+    "Noite Verao 3/4p",
+    "Noite Verão 3/4p",
+  ],
+};
+
 export function splitInclusiveVat(
   grossCents: number,
   vatPercent: number
 ): { netCents: number; vatCents: number } {
   const netCents = Math.round(grossCents / (1 + vatPercent / 100));
   return { netCents, vatCents: grossCents - netCents };
+}
+
+/**
+ * Unit net price (euros) so Moloni’s taxable + VAT for the line equals the
+ * tax-inclusive gross (avoids 29.02 vs 29.00 style drift).
+ */
+export function moloniUnitNetPrice(
+  grossCentsPerUnit: number,
+  quantity: number,
+  vatPercent: number
+): number {
+  const qty = Math.max(1, Math.round(quantity));
+  const targetGrossCents = grossCentsPerUnit * qty;
+  let netTotalCents = Math.round(targetGrossCents / (1 + vatPercent / 100));
+  for (let i = 0; i < 20; i++) {
+    const vatCents = Math.round((netTotalCents * vatPercent) / 100);
+    const diff = targetGrossCents - (netTotalCents + vatCents);
+    if (diff === 0) break;
+    netTotalCents += diff;
+  }
+  return netTotalCents / 100 / qty;
 }
 
 export function formatVatDescription(grossCents: number, vatPercent: number): string {

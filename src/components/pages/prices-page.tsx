@@ -4,6 +4,11 @@ import { PageHero } from "@/components/marketing/sections";
 import { MarketingLayout } from "@/components/layout/marketing-layout";
 import { buttonVariants } from "@/components/ui/button";
 import { formatEuroAmount, PRICING_EXTRAS, PRICING_SEASONS } from "@/lib/pricing-display";
+import {
+  getPublicPricingSupplements,
+  getPublicVisibleSupplements,
+  supplementDisplayName,
+} from "@/lib/pricing-supplements";
 import { getTranslations } from "@/lib/i18n";
 import type { Locale } from "@/lib/constants";
 import { localePath } from "@/lib/locale-path";
@@ -77,9 +82,10 @@ function SeasonBlock({
   );
 }
 
-export default function PricesPageContent({ locale }: { locale: Locale }) {
+export default async function PricesPageContent({ locale }: { locale: Locale }) {
   const t = getTranslations(locale);
   const bookPath = localePath(locale, "/book");
+  const supplements = getPublicVisibleSupplements(await getPublicPricingSupplements());
 
   const labels = {
     twoPeople: t.prices.two_people,
@@ -120,18 +126,18 @@ export default function PricesPageContent({ locale }: { locale: Locale }) {
           <article className="rounded-2xl border bg-card p-6 shadow-sm">
             <h2 className="font-heading text-xl font-semibold mb-4">{t.prices.rules_title}</h2>
             <ul className="space-y-2 text-muted-foreground">
-              <li className="flex gap-2">
-                <span className="text-primary shrink-0">•</span>
-                {t.prices.extra_person}
-              </li>
-              <li className="flex gap-2">
-                <span className="text-primary shrink-0">•</span>
-                {t.prices.long_motorhome}
-              </li>
-              <li className="flex gap-2">
-                <span className="text-primary shrink-0">•</span>
-                {t.prices.electricity_10a}
-              </li>
+              {supplements.map((supplement) => {
+                const amount = formatEuroAmount(supplement.amount_cents_per_night / 100, locale);
+                const name = supplementDisplayName(supplement, locale);
+                return (
+                  <li key={supplement.id} className="flex gap-2">
+                    <span className="text-primary shrink-0">•</span>
+                    {t.prices.supplement_line
+                      .replace("{amount}", amount)
+                      .replace("{name}", name)}
+                  </li>
+                );
+              })}
               <li className="flex gap-2">
                 <span className="text-primary shrink-0">•</span>
                 {t.prices.children_free}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { revalidatePublicPricesPages } from "@/lib/revalidate-prices";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
         slug: null,
         is_system: false,
         trigger_config: {},
-        applies_online: body.applies_online ?? false,
+        applies_online: body.applies_online ?? true,
         applies_admin: body.applies_admin ?? true,
         active: body.active ?? true,
         sort_order: body.sort_order ?? (count ?? 0) + 1,
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    revalidatePublicPricesPages();
     return NextResponse.json({ supplement: data });
   } catch (error) {
     if (error instanceof z.ZodError) {
