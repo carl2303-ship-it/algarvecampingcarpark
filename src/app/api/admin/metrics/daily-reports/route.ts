@@ -36,6 +36,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Generate daily report error:", error);
     const message = error instanceof Error ? error.message : "Erreur génération PDF";
+    // Surface the real cause in the UI (missing table, PDF encoding, etc.)
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
