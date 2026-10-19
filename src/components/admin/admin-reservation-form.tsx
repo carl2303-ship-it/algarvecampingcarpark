@@ -775,23 +775,6 @@ export function AdminReservationForm({
             />
           </div>
 
-          <label className="sm:col-span-2 flex items-start gap-3 cursor-pointer rounded-lg border border-amber-500/30 bg-amber-50/50 px-4 py-3 hover:bg-amber-50">
-            <input
-              type="checkbox"
-              checked={manualCheckoutRequired}
-              onChange={(event) => setManualCheckoutRequired(event.target.checked)}
-              className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
-            />
-            <span className="text-sm">
-              <span className="font-medium text-foreground">
-                {adminT.reservationForm.clientHabitual}
-              </span>
-              <span className="block text-muted-foreground mt-0.5">
-                {adminT.reservationForm.clientHabitualHint}
-              </span>
-            </span>
-          </label>
-
           <div className="sm:col-span-2 rounded-xl border p-4 space-y-4">
             <p className="font-medium text-sm">{adminT.reservationForm.supplementsTitle}</p>
 
@@ -1078,6 +1061,22 @@ export function AdminReservationForm({
               className="mt-1"
             />
           </div>
+          <label className="sm:col-span-2 flex items-start gap-3 cursor-pointer rounded-lg border border-amber-500/30 bg-amber-50/50 px-4 py-3 hover:bg-amber-50">
+            <input
+              type="checkbox"
+              checked={manualCheckoutRequired}
+              onChange={(event) => setManualCheckoutRequired(event.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
+            />
+            <span className="text-sm">
+              <span className="font-medium text-foreground">
+                {adminT.reservationForm.clientHabitual}
+              </span>
+              <span className="block text-muted-foreground mt-0.5">
+                {adminT.reservationForm.clientHabitualHint}
+              </span>
+            </span>
+          </label>
           <div className="sm:col-span-2">
             <Label htmlFor="operational_notes">{adminT.reservationForm.operationalNotes}</Label>
             <Textarea
