@@ -203,10 +203,10 @@ export async function getOccupancySeries(days = 14): Promise<OccupancyDay[]> {
     supabase.from("zones").select("id, capacity").eq("active", true),
     supabase
       .from("reservations")
-      .select("zone_id, check_in, check_out, status, expires_at")
+      .select("zone_id, check_in, check_out, status, expires_at, manual_checkout_required")
       .in("status", ["confirmed", "checked_in", "pending_payment"])
       .lt("check_in", endDate)
-      .gt("check_out", startDate),
+      .or(`check_out.gt.${startDate},manual_checkout_required.eq.true`),
   ]);
 
   const totalCapacity = zones?.reduce((sum, zone) => sum + zone.capacity, 0) ?? TOTAL_CAPACITY;
@@ -218,7 +218,9 @@ export async function getOccupancySeries(days = 14): Promise<OccupancyDay[]> {
     const occupied =
       reservations?.filter((reservation) => {
         if (!isActiveReservation(reservation.status, reservation.expires_at)) return false;
-        return reservation.check_in <= dayStr && reservation.check_out > dayStr;
+        if (reservation.check_in > dayStr) return false;
+        if (reservation.manual_checkout_required) return true;
+        return reservation.check_out > dayStr;
       }).length ?? 0;
 
     const percent = totalCapacity > 0 ? Math.round((occupied / totalCapacity) * 100) : 0;

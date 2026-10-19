@@ -1,4 +1,5 @@
 import { addDays, format } from "date-fns";
+import { reservationOccupiesDay } from "@/lib/reservation-hold";
 
 export type GanttOccupancyReservation = {
   id: string;
@@ -12,6 +13,7 @@ export type GanttOccupancyReservation = {
   status: string;
   payment_status: string;
   expires_at?: string | null;
+  manual_checkout_required?: boolean | null;
 };
 
 export function isCountableReservation(
@@ -37,7 +39,8 @@ export function reservationsActiveInWeek(
       (reservation) =>
         reservation.zone_id === zoneId &&
         reservation.check_in <= weekEndStr &&
-        reservation.check_out > weekStartStr &&
+        (Boolean(reservation.manual_checkout_required) ||
+          reservation.check_out > weekStartStr) &&
         isCountableReservation(reservation)
     )
     .sort(
@@ -56,8 +59,14 @@ export function countOccupiedForDay(
   return reservations.filter(
     (reservation) =>
       reservation.zone_id === zoneId &&
-      reservation.check_in <= dayStr &&
-      reservation.check_out > dayStr &&
+      reservationOccupiesDay(
+        {
+          check_in: reservation.check_in,
+          check_out: reservation.check_out,
+          manual_checkout_required: Boolean(reservation.manual_checkout_required),
+        },
+        dayStr
+      ) &&
       isCountableReservation(reservation)
   ).length;
 }

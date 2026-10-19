@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isReservationFullyPaid } from "@/lib/admin-reservation-payments";
 import { getPitchMapSpots } from "@/lib/pitch-map";
+import { reservationOnSiteOnDate } from "@/lib/reservation-hold";
 import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
 
 export type PitchOperationalStatus =
@@ -45,15 +46,25 @@ export async function getPitchesWithOperationalStatus(
   const supabase = createAdminClient();
   const spots = await getPitchMapSpots();
 
-  // Include check_out === today so departures still show as yellow until auto-checkout.
+  // Habitual holds remain on the map after paid check_out until manual checkout.
   const { data: reservations } = await supabase
     .from("reservations")
     .select(
-      "id, pitch_code, guest_name, guest_phone, vehicle_plate, check_in, check_out, operational_notes, payment_status, status, paid_cents, total_cents"
+      "id, pitch_code, guest_name, guest_phone, vehicle_plate, check_in, check_out, operational_notes, payment_status, status, paid_cents, total_cents, manual_checkout_required"
     )
     .in("status", ["confirmed", "checked_in", "pending_payment"])
-    .lte("check_in", date)
-    .gte("check_out", date);
+    .lte("check_in", date);
+
+  const onSiteReservations = (reservations ?? []).filter((reservation) =>
+    reservationOnSiteOnDate(
+      {
+        check_in: reservation.check_in,
+        check_out: reservation.check_out,
+        manual_checkout_required: Boolean(reservation.manual_checkout_required),
+      },
+      date
+    )
+  );
 
   const { data: spotRows } = await supabase
     .from("pitch_map_spots")
@@ -70,14 +81,14 @@ export async function getPitchesWithOperationalStatus(
     ])
   );
 
-  const reservationByPitch = new Map<string, NonNullable<typeof reservations>[number]>();
-  for (const reservation of reservations ?? []) {
+  const reservationByPitch = new Map<string, (typeof onSiteReservations)[number]>();
+  for (const reservation of onSiteReservations) {
     if (!reservation.pitch_code) continue;
     if (reservation.status === "pending_payment") continue;
     reservationByPitch.set(reservation.pitch_code, reservation);
   }
 
-  const checkoutToday = reservations?.filter(
+  const checkoutToday = onSiteReservations.filter(
     (r) => r.check_out === date && r.pitch_code && ["confirmed", "checked_in"].includes(r.status)
   );
 

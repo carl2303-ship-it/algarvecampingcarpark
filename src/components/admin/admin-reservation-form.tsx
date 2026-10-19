@@ -67,6 +67,7 @@ export type AdminReservationInitial = {
   paid_cents?: number;
   status?: string;
   motorhome_over_9m?: boolean;
+  manual_checkout_required?: boolean;
   electricity_amperage?: 6 | 10 | null;
   manual_supplement_ids?: string[];
   pre_arrival_email_sent_at?: string | null;
@@ -183,6 +184,9 @@ export function AdminReservationForm({
   const [extendMessage, setExtendMessage] = useState<string | null>(null);
   const [motorhomeOver9m, setMotorhomeOver9m] = useState(
     initialReservation?.motorhome_over_9m ?? false
+  );
+  const [manualCheckoutRequired, setManualCheckoutRequired] = useState(
+    initialReservation?.manual_checkout_required ?? false
   );
   const [electricityAmperage, setElectricityAmperage] = useState<6 | 10 | null>(
     initialReservation?.electricity_amperage ?? 6
@@ -307,6 +311,9 @@ export function AdminReservationForm({
               setGuestEmail(lookupData.guest.email || "");
               setGuestPhone(lookupData.guest.phone || "");
               setGuestCountry(lookupData.guest.country || "");
+              if (lookupData.guest.is_habitual) {
+                setManualCheckoutRequired(true);
+              }
               setPlateLookupMessage(adminT.reservationForm.plateAutofilled);
             } else if (lookupData.guest && isEdit) {
               // Only fill empty fields when editing
@@ -501,6 +508,7 @@ export function AdminReservationForm({
       operational_notes: operationalNotes || undefined,
       total_cents: totalCents,
       motorhome_over_9m: motorhomeOver9m,
+      manual_checkout_required: manualCheckoutRequired,
       electricity_amperage: pitchHasElectricity ? (electricityAmperage ?? 6) : null,
       manual_supplement_ids: manualSupplementIds,
     };
@@ -766,6 +774,23 @@ export function AdminReservationForm({
               increaseLabel={adminT.reservationForm.guestsStepUp}
             />
           </div>
+
+          <label className="sm:col-span-2 flex items-start gap-3 cursor-pointer rounded-lg border border-amber-500/30 bg-amber-50/50 px-4 py-3 hover:bg-amber-50">
+            <input
+              type="checkbox"
+              checked={manualCheckoutRequired}
+              onChange={(event) => setManualCheckoutRequired(event.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
+            />
+            <span className="text-sm">
+              <span className="font-medium text-foreground">
+                {adminT.reservationForm.clientHabitual}
+              </span>
+              <span className="block text-muted-foreground mt-0.5">
+                {adminT.reservationForm.clientHabitualHint}
+              </span>
+            </span>
+          </label>
 
           <div className="sm:col-span-2 rounded-xl border p-4 space-y-4">
             <p className="font-medium text-sm">{adminT.reservationForm.supplementsTitle}</p>

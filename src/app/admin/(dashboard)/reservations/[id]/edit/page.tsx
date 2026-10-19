@@ -66,6 +66,7 @@ export default async function EditReservationPage({
     paid_cents: reservation.paid_cents,
     status: reservation.status,
     motorhome_over_9m: Boolean(reservation.motorhome_over_9m),
+    manual_checkout_required: Boolean(reservation.manual_checkout_required),
     electricity_amperage:
       reservation.electricity_amperage === 6 || reservation.electricity_amperage === 10
         ? reservation.electricity_amperage

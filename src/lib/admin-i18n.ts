@@ -281,6 +281,9 @@ export const adminT = {
     useCalculatedQuote: "Utiliser le tarif calculé",
     country: "Pays",
     countryPlaceholder: "Ex. : France, Portugal, Belgique…",
+    clientHabitual: "Client habituel",
+    clientHabitualHint:
+      "Pas de check-out automatique : l'emplacement reste occupé jusqu'au check-out manuel, même après la date payée (ex. prolongement payé plus tard).",
     emailConfirmAlert:
       "Vérifiez bien l'adresse e-mail : sans e-mail correct, le client ne recevra pas le code d'entrée.",
     paymentHistoryDescription:

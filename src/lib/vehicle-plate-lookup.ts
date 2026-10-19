@@ -9,6 +9,7 @@ export type PlateGuestProfile = {
   phone: string | null;
   country: string | null;
   vehicle_plate: string;
+  is_habitual: boolean;
 };
 
 export type ActivePlateReservation = {
@@ -35,7 +36,7 @@ export async function findGuestByPlate(
 
   const { data } = await supabase
     .from("guests")
-    .select("id, name, email, phone, country, vehicle_plate")
+    .select("id, name, email, phone, country, vehicle_plate, is_habitual")
     .eq("vehicle_plate", plate)
     .maybeSingle();
 
@@ -47,6 +48,7 @@ export async function findGuestByPlate(
       phone: data.phone,
       country: data.country,
       vehicle_plate: data.vehicle_plate ?? plate,
+      is_habitual: Boolean(data.is_habitual),
     };
   }
 
@@ -71,6 +73,7 @@ export async function findGuestByPlate(
     phone: match.guest_phone,
     country: null,
     vehicle_plate: plate,
+    is_habitual: false,
   };
 }
 

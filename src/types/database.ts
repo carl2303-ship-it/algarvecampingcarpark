@@ -127,6 +127,7 @@ export interface Reservation {
   electricity?: boolean;
   electricity_amperage?: 6 | 10 | null;
   motorhome_over_9m?: boolean;
+  manual_checkout_required?: boolean;
   manual_supplement_ids?: string[];
   total_cents: number;
   paid_cents?: number;

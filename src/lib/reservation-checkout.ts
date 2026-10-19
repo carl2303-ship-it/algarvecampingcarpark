@@ -85,14 +85,16 @@ export async function runAutoCheckout(force = false): Promise<AutoCheckoutResult
 
   const { data: reservations, error } = await supabase
     .from("reservations")
-    .select("id, pitch_id, pitch_code, check_out, status, payment_method")
+    .select("id, pitch_id, pitch_code, check_out, status, payment_method, manual_checkout_required")
     .in("status", ["checked_in", "confirmed"])
     .lte("check_out", today);
 
   if (error) throw error;
 
   // Days already past always close; same-day waits until check-out time (unless forced).
+  // Habitual clients (manual_checkout_required) stay until staff checks out.
   const due = (reservations ?? []).filter((reservation) => {
+    if (reservation.manual_checkout_required) return false;
     if (reservation.check_out < today) return true;
     return reservation.check_out === today && pastCheckoutTime;
   });

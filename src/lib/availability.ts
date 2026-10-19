@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { calculateTotalPrice, EMPTY_STAY_PRICING, type PricingOptions } from "@/lib/pricing";
+import { reservationBlocksDateRange } from "@/lib/reservation-hold";
 import {
   getSpotZoneSlug,
   isPricingZoneSlug,
@@ -137,16 +138,28 @@ export async function getOccupiedPitchCodes(
 
   const { data: reservations, error: resError } = await supabase
     .from("reservations")
-    .select("id, pitch_code, check_in, check_out, status")
+    .select("id, pitch_code, check_in, check_out, status, manual_checkout_required")
     .in("status", [...ACTIVE_BOOKING_STATUSES])
     .not("pitch_code", "is", null)
-    .lt("check_in", checkOut)
-    .gt("check_out", checkIn);
+    .lt("check_in", checkOut);
 
   if (resError) throw resError;
 
   for (const row of reservations ?? []) {
     if (excludeReservationId && row.id === excludeReservationId) continue;
+    if (
+      !reservationBlocksDateRange(
+        {
+          check_in: row.check_in,
+          check_out: row.check_out,
+          manual_checkout_required: Boolean(row.manual_checkout_required),
+        },
+        checkIn,
+        checkOut
+      )
+    ) {
+      continue;
+    }
     if (row.pitch_code) occupied.add(String(row.pitch_code).toUpperCase());
   }
 
@@ -177,19 +190,27 @@ export async function findPitchOverlapConflict(params: {
 
   const { data, error } = await supabase
     .from("reservations")
-    .select("id, guest_name, check_in, check_out, pitch_code, status")
+    .select("id, guest_name, check_in, check_out, pitch_code, status, manual_checkout_required")
     .eq("pitch_code", code)
     .in("status", [...ACTIVE_BOOKING_STATUSES])
     .lt("check_in", params.checkOut)
-    .gt("check_out", params.checkIn)
     .order("check_in", { ascending: true })
-    .limit(5);
+    .limit(20);
 
   if (error) throw error;
 
-  const conflict = (data ?? []).find((row) =>
-    params.excludeReservationId ? row.id !== params.excludeReservationId : true
-  );
+  const conflict = (data ?? []).find((row) => {
+    if (params.excludeReservationId && row.id === params.excludeReservationId) return false;
+    return reservationBlocksDateRange(
+      {
+        check_in: row.check_in,
+        check_out: row.check_out,
+        manual_checkout_required: Boolean(row.manual_checkout_required),
+      },
+      params.checkIn,
+      params.checkOut
+    );
+  });
 
   return conflict
     ? {

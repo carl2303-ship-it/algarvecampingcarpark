@@ -27,6 +27,7 @@ const updateSchema = z.object({
   notes: z.string().optional(),
   total_cents: z.number().int().min(0),
   motorhome_over_9m: z.boolean().optional().default(false),
+  manual_checkout_required: z.boolean().optional().default(false),
   electricity_amperage: z.union([z.literal(6), z.literal(10)]).nullable().optional(),
   manual_supplement_ids: z.array(z.string().uuid()).optional().default([]),
   confirm_without_payment: z.boolean().optional().default(false),
@@ -132,6 +133,7 @@ export async function PATCH(
         electricity: body.electricity_amperage != null,
         electricity_amperage: body.electricity_amperage ?? null,
         motorhome_over_9m: body.motorhome_over_9m ?? false,
+        manual_checkout_required: body.manual_checkout_required ?? false,
         manual_supplement_ids: body.manual_supplement_ids ?? [],
         ...(confirmWithoutPayment
           ? { status: "confirmed", expires_at: null }
@@ -172,6 +174,7 @@ export async function PATCH(
       phone: body.guest_phone,
       vehicle_plate: plate,
       country: body.guest_country,
+      is_habitual: body.manual_checkout_required === true,
     });
 
     if (guestId) {

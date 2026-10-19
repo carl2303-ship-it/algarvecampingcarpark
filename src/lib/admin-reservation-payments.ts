@@ -170,6 +170,7 @@ export async function upsertGuestForReservation(
     phone: string;
     vehicle_plate?: string | null;
     country?: string | null;
+    is_habitual?: boolean;
   }
 ): Promise<string | null> {
   const plate = normalizeVehiclePlate(input.vehicle_plate ?? "");
@@ -181,13 +182,16 @@ export async function upsertGuestForReservation(
     .eq("vehicle_plate", plate)
     .maybeSingle();
 
-  const guestPayload = {
+  const guestPayload: Record<string, unknown> = {
     name: input.name,
     email: input.email,
     phone: input.phone,
     vehicle_plate: plate,
     country: input.country?.trim() || null,
   };
+  if (input.is_habitual === true) {
+    guestPayload.is_habitual = true;
+  }
 
   if (!existingGuest?.id) {
     const { data: newGuest } = await supabase

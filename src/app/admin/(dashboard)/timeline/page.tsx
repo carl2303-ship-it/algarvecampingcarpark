@@ -29,11 +29,11 @@ export default async function TimelinePage() {
     supabase
       .from("reservations")
       .select(
-        "id, zone_id, pitch_code, guest_name, guest_phone, vehicle_plate, check_in, check_out, status, payment_status, expires_at"
+        "id, zone_id, pitch_code, guest_name, guest_phone, vehicle_plate, check_in, check_out, status, payment_status, expires_at, manual_checkout_required"
       )
       .in("status", ["confirmed", "checked_in", "pending_payment"])
       .lt("check_in", horizon)
-      .gt("check_out", today)
+      .or(`check_out.gt.${today},manual_checkout_required.eq.true`)
       .order("check_in"),
   ]);
 
