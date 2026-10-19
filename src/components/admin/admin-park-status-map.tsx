@@ -31,6 +31,7 @@ const STATUS_STYLES: Record<PitchOperationalStatus, string> = {
   occupied: "bg-red-500/95 text-white border-red-300 hover:bg-red-600",
   checkout_today: "bg-amber-400/95 text-amber-950 border-amber-300 hover:bg-amber-500",
   unpaid: "bg-fuchsia-500/95 text-white border-fuchsia-300 hover:bg-fuchsia-600",
+  habitual_overstay: "bg-sky-500/95 text-white border-sky-300 hover:bg-sky-600",
   maintenance: "bg-slate-500/95 text-white border-slate-300",
 };
 
@@ -44,6 +45,8 @@ function operationalStatusLabel(status: PitchOperationalStatus): string {
       return adminT.parkStatus.stateCheckout;
     case "unpaid":
       return adminT.parkStatus.stateUnpaid;
+    case "habitual_overstay":
+      return adminT.parkStatus.stateOverstay;
     case "maintenance":
       return adminT.parkStatus.stateMaintenance;
   }
@@ -85,6 +88,10 @@ export function AdminParkStatusMap({
         <span className="inline-flex items-center gap-2">
           <span className="h-3 w-5 rounded bg-fuchsia-500 border border-fuchsia-300" />
           {adminT.parkStatus.legendUnpaid}
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className="h-3 w-5 rounded bg-sky-500 border border-sky-300" />
+          {adminT.parkStatus.legendOverstay}
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="h-3 w-5 rounded bg-slate-500 border border-slate-300" />
@@ -167,12 +174,14 @@ export function AdminParkStatusMap({
                     </p>
                     <p>
                       <span className="text-muted-foreground">{adminT.common.payment}</span>{" "}
-                      {formatAdminPaymentBalanceLabel(
-                        getPaymentBalanceTier(
-                          selected.reservation.paid_cents,
-                          selected.reservation.total_cents
-                        )
-                      )}
+                      {selected.operational_status === "habitual_overstay"
+                        ? adminT.paymentBalance.overstay
+                        : formatAdminPaymentBalanceLabel(
+                            getPaymentBalanceTier(
+                              selected.reservation.paid_cents,
+                              selected.reservation.total_cents
+                            )
+                          )}
                     </p>
                     {selected.reservation.operational_notes && (
                       <p className="rounded-lg bg-muted p-3 text-muted-foreground">

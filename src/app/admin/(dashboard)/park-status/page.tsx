@@ -14,6 +14,7 @@ export default async function ParkStatusPage() {
   const occupied = pitches.filter((p) => p.operational_status === "occupied").length;
   const checkout = pitches.filter((p) => p.operational_status === "checkout_today").length;
   const unpaid = pitches.filter((p) => p.operational_status === "unpaid").length;
+  const overstay = pitches.filter((p) => p.operational_status === "habitual_overstay").length;
   const free = pitches.filter((p) => p.operational_status === "free").length;
 
   return (
@@ -35,6 +36,9 @@ export default async function ParkStatusPage() {
         </span>
         <span className="rounded-full bg-fuchsia-100 text-fuchsia-900 px-3 py-1 font-medium">
           {adminT.parkStatus.unpaidCount.replace("{count}", String(unpaid))}
+        </span>
+        <span className="rounded-full bg-sky-100 text-sky-900 px-3 py-1 font-medium">
+          {adminT.parkStatus.overstayCount.replace("{count}", String(overstay))}
         </span>
       </div>
 

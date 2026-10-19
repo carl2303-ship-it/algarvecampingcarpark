@@ -27,6 +27,7 @@ import {
   getPaymentBalanceTier,
   type PaymentBalanceTier,
 } from "@/lib/admin-reservation-payments";
+import { isHabitualOverstay, lisbonToday } from "@/lib/reservation-hold";
 import { formatPrice } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import type { Pitch, Reservation } from "@/types/database";
@@ -67,8 +68,23 @@ const BALANCE_BADGE_STYLES: Record<PaymentBalanceTier, string> = {
   unpaid: "border-transparent bg-red-600 text-white hover:bg-red-600",
 };
 
+const OVERSTAY_ROW = "bg-sky-100/90 hover:bg-sky-100";
+const OVERSTAY_BADGE =
+  "border-transparent bg-sky-600 text-white hover:bg-sky-600";
+
 function paymentTier(row: ReservationRow): PaymentBalanceTier {
   return getPaymentBalanceTier(row.paid_cents ?? 0, row.total_cents);
+}
+
+function rowIsOverstay(row: ReservationRow): boolean {
+  if (["cancelled", "expired", "checked_out"].includes(row.status)) return false;
+  return isHabitualOverstay(
+    {
+      check_out: row.check_out,
+      manual_checkout_required: row.manual_checkout_required,
+    },
+    lisbonToday()
+  );
 }
 
 function normalizeSearch(value: string) {
@@ -317,8 +333,12 @@ export function AdminReservationsTable({
             ) : (
               sorted.map((r) => {
                 const tier = paymentTier(r);
+                const overstay = rowIsOverstay(r);
                 return (
-                <TableRow key={r.id} className={BALANCE_ROW_STYLES[tier]}>
+                <TableRow
+                  key={r.id}
+                  className={overstay ? OVERSTAY_ROW : BALANCE_ROW_STYLES[tier]}
+                >
                   <TableCell>
                     <div className="flex flex-col gap-1">
                       <span>
@@ -342,8 +362,10 @@ export function AdminReservationsTable({
                   <TableCell className="text-sm whitespace-nowrap">{r.check_in}</TableCell>
                   <TableCell className="text-sm whitespace-nowrap">{r.check_out}</TableCell>
                   <TableCell>
-                    <Badge className={BALANCE_BADGE_STYLES[tier]}>
-                      {formatAdminPaymentBalanceLabel(tier)}
+                    <Badge className={overstay ? OVERSTAY_BADGE : BALANCE_BADGE_STYLES[tier]}>
+                      {overstay
+                        ? adminT.paymentBalance.overstay
+                        : formatAdminPaymentBalanceLabel(tier)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm whitespace-nowrap">

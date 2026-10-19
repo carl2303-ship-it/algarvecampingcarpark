@@ -36,3 +36,24 @@ export function reservationOnSiteOnDate(
   if (reservation.manual_checkout_required) return true;
   return reservation.check_out >= date;
 }
+
+/**
+ * Habitual client past paid departure: still on site (no manual checkout),
+ * extension must be arranged/paid.
+ */
+export function isHabitualOverstay(
+  reservation: Pick<ReservationHoldFields, "check_out" | "manual_checkout_required">,
+  today: string
+): boolean {
+  return Boolean(reservation.manual_checkout_required) && reservation.check_out <= today;
+}
+
+/** Calendar date in Europe/Lisbon (park local day). */
+export function lisbonToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}

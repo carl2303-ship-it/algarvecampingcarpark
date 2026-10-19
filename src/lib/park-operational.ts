@@ -1,7 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isReservationFullyPaid } from "@/lib/admin-reservation-payments";
 import { getPitchMapSpots } from "@/lib/pitch-map";
-import { reservationOnSiteOnDate } from "@/lib/reservation-hold";
+import {
+  isHabitualOverstay,
+  lisbonToday,
+  reservationOnSiteOnDate,
+} from "@/lib/reservation-hold";
 import type { PitchMapSpot } from "@/lib/park-pitch-map-defaults";
 
 export type PitchOperationalStatus =
@@ -9,6 +13,7 @@ export type PitchOperationalStatus =
   | "occupied"
   | "checkout_today"
   | "unpaid"
+  | "habitual_overstay"
   | "maintenance";
 
 export type PitchWithBooking = PitchMapSpot & {
@@ -27,18 +32,9 @@ export type PitchWithBooking = PitchMapSpot & {
     payment_status: string;
     paid_cents: number;
     total_cents: number;
+    manual_checkout_required: boolean;
   } | null;
 };
-
-/** Calendar date in Europe/Lisbon (park local day). */
-function lisbonToday(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Lisbon",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
 
 export async function getPitchesWithOperationalStatus(
   date = lisbonToday()
@@ -102,10 +98,22 @@ export async function getPitchesWithOperationalStatus(
     const totalCents = reservation?.total_cents ?? 0;
     const unpaid =
       Boolean(reservation) && !isReservationFullyPaid(paidCents, totalCents);
+    const habitualOverstay =
+      reservation != null &&
+      isHabitualOverstay(
+        {
+          check_out: reservation.check_out,
+          manual_checkout_required: Boolean(reservation.manual_checkout_required),
+        },
+        date
+      );
 
     let operational_status: PitchOperationalStatus = "free";
     if (dbStatus === "maintenance") {
       operational_status = "maintenance";
+    } else if (habitualOverstay) {
+      // Past paid departure, still on site — extension / manual checkout pending.
+      operational_status = "habitual_overstay";
     } else if (unpaid) {
       operational_status = "unpaid";
     } else if (checkoutSet.has(spot.code) && reservation) {
@@ -132,6 +140,7 @@ export async function getPitchesWithOperationalStatus(
             payment_status: reservation.payment_status,
             paid_cents: paidCents,
             total_cents: totalCents,
+            manual_checkout_required: Boolean(reservation.manual_checkout_required),
           }
         : null,
     };

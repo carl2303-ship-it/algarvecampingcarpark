@@ -1,6 +1,7 @@
 import { addDays, format, startOfToday } from "date-fns";
 import { adminDateLocale } from "@/lib/admin-i18n";
 import { TOTAL_CAPACITY } from "@/lib/constants";
+import { isHabitualOverstay, lisbonToday } from "@/lib/reservation-hold";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type OccupancyDay = {
@@ -25,6 +26,7 @@ export type DashboardReservationRow = {
   pitch_code: string | null;
   zone: { name: string } | null;
   pitch: { code: string } | null;
+  manual_checkout_required?: boolean;
   /** True when another booking takes the same pitch on checkout day or the next day. */
   turnover_urgent: boolean;
 };
@@ -102,26 +104,39 @@ async function withTurnoverUrgent(
 
 export async function getUpcomingDepartures(limit = 10): Promise<DashboardReservationRow[]> {
   const supabase = createAdminClient();
-  const today = format(startOfToday(), "yyyy-MM-dd");
-  const weekEnd = format(addDays(startOfToday(), 7), "yyyy-MM-dd");
+  const today = lisbonToday();
+  const weekEnd = format(addDays(new Date(`${today}T12:00:00`), 7), "yyyy-MM-dd");
 
   const { data } = await supabase
     .from("reservations")
-    .select("id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
+    .select(
+      "id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, manual_checkout_required, zone:zones(name), pitch:pitches(code)"
+    )
     .in("status", ["confirmed", "checked_in"])
-    .gte("check_out", today)
     .lte("check_out", weekEnd)
     .order("check_out")
-    .limit(limit);
+    .limit(80);
 
-  const rows = ((data ?? []) as unknown as Omit<DashboardReservationRow, "turnover_urgent">[]).map(
-    (row) => ({
+  const rows = ((data ?? []) as unknown as Omit<DashboardReservationRow, "turnover_urgent">[])
+    .map((row) => ({
       ...row,
       vehicle_plate: row.vehicle_plate ?? null,
       pitch_id: row.pitch_id ?? null,
       paid_cents: row.paid_cents ?? 0,
+      manual_checkout_required: Boolean(row.manual_checkout_required),
+    }))
+    .filter(
+      (row) =>
+        (row.check_out >= today && row.check_out <= weekEnd) ||
+        isHabitualOverstay(row, today)
+    )
+    .sort((a, b) => {
+      const aOver = isHabitualOverstay(a, today) ? 0 : 1;
+      const bOver = isHabitualOverstay(b, today) ? 0 : 1;
+      if (aOver !== bOver) return aOver - bOver;
+      return a.check_out.localeCompare(b.check_out);
     })
-  );
+    .slice(0, limit);
 
   return withTurnoverUrgent(rows);
 }
@@ -133,7 +148,9 @@ export async function getUpcomingArrivals(limit = 10): Promise<DashboardReservat
 
   const { data } = await supabase
     .from("reservations")
-    .select("id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)")
+    .select(
+      "id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, manual_checkout_required, zone:zones(name), pitch:pitches(code)"
+    )
     .in("status", ["confirmed", "checked_in", "pending_payment"])
     .gte("check_in", today)
     .lte("check_in", weekEnd)
@@ -152,31 +169,26 @@ export async function getUpcomingArrivals(limit = 10): Promise<DashboardReservat
       vehicle_plate: row.vehicle_plate ?? null,
       pitch_id: row.pitch_id ?? null,
       paid_cents: row.paid_cents ?? 0,
+      manual_checkout_required: Boolean(row.manual_checkout_required),
     }));
 
   return withTurnoverUrgent(rows);
 }
 
-/** Currently on site (check-in ≤ today ≤ check-out) with outstanding balance. */
+/** Currently on site with outstanding balance, or habitual overstay needing extension. */
 export async function getOnSiteUnpaidReservations(
   limit = 20
 ): Promise<DashboardReservationRow[]> {
   const supabase = createAdminClient();
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Lisbon",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  const today = lisbonToday();
 
   const { data } = await supabase
     .from("reservations")
     .select(
-      "id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, zone:zones(name), pitch:pitches(code)"
+      "id, guest_name, vehicle_plate, check_in, check_out, total_cents, paid_cents, status, zone_id, pitch_id, pitch_code, expires_at, manual_checkout_required, zone:zones(name), pitch:pitches(code)"
     )
     .in("status", ["confirmed", "checked_in"])
     .lte("check_in", today)
-    .gte("check_out", today)
     .order("check_out")
     .limit(100);
 
@@ -186,8 +198,17 @@ export async function getOnSiteUnpaidReservations(
       vehicle_plate: row.vehicle_plate ?? null,
       pitch_id: row.pitch_id ?? null,
       paid_cents: row.paid_cents ?? 0,
+      manual_checkout_required: Boolean(row.manual_checkout_required),
     }))
-    .filter((row) => row.total_cents > 0 && row.paid_cents < row.total_cents)
+    .filter((row) => {
+      const onSite =
+        row.check_out >= today || isHabitualOverstay(row, today);
+      if (!onSite) return false;
+      return (
+        (row.total_cents > 0 && row.paid_cents < row.total_cents) ||
+        isHabitualOverstay(row, today)
+      );
+    })
     .slice(0, limit);
 
   return withTurnoverUrgent(rows);

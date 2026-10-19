@@ -14,6 +14,7 @@ import {
   getPaymentBalanceTier,
   type PaymentBalanceTier,
 } from "@/lib/admin-reservation-payments";
+import { isHabitualOverstay, lisbonToday } from "@/lib/reservation-hold";
 import { formatPrice } from "@/lib/pricing";
 import type { Pitch, Reservation } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,9 @@ const BALANCE_LABEL_STYLES: Record<PaymentBalanceTier, string> = {
   partial: "text-orange-800",
   unpaid: "text-red-800",
 };
+
+const OVERSTAY_CARD = "bg-sky-100 border-sky-300";
+const OVERSTAY_LABEL = "text-sky-900";
 
 function toCheckInReservation(row: DashboardReservationRow): Reservation {
   return {
@@ -75,7 +79,14 @@ export function DashboardReservationList({
         const paidCents = row.paid_cents ?? 0;
         const dueCents = Math.max(0, row.total_cents - paidCents);
         const tier = getPaymentBalanceTier(paidCents, row.total_cents);
-        const turnoverUrgent = row.turnover_urgent;
+        const overstay = isHabitualOverstay(
+          {
+            check_out: row.check_out,
+            manual_checkout_required: row.manual_checkout_required,
+          },
+          lisbonToday()
+        );
+        const turnoverUrgent = row.turnover_urgent && !overstay;
         const canArrive = row.status === "confirmed";
         const canDepart = row.status === "confirmed" || row.status === "checked_in";
 
@@ -84,16 +95,18 @@ export function DashboardReservationList({
             key={row.id}
             className={cn(
               "rounded-lg border p-3 space-y-3",
-              turnoverUrgent
-                ? "bg-fuchsia-100 border-fuchsia-300"
-                : BALANCE_CARD_STYLES[tier]
+              overstay
+                ? OVERSTAY_CARD
+                : turnoverUrgent
+                  ? "bg-fuchsia-100 border-fuchsia-300"
+                  : BALANCE_CARD_STYLES[tier]
             )}
           >
             <div className="flex items-start gap-3">
               <span
                 className={cn(
                   "flex h-12 min-w-12 shrink-0 items-center justify-center rounded-lg px-2.5 text-lg font-bold tracking-tight text-white shadow-sm",
-                  turnoverUrgent ? "bg-fuchsia-600" : "bg-slate-900"
+                  overstay ? "bg-sky-600" : turnoverUrgent ? "bg-fuchsia-600" : "bg-slate-900"
                 )}
                 aria-label={pitchLabel}
               >
@@ -122,7 +135,11 @@ export function DashboardReservationList({
                   {format(new Date(row.check_in), "dd MMM", { locale: adminDateLocale })} →{" "}
                   {format(new Date(row.check_out), "dd MMM", { locale: adminDateLocale })}
                 </p>
-                {turnoverUrgent ? (
+                {overstay ? (
+                  <p className="text-xs font-semibold text-sky-900 mt-0.5">
+                    {adminT.dashboard.habitualOverstay}
+                  </p>
+                ) : turnoverUrgent ? (
                   <p className="text-xs font-semibold text-fuchsia-800 mt-0.5">
                     {adminT.dashboard.turnoverUrgent}
                   </p>
@@ -135,7 +152,11 @@ export function DashboardReservationList({
                 <p
                   className={cn(
                     "font-semibold leading-tight",
-                    turnoverUrgent ? "text-fuchsia-800" : BALANCE_LABEL_STYLES[tier]
+                    overstay
+                      ? OVERSTAY_LABEL
+                      : turnoverUrgent
+                        ? "text-fuchsia-800"
+                        : BALANCE_LABEL_STYLES[tier]
                   )}
                 >
                   {formatPrice(dueCents)}
@@ -143,10 +164,16 @@ export function DashboardReservationList({
                 <p
                   className={cn(
                     "text-[11px] font-medium",
-                    turnoverUrgent ? "text-fuchsia-800" : BALANCE_LABEL_STYLES[tier]
+                    overstay
+                      ? OVERSTAY_LABEL
+                      : turnoverUrgent
+                        ? "text-fuchsia-800"
+                        : BALANCE_LABEL_STYLES[tier]
                   )}
                 >
-                  {formatAdminPaymentBalanceLabel(tier)}
+                  {overstay
+                    ? adminT.paymentBalance.overstay
+                    : formatAdminPaymentBalanceLabel(tier)}
                 </p>
               </div>
             </div>
