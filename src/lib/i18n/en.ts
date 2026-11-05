@@ -218,17 +218,17 @@ const en = {
     reception_submit_hint:
       "After submitting, reception finds your booking by plate number to assign a pitch and take payment.",
     hero_description:
-      "Enter your details, choose pitch type, select on the map and pay the full stay online.",
-    step_dates: "Dates & details",
+      "Choose your dates and pitch type, pick a spot on the map with pricing, then enter your details just before payment.",
+    step_dates: "Dates",
     step_zone: "Pitch type",
     step_pitch: "Map pitch",
-    step_details: "Details",
+    step_details: "Your details",
     step_payment: "Payment",
     check_in: "Check-in",
     check_out: "Check-out",
     online_period_hint:
       "Dates blocked for online bookings outside {from} to {until} (every year). Last night is {until}; check-out may be the next day.",
-    select_dates: "Dates and guest details",
+    select_dates: "Dates and pitch type",
     select_zone: "Pitch type",
     select_pitch: "Choose your pitch on the map",
     pitch_type_title: "Pitch type",

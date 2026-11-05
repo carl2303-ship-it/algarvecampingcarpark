@@ -220,17 +220,17 @@ const es = {
     reception_submit_hint:
       "Tras enviar, recepción encuentra su reserva por la matrícula para asignar plaza y cobrar.",
     hero_description:
-      "Indique sus datos, elija el tipo de plaza, selecciónela en el mapa y pague el total de la estancia online.",
-    step_dates: "Fechas y datos",
+      "Elija fechas y tipo de plaza, selecciónela en el mapa con la tarifa y solo después indique sus datos, justo antes del pago.",
+    step_dates: "Fechas",
     step_zone: "Tipo de plaza",
     step_pitch: "Plaza en el mapa",
-    step_details: "Datos",
+    step_details: "Datos del cliente",
     step_payment: "Pago",
     check_in: "Entrada",
     check_out: "Salida",
     online_period_hint:
       "Fechas bloqueadas para reservas online fuera de {from} a {until} (cada año). La última noche es {until}; la salida puede ser al día siguiente.",
-    select_dates: "Fechas y datos del cliente",
+    select_dates: "Fechas y tipo de plaza",
     select_zone: "Tipo de plaza",
     select_pitch: "Elija su plaza en el mapa",
     pitch_type_title: "Tipo de plaza",

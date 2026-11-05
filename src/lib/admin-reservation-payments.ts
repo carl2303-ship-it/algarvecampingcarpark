@@ -11,6 +11,8 @@ export type ClientPaymentHistoryRow = {
   check_in: string;
   check_out: string;
   pitch_code: string | null;
+  /** succeeded = money received; adjustment = date-change charge (not paid). */
+  status?: string;
 };
 
 export function normalizeVehiclePlate(plate: string): string {
@@ -131,20 +133,37 @@ export async function getClientPaymentHistory(
     return [];
   }
 
-  const { data: payments, error: paymentsError } = await supabase
+  let paymentsQuery = await supabase
     .from("payments")
-    .select("id, amount_cents, payment_method, notes, created_at, reservation_id")
+    .select(
+      "id, amount_cents, payment_method, notes, created_at, reservation_id, status, period_check_in, period_check_out"
+    )
     .in("reservation_id", [...reservationById.keys()])
-    .eq("status", "succeeded")
+    .in("status", ["succeeded", "adjustment"])
     .order("created_at", { ascending: true });
 
-  if (paymentsError) {
-    throw new Error(paymentsError.message);
+  // Until migration 033 is applied, fall back without period columns / adjustments.
+  if (paymentsQuery.error?.message?.includes("period_check_in")) {
+    paymentsQuery = await supabase
+      .from("payments")
+      .select("id, amount_cents, payment_method, notes, created_at, reservation_id, status")
+      .in("reservation_id", [...reservationById.keys()])
+      .eq("status", "succeeded")
+      .order("created_at", { ascending: true });
   }
 
-  return (payments ?? []).flatMap((payment) => {
+  if (paymentsQuery.error) {
+    throw new Error(paymentsQuery.error.message);
+  }
+
+  return (paymentsQuery.data ?? []).flatMap((payment) => {
     const reservation = reservationById.get(payment.reservation_id);
     if (!reservation) return [];
+    const row = payment as {
+      period_check_in?: string | null;
+      period_check_out?: string | null;
+      status?: string;
+    };
 
     return [
       {
@@ -154,9 +173,11 @@ export async function getClientPaymentHistory(
         notes: payment.notes,
         created_at: payment.created_at,
         reservation_id: payment.reservation_id,
-        check_in: reservation.check_in,
-        check_out: reservation.check_out,
+        // Prefer frozen period snapshot; fall back only for legacy rows.
+        check_in: row.period_check_in ?? reservation.check_in,
+        check_out: row.period_check_out ?? reservation.check_out,
         pitch_code: reservation.pitch_code,
+        status: payment.status,
       },
     ];
   });

@@ -76,6 +76,7 @@ export async function POST(request: Request) {
       newCheckOut: quote.newCheckOut,
       vehiclePlate: reservation.vehicle_plate,
       applyOnPayment: true,
+      newTotalCents: quote.newTotalCents,
       cancelUrl,
       locale: body.locale as Locale,
       accountingLines: quote.lines,
@@ -89,6 +90,8 @@ export async function POST(request: Request) {
       status: "pending",
       stripe_session_id: session.id,
       notes: `Extensão online até ${quote.newCheckOut} (aguarda pagamento)`,
+      period_check_in: quote.oldCheckOut,
+      period_check_out: quote.newCheckOut,
     });
 
     return NextResponse.json({

@@ -220,17 +220,17 @@ const de = {
     reception_submit_hint:
       "Nach dem Absenden findet die Rezeption Ihre Buchung über das Kennzeichen, vergibt den Platz und kassiert.",
     hero_description:
-      "Geben Sie Ihre Daten ein, wählen Sie den Stellplatztyp, markieren Sie auf der Karte und zahlen Sie den gesamten Aufenthalt online.",
-    step_dates: "Daten & Angaben",
+      "Wählen Sie Daten und Stellplatztyp, markieren Sie auf der Karte mit dem Tarif und geben Sie Ihre Daten erst kurz vor der Zahlung ein.",
+    step_dates: "Daten",
     step_zone: "Stellplatztyp",
     step_pitch: "Stellplatz auf Karte",
-    step_details: "Angaben",
+    step_details: "Ihre Angaben",
     step_payment: "Zahlung",
     check_in: "Anreise",
     check_out: "Abreise",
     online_period_hint:
       "Für Online-Buchungen gesperrte Daten außerhalb von {from} bis {until} (jedes Jahr). Letzte Nacht {until}; Abreise am Folgetag möglich.",
-    select_dates: "Daten und Kundendaten",
+    select_dates: "Daten und Stellplatztyp",
     select_zone: "Stellplatztyp",
     select_pitch: "Wählen Sie Ihren Stellplatz auf der Karte",
     pitch_type_title: "Stellplatztyp",

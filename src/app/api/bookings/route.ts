@@ -370,6 +370,8 @@ export async function POST(request: Request) {
       notes: gateEntry
         ? "Paiement intégral (entrée QR portail)"
         : "Paiement intégral (réservation en ligne)",
+      period_check_in: data.check_in,
+      period_check_out: data.check_out,
     });
 
     return NextResponse.json({

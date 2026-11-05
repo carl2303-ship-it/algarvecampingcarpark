@@ -64,6 +64,7 @@ export async function POST(request: Request) {
       const extensionCents = Number(session.metadata?.extension_cents ?? amountCents);
       const applyOnPayment = session.metadata?.apply_on_payment === "true";
       const newCheckOut = session.metadata?.new_check_out;
+      const metadataNewTotal = Number(session.metadata?.new_total_cents ?? NaN);
 
       const { data: reservation } = await supabase
         .from("reservations")
@@ -78,26 +79,44 @@ export async function POST(request: Request) {
         let nextCheckOut = reservation.check_out;
 
         if (applyOnPayment && newCheckOut && newCheckOut > reservation.check_out) {
-          const { quoteStayExtension } = await import("@/lib/stay-extension");
-          const quote = await quoteStayExtension({
-            reservation: {
-              id: reservation.id,
-              status: reservation.status,
-              zone_id: reservation.zone_id,
-              check_in: reservation.check_in,
-              check_out: reservation.check_out,
-              total_cents: reservation.total_cents,
-              num_guests: reservation.num_guests,
-              pitch_code: reservation.pitch_code,
-            },
-            newCheckOut,
-          });
-
-          if (quote.available) {
-            nextCheckOut = newCheckOut;
-            nextTotal = quote.newTotalCents;
+          nextCheckOut = newCheckOut;
+          // Prefer the total locked at checkout so paid/total stay aligned with Stripe.
+          if (Number.isFinite(metadataNewTotal) && metadataNewTotal > 0) {
+            nextTotal = metadataNewTotal;
           } else {
-            console.error("Extension webhook conflict after payment:", quote.error, quote.conflict);
+            const { quoteStayExtension } = await import("@/lib/stay-extension");
+            const quote = await quoteStayExtension({
+              reservation: {
+                id: reservation.id,
+                status: reservation.status,
+                zone_id: reservation.zone_id,
+                check_in: reservation.check_in,
+                check_out: reservation.check_out,
+                total_cents: reservation.total_cents,
+                num_guests: reservation.num_guests,
+                pitch_code: reservation.pitch_code,
+                electricity_amperage:
+                  reservation.electricity_amperage === 6 ||
+                  reservation.electricity_amperage === 10
+                    ? reservation.electricity_amperage
+                    : null,
+                motorhome_over_9m: Boolean(reservation.motorhome_over_9m),
+                manual_supplement_ids: reservation.manual_supplement_ids ?? [],
+              },
+              newCheckOut,
+            });
+
+            if (quote.available) {
+              nextTotal = quote.newTotalCents;
+            } else {
+              // Still apply checkout date; keep total in sync with amount charged.
+              nextTotal = (reservation.total_cents ?? 0) + extensionCents;
+              console.error(
+                "Extension webhook conflict after payment:",
+                quote.error,
+                quote.conflict
+              );
+            }
           }
         }
 
@@ -180,6 +199,8 @@ export async function POST(request: Request) {
                 : session.payment_intent?.id ?? null,
             payment_method: "stripe",
             notes: "Solde 50% (48h avant arrivée)",
+            period_check_in: reservation.check_in,
+            period_check_out: reservation.check_out,
           });
         }
 

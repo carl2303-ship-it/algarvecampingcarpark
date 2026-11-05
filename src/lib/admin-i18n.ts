@@ -289,7 +289,7 @@ export const adminT = {
     emailConfirmAlert:
       "Vérifiez bien l'adresse e-mail : sans e-mail correct, le client ne recevra pas le code d'entrée.",
     paymentHistoryDescription:
-      "Historique des paiements du client (matricule), sur toutes les réservations. Les lignes de cette réservation sont mises en évidence.",
+      "Historique des paiements du client (matricule). Les dates de chaque ligne sont figées au moment du paiement ; une modification de séjour crée une nouvelle ligne / solde.",
     initialPaymentDescription:
       "Vous pouvez enregistrer un premier paiement à la création. L'historique client s'affiche dès que la matricule est renseignée.",
     reserveWithoutPayment: "Réserver l'emplacement sans paiement",
@@ -350,9 +350,9 @@ export const adminT = {
     emailTypeReceipt: "Reçu de paiement",
     emailTypeExtension: "Lien de prolongation",
     emailSentTo: "à {email}",
-    extendTitle: "Prolonger le séjour",
+    extendTitle: "Modifier les dates du séjour",
     extendDescription:
-      "Allonge la date de départ sur la même réservation et calcule le supplément selon les tarifs.",
+      "Prolonger le départ ou avancer l'arrivée. Les paiements déjà enregistrés gardent leurs dates d'origine ; le supplément apparaît comme solde / nouvelle ligne.",
     extendNewDeparture: "Nouvelle date de départ",
     extendQuote: "Supplément : {amount} ({nights} nuit(s))",
     extendUnavailable: "Prolongation impossible pour ces dates.",
@@ -362,6 +362,17 @@ export const adminT = {
     extendSuccessNoCharge: "Séjour prolongé jusqu'au {date}.",
     extendError: "Erreur lors de la prolongation.",
     extendNotEligible: "La prolongation n'est disponible que pour les réservations confirmées ou en check-in.",
+    earlyArrivalTitle: "Nouvelle date d'arrivée",
+    earlyArrivalHint:
+      "Avance la date d'arrivée sans modifier les lignes de paiement déjà encaissées. Les nuits en plus sont ajoutées au total (solde à régler).",
+    earlyArrivalSubmit: "Appliquer la nouvelle arrivée",
+    earlyArrivalQuote: "Nuits anticipées : {amount} ({nights} nuit(s))",
+    earlyArrivalUnavailable: "Changement d'arrivée impossible pour cette date.",
+    earlyArrivalSuccess:
+      "Arrivée avancée au {date}. Supplément : {amount}. Solde à régler : {balance}.",
+    earlyArrivalSuccessNoCharge: "Arrivée avancée au {date}.",
+    earlyArrivalError: "Erreur lors du changement d'arrivée.",
+    paymentAdjustment: "Ajustement (solde)",
     supplementsTitle: "Suppléments",
     supplementOver9mLabel: "Véhicule de plus de 9 m (+9 m)",
     supplementOver9mHint:

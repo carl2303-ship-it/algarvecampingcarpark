@@ -21,6 +21,24 @@ export type ExtensionQuote = {
   error?: string;
 };
 
+export type EarlyArrivalQuote = {
+  available: boolean;
+  conflict: {
+    guest_name: string;
+    check_in: string;
+    check_out: string;
+  } | null;
+  oldCheckIn: string;
+  newCheckIn: string;
+  checkOut: string;
+  oldTotalCents: number;
+  newTotalCents: number;
+  extraCents: number;
+  nightsAdded: number;
+  lines: AccountingLine[];
+  error?: string;
+};
+
 type ReservationForExtend = {
   id: string;
   status: string;
@@ -136,6 +154,121 @@ export async function quoteStayExtension(params: {
     extensionCents,
     nightsAdded,
     lines: extraNightsPricing.totalCents === extensionCents ? extraNightsPricing.lines : [],
+  };
+}
+
+function emptyEarlyArrivalQuote(
+  reservation: ReservationForExtend,
+  newCheckIn: string,
+  error: string,
+  conflict: EarlyArrivalQuote["conflict"] = null
+): EarlyArrivalQuote {
+  return {
+    available: false,
+    conflict,
+    oldCheckIn: reservation.check_in,
+    newCheckIn,
+    checkOut: reservation.check_out,
+    oldTotalCents: reservation.total_cents,
+    newTotalCents: reservation.total_cents,
+    extraCents: 0,
+    nightsAdded: 0,
+    lines: [],
+    error,
+  };
+}
+
+/** Bring check-in earlier; extra nights become balance due (original payment rows untouched). */
+export async function quoteEarlyArrival(params: {
+  reservation: ReservationForExtend;
+  newCheckIn: string;
+}): Promise<EarlyArrivalQuote> {
+  const { reservation, newCheckIn } = params;
+
+  if (!["confirmed", "checked_in"].includes(reservation.status)) {
+    return emptyEarlyArrivalQuote(
+      reservation,
+      newCheckIn,
+      "Reserva não pode alterar a chegada neste estado"
+    );
+  }
+
+  if (newCheckIn >= reservation.check_in) {
+    return emptyEarlyArrivalQuote(
+      reservation,
+      newCheckIn,
+      "A nova data de chegada deve ser anterior à atual"
+    );
+  }
+
+  if (newCheckIn >= reservation.check_out) {
+    return emptyEarlyArrivalQuote(reservation, newCheckIn, "Data de chegada inválida");
+  }
+
+  if (reservation.pitch_code) {
+    const conflict = await findPitchOverlapConflict({
+      pitchCode: reservation.pitch_code,
+      checkIn: newCheckIn,
+      checkOut: reservation.check_out,
+      excludeReservationId: reservation.id,
+    });
+
+    if (conflict) {
+      return emptyEarlyArrivalQuote(
+        reservation,
+        newCheckIn,
+        `O lugar ${reservation.pitch_code} não está disponível a partir de ${newCheckIn}`,
+        {
+          guest_name: conflict.guest_name,
+          check_in: conflict.check_in,
+          check_out: conflict.check_out,
+        }
+      );
+    }
+  }
+
+  const rates = await getZoneRates(reservation.zone_id);
+  const supplements = await getPricingSupplements();
+  const pricingOptions = {
+    motorhomeOver9m: Boolean(reservation.motorhome_over_9m),
+    electricityAmperage: reservation.electricity_amperage ?? null,
+    manualSupplementIds: reservation.manual_supplement_ids ?? [],
+    supplements,
+  };
+  const newPricing = calculateTotalPrice(
+    rates,
+    newCheckIn,
+    reservation.check_out,
+    reservation.num_guests,
+    pricingOptions
+  );
+  const extraNightsPricing = calculateTotalPrice(
+    rates,
+    newCheckIn,
+    reservation.check_in,
+    reservation.num_guests,
+    pricingOptions
+  );
+  const extraCents = Math.max(0, newPricing.totalCents - reservation.total_cents);
+
+  const oldIn = new Date(reservation.check_in + "T12:00:00");
+  const newIn = new Date(newCheckIn + "T12:00:00");
+  const nightsAdded = Math.max(
+    0,
+    Math.round((oldIn.getTime() - newIn.getTime()) / (1000 * 60 * 60 * 24))
+  );
+
+  return {
+    available: true,
+    conflict: null,
+    oldCheckIn: reservation.check_in,
+    newCheckIn,
+    checkOut: reservation.check_out,
+    oldTotalCents: reservation.total_cents,
+    newTotalCents: newPricing.totalCents,
+    extraCents,
+    nightsAdded,
+    lines: extraNightsPricing.totalCents === extraCents ? extraNightsPricing.lines : [],
   };
 }
 

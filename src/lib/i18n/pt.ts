@@ -219,17 +219,17 @@ const pt = {
     reception_submit_hint:
       "Ao confirmar, a receção encontra a sua reserva pela matrícula para atribuir o lugar e receber o pagamento.",
     hero_description:
-      "Indique os seus dados, escolha o tipo de lugar, selecione no mapa e pague o total da estadia online.",
-    step_dates: "Datas e dados",
+      "Escolha as datas e o tipo de lugar, selecione no mapa com o tarifário e só depois indique os seus dados, antes do pagamento.",
+    step_dates: "Datas",
     step_zone: "Tipo de lugar",
     step_pitch: "Lugar no mapa",
-    step_details: "Dados",
+    step_details: "Dados do cliente",
     step_payment: "Pagamento",
     check_in: "Check-in",
     check_out: "Check-out",
     online_period_hint:
       "Datas bloqueadas para reservas online fora de {from} a {until} (todos os anos). A última noite é {until}; o check-out pode ser no dia seguinte.",
-    select_dates: "Datas e dados do cliente",
+    select_dates: "Datas e tipo de lugar",
     select_zone: "Tipo de lugar",
     select_pitch: "Escolha o seu lugar no mapa",
     pitch_type_title: "Tipo de lugar",

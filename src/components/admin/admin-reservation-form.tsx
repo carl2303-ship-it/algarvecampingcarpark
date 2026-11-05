@@ -47,6 +47,7 @@ export type AdminReservationPayment = {
   check_in: string;
   check_out: string;
   pitch_code: string | null;
+  status?: string;
 };
 
 export type AdminReservationInitial = {
@@ -182,6 +183,13 @@ export function AdminReservationForm({
   const [extendQuoteError, setExtendQuoteError] = useState<string | null>(null);
   const [loadingExtendQuote, setLoadingExtendQuote] = useState(false);
   const [extendMessage, setExtendMessage] = useState<string | null>(null);
+  const [earlyCheckIn, setEarlyCheckIn] = useState("");
+  const [earlyQuoteCents, setEarlyQuoteCents] = useState<number | null>(null);
+  const [earlyNights, setEarlyNights] = useState(0);
+  const [earlyQuoteError, setEarlyQuoteError] = useState<string | null>(null);
+  const [loadingEarlyQuote, setLoadingEarlyQuote] = useState(false);
+  const [earlyMessage, setEarlyMessage] = useState<string | null>(null);
+  const [applyingEarly, setApplyingEarly] = useState(false);
   const [motorhomeOver9m, setMotorhomeOver9m] = useState(
     initialReservation?.motorhome_over_9m ?? false
   );
@@ -394,6 +402,68 @@ export function AdminReservationForm({
     canExtend,
     initialReservation,
     extendCheckOut,
+    zoneId,
+    numGuests,
+    totalCents,
+    motorhomeOver9m,
+    quoteAmperageParam,
+    quoteManualParam,
+  ]);
+
+  useEffect(() => {
+    if (!canExtend || !initialReservation || !earlyCheckIn || !zoneId) {
+      setEarlyQuoteCents(null);
+      setEarlyNights(0);
+      setEarlyQuoteError(null);
+      return;
+    }
+
+    if (earlyCheckIn >= initialReservation.check_in) {
+      setEarlyQuoteCents(null);
+      setEarlyNights(0);
+      setEarlyQuoteError(adminT.reservationForm.earlyArrivalUnavailable);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoadingEarlyQuote(true);
+    setEarlyQuoteError(null);
+
+    fetch(
+      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${earlyCheckIn}&check_out=${initialReservation.check_out}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
+      { signal: controller.signal }
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.pricing?.totalCents != null) {
+          const extra = Math.max(0, data.pricing.totalCents - totalCents);
+          setEarlyQuoteCents(extra);
+          const oldIn = new Date(initialReservation.check_in + "T12:00:00");
+          const newIn = new Date(earlyCheckIn + "T12:00:00");
+          setEarlyNights(
+            Math.max(
+              0,
+              Math.round((oldIn.getTime() - newIn.getTime()) / (1000 * 60 * 60 * 24))
+            )
+          );
+        } else {
+          setEarlyQuoteCents(null);
+          setEarlyQuoteError(adminT.reservationForm.earlyArrivalUnavailable);
+        }
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          setEarlyQuoteCents(null);
+          setEarlyQuoteError(adminT.reservationForm.quoteError);
+        }
+      })
+      .finally(() => setLoadingEarlyQuote(false));
+
+    return () => controller.abort();
+  }, [
+    canExtend,
+    initialReservation,
+    earlyCheckIn,
     zoneId,
     numGuests,
     totalCents,
@@ -696,6 +766,58 @@ export function AdminReservationForm({
     router.refresh();
   }
 
+  async function handleEarlyArrival() {
+    if (!isEdit || !initialReservation?.id || !earlyCheckIn) return;
+
+    setApplyingEarly(true);
+    setError(null);
+    setEarlyMessage(null);
+
+    const res = await fetch(
+      `/api/admin/reservations/${initialReservation.id}/early-arrival`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ check_in: earlyCheckIn }),
+      }
+    );
+    const data = await res.json().catch(() => ({}));
+    setApplyingEarly(false);
+
+    if (!res.ok) {
+      setError(
+        typeof data.error === "string" ? data.error : adminT.reservationForm.earlyArrivalError
+      );
+      return;
+    }
+
+    const amount = formatPrice(data.extra_cents ?? 0);
+    const balance = formatPrice(data.balance_cents ?? 0);
+    setEarlyMessage(
+      (data.extra_cents ?? 0) > 0
+        ? adminT.reservationForm.earlyArrivalSuccess
+            .replace("{date}", data.check_in)
+            .replace("{amount}", amount)
+            .replace("{balance}", balance)
+        : adminT.reservationForm.earlyArrivalSuccessNoCharge.replace("{date}", data.check_in)
+    );
+    setCheckIn(data.check_in);
+    setTotalEuros(centsToEurosInput(data.total_cents ?? totalCents));
+    setPaidCents(data.paid_cents ?? paidCents);
+    setFollowQuote(false);
+    setEarlyCheckIn("");
+
+    if (vehiclePlate.trim()) {
+      const historyRes = await fetch(
+        `/api/admin/client-payments?vehicle_plate=${encodeURIComponent(vehiclePlate.trim())}`
+      );
+      const historyData = await historyRes.json().catch(() => ({ payments: [] }));
+      setPayments(historyData.payments ?? []);
+    }
+
+    router.refresh();
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
       {error && (
@@ -982,6 +1104,66 @@ export function AdminReservationForm({
               {extendMessage && (
                 <p className="text-sm text-muted-foreground">{extendMessage}</p>
               )}
+
+              <div className="border-t pt-4 space-y-4">
+                <div>
+                  <p className="font-medium text-sm">{adminT.reservationForm.earlyArrivalTitle}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {adminT.reservationForm.earlyArrivalHint}
+                  </p>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="early_check_in">
+                      {adminT.reservationForm.earlyArrivalTitle}
+                    </Label>
+                    <Input
+                      id="early_check_in"
+                      type="date"
+                      max={checkIn || undefined}
+                      value={earlyCheckIn}
+                      onChange={(event) => setEarlyCheckIn(event.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-end text-sm text-muted-foreground">
+                    {loadingEarlyQuote && (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        {adminT.common.loading}
+                      </span>
+                    )}
+                    {!loadingEarlyQuote && earlyQuoteError && (
+                      <span className="text-destructive">{earlyQuoteError}</span>
+                    )}
+                    {!loadingEarlyQuote && earlyQuoteCents != null && !earlyQuoteError && (
+                      <span>
+                        {adminT.reservationForm.earlyArrivalQuote
+                          .replace("{amount}", formatPrice(earlyQuoteCents))
+                          .replace("{nights}", String(earlyNights))}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={
+                    applyingEarly ||
+                    !earlyCheckIn ||
+                    earlyQuoteCents == null ||
+                    Boolean(earlyQuoteError) ||
+                    loadingEarlyQuote
+                  }
+                  onClick={handleEarlyArrival}
+                >
+                  {applyingEarly && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {adminT.reservationForm.earlyArrivalSubmit}
+                </Button>
+                {earlyMessage && (
+                  <p className="text-sm text-muted-foreground">{earlyMessage}</p>
+                )}
+              </div>
             </CardContent>
           )}
         </Card>
@@ -1137,11 +1319,18 @@ export function AdminReservationForm({
                     {payments.map((payment) => {
                       const isCurrentReservation =
                         isEdit && payment.reservation_id === initialReservation?.id;
+                      const isAdjustment = payment.status === "adjustment";
 
                       return (
                         <TableRow
                           key={payment.id}
-                          className={isCurrentReservation ? "bg-primary/5" : undefined}
+                          className={
+                            isAdjustment
+                              ? "bg-amber-50/80"
+                              : isCurrentReservation
+                                ? "bg-primary/5"
+                                : undefined
+                          }
                         >
                           <TableCell className="whitespace-nowrap text-sm">
                             {format(new Date(payment.created_at), "dd MMM yyyy HH:mm", {
@@ -1150,16 +1339,24 @@ export function AdminReservationForm({
                           </TableCell>
                           <TableCell className="text-sm">
                             <div>{formatStayLabel(payment)}</div>
-                            {isCurrentReservation && (
+                            {isAdjustment ? (
+                              <span className="text-xs font-medium text-amber-800">
+                                {adminT.reservationForm.paymentAdjustment}
+                              </span>
+                            ) : isCurrentReservation ? (
                               <span className="text-xs font-medium text-primary">
                                 {adminT.reservationForm.currentReservationPayment}
                               </span>
-                            )}
+                            ) : null}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {formatPrice(payment.amount_cents)}
+                            {isAdjustment ? `+${formatPrice(payment.amount_cents)}` : formatPrice(payment.amount_cents)}
                           </TableCell>
-                          <TableCell>{paymentMethodLabel(payment.payment_method)}</TableCell>
+                          <TableCell>
+                            {isAdjustment
+                              ? adminT.reservationForm.paymentAdjustment
+                              : paymentMethodLabel(payment.payment_method)}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {payment.notes ?? "—"}
                           </TableCell>

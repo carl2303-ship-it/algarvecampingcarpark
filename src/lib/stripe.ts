@@ -236,6 +236,7 @@ export async function createExtensionCheckoutSession({
   newCheckOut,
   vehiclePlate,
   applyOnPayment = false,
+  newTotalCents,
   cancelUrl,
   locale = "pt",
   accountingLines,
@@ -250,6 +251,8 @@ export async function createExtensionCheckoutSession({
   vehiclePlate?: string | null;
   /** When true, webhook applies new check_out + total after payment (guest flow). */
   applyOnPayment?: boolean;
+  /** Full-stay total after extension (kept in sync with what Stripe charged). */
+  newTotalCents?: number;
   cancelUrl?: string;
   locale?: Locale;
   accountingLines?: AccountingLine[];
@@ -285,6 +288,9 @@ export async function createExtensionCheckoutSession({
       new_check_out: newCheckOut,
       old_check_out: oldCheckOut,
       extension_cents: String(extensionCents),
+      ...(typeof newTotalCents === "number"
+        ? { new_total_cents: String(newTotalCents) }
+        : {}),
       apply_on_payment: applyOnPayment ? "true" : "false",
       vehicle_plate: plate,
       locale,

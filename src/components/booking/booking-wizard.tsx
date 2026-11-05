@@ -33,7 +33,8 @@ import {
 } from "@/lib/park-pitch-map-defaults";
 import { cn } from "@/lib/utils";
 
-type Step = "details" | "pitch" | "pay";
+/** Dates & options → pitch & rates → guest details → pay */
+type Step = "dates" | "pitch" | "details";
 
 type AvailablePitch = PitchMapSpot & {
   zone_id: string;
@@ -71,7 +72,7 @@ export function BookingWizard({
 
   const preferredSlug = preferredSpot ? getSpotZoneSlug(preferredSpot) : null;
 
-  const [step, setStep] = useState<Step>("details");
+  const [step, setStep] = useState<Step>("dates");
   const [checkIn, setCheckIn] = useState<Date | undefined>();
   const [checkOut, setCheckOut] = useState<Date | undefined>();
   const [selectedZone, setSelectedZone] = useState<ZoneAvailability | null>(null);
@@ -99,7 +100,7 @@ export function BookingWizard({
 
   const checkInStr = checkIn ? format(checkIn, "yyyy-MM-dd") : "";
   const checkOutStr = checkOut ? format(checkOut, "yyyy-MM-dd") : "";
-  const steps: Step[] = useMemo(() => ["details", "pitch", "pay"], []);
+  const steps: Step[] = useMemo(() => ["dates", "pitch", "details"], []);
 
   // Public online booking: lock calendar to annual season. Desk/gate QR can pick any future date.
   const bookableSeason = useMemo(
@@ -164,21 +165,6 @@ export function BookingWizard({
 
   async function continueToPitches() {
     if (!checkInStr || !checkOutStr) return;
-    if (
-      !guestName ||
-      !guestEmail ||
-      !guestPhone ||
-      !guestCountry.trim() ||
-      !vehiclePlate.trim() ||
-      !acceptedTerms
-    ) {
-      setError(tr.book.terms_fill_required);
-      return;
-    }
-    if (plateBlocked) {
-      setError(plateLookupMessage || tr.book.vehicle_plate_active);
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -273,8 +259,31 @@ export function BookingWizard({
     }
   }
 
+  function continueToGuestDetails() {
+    if (!selectedPitch) return;
+    setError(null);
+    setStep("details");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function submitBooking() {
     if (!selectedZone || !selectedPitch) return;
+    if (
+      !guestName ||
+      !guestEmail ||
+      !guestPhone ||
+      !guestCountry.trim() ||
+      !vehiclePlate.trim() ||
+      !acceptedTerms
+    ) {
+      setError(tr.book.terms_fill_required);
+      return;
+    }
+    if (plateBlocked) {
+      setError(plateLookupMessage || tr.book.vehicle_plate_active);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -344,7 +353,7 @@ export function BookingWizard({
         </div>
       )}
 
-      {step === "details" && (
+      {step === "dates" && (
         <Card>
           <CardHeader>
             <CardTitle>{tr.book.select_dates}</CardTitle>
@@ -402,6 +411,165 @@ export function BookingWizard({
                 {format(checkOut, "dd MMM yyyy", { locale: dateLocale })}
               </p>
             )}
+
+            <div className="space-y-2 max-w-xs">
+              <Label htmlFor="guests">{tr.book.num_guests}</Label>
+              <GuestCountStepper
+                id="guests"
+                value={numGuests}
+                onChange={setNumGuests}
+                decreaseLabel={tr.book.guests_step_down}
+                increaseLabel={tr.book.guests_step_up}
+              />
+            </div>
+
+            <div className="rounded-xl border p-4 space-y-4">
+              <p className="font-medium text-sm">{tr.book.pitch_type_title}</p>
+
+              <div className="space-y-2">
+                <Label>{tr.book.electricity_label}</Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWithElectricity(true);
+                    }}
+                    className={cn(
+                      "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
+                      withElectricity
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    {tr.book.type_with_electricity}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWithElectricity(false)}
+                    className={cn(
+                      "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
+                      !withElectricity
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    {tr.book.type_without_electricity}
+                  </button>
+                </div>
+              </div>
+
+              <label className="flex items-start gap-3 cursor-pointer rounded-lg border px-4 py-3 hover:bg-muted/40">
+                <input
+                  type="checkbox"
+                  checked={over9m}
+                  onChange={(event) => setOver9m(event.target.checked)}
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-foreground">{longPitchCheckboxLabel}</span>
+                  <span className="block text-muted-foreground mt-0.5">
+                    {tr.book.over_9m_hint}
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <Button
+              type="button"
+              onClick={continueToPitches}
+              disabled={!checkIn || !checkOut || loading}
+              className="w-full"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {tr.book.continue}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "pitch" && selectedZone && (
+        <div className="space-y-4">
+          <Button variant="ghost" onClick={() => setStep("dates")}>
+            ← {tr.book.step_dates}
+          </Button>
+          <div>
+            <h2 className="text-lg font-semibold">{tr.book.select_pitch}</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {typeSummary} · {formatPrice(totalCents)} · {tr.book.pay_full}:{" "}
+              {formatPrice(depositCents)}
+            </p>
+          </div>
+
+          <ParkPitchMap
+            locale={locale}
+            spots={pitches}
+            mode="booking"
+            showFacilities
+            hideHeader
+            over9mLabel={longPitchLabel}
+            selectedPitchCode={selectedPitch?.code ?? null}
+            onSelectPitch={(spot) => {
+              const match = pitches.find((p) => p.code === spot.code);
+              if (match) setSelectedPitch(match);
+            }}
+          />
+
+          <div>
+            <p className="text-sm font-medium mb-2">{tr.book.pitch_list_title}</p>
+            <div className="flex flex-wrap gap-2">
+              {pitches.map((spot) => (
+                <Button
+                  key={spot.code}
+                  type="button"
+                  size="sm"
+                  variant={selectedPitch?.code === spot.code ? "default" : "outline"}
+                  onClick={() => setSelectedPitch(spot)}
+                >
+                  {spot.code}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <Button
+            onClick={continueToGuestDetails}
+            disabled={!selectedPitch}
+            className="w-full"
+          >
+            {tr.book.continue}
+            {selectedPitch ? ` — ${selectedPitch.code}` : ""}
+          </Button>
+        </div>
+      )}
+
+      {step === "details" && selectedZone && selectedPitch && (
+        <Card className="rounded-2xl shadow-lg border-primary/10">
+          <CardHeader>
+            <Button
+              variant="ghost"
+              className="w-fit -ml-2 mb-2"
+              onClick={() => setStep("pitch")}
+            >
+              ← {tr.book.step_pitch}
+            </Button>
+            <CardTitle>{tr.book.step_details}</CardTitle>
+            <CardDescription>
+              {typeSummary} · {selectedPitch.code} ·{" "}
+              {format(checkIn!, "dd MMM yyyy", { locale: dateLocale })} →{" "}
+              {format(checkOut!, "dd MMM yyyy", { locale: dateLocale })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>{tr.book.total}</span>
+                <span className="font-semibold">{formatPrice(totalCents)}</span>
+              </div>
+              <div className="flex justify-between text-primary">
+                <span>{tr.book.pay_full}</span>
+                <span className="font-semibold">{formatPrice(depositCents)}</span>
+              </div>
+            </div>
 
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2 md:col-span-2">
@@ -469,67 +637,6 @@ export function BookingWizard({
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="guests">{tr.book.num_guests}</Label>
-                <GuestCountStepper
-                  id="guests"
-                  value={numGuests}
-                  onChange={setNumGuests}
-                  decreaseLabel={tr.book.guests_step_down}
-                  increaseLabel={tr.book.guests_step_up}
-                />
-              </div>
-            </div>
-
-            <div className="rounded-xl border p-4 space-y-4">
-              <p className="font-medium text-sm">{tr.book.pitch_type_title}</p>
-
-              <div className="space-y-2">
-                <Label>{tr.book.electricity_label}</Label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWithElectricity(true);
-                    }}
-                    className={cn(
-                      "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
-                      withElectricity
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    {tr.book.type_with_electricity}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWithElectricity(false)}
-                    className={cn(
-                      "flex-1 rounded-lg border px-4 py-3 text-sm text-left transition-colors",
-                      !withElectricity
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "hover:bg-muted/50"
-                    )}
-                  >
-                    {tr.book.type_without_electricity}
-                  </button>
-                </div>
-              </div>
-
-              <label className="flex items-start gap-3 cursor-pointer rounded-lg border px-4 py-3 hover:bg-muted/40">
-                <input
-                  type="checkbox"
-                  checked={over9m}
-                  onChange={(event) => setOver9m(event.target.checked)}
-                  className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
-                />
-                <span className="text-sm">
-                  <span className="font-medium text-foreground">{longPitchCheckboxLabel}</span>
-                  <span className="block text-muted-foreground mt-0.5">
-                    {tr.book.over_9m_hint}
-                  </span>
-                </span>
-              </label>
             </div>
 
             <div className="space-y-2">
@@ -564,101 +671,16 @@ export function BookingWizard({
               </label>
             </div>
 
-            <Button
-              type="button"
-              onClick={continueToPitches}
-              disabled={!checkIn || !checkOut || loading || plateBlocked || !vehiclePlate.trim()}
-              className="w-full"
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {tr.book.continue}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "pitch" && selectedZone && (
-        <div className="space-y-4">
-          <Button variant="ghost" onClick={() => setStep("details")}>
-            ← {tr.book.step_dates}
-          </Button>
-          <div>
-            <h2 className="text-lg font-semibold">{tr.book.select_pitch}</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {typeSummary} · {formatPrice(totalCents)} · {tr.book.pay_full}:{" "}
-              {formatPrice(depositCents)}
-            </p>
-          </div>
-
-          <ParkPitchMap
-            locale={locale}
-            spots={pitches}
-            mode="booking"
-            showFacilities
-            hideHeader
-            over9mLabel={longPitchLabel}
-            selectedPitchCode={selectedPitch?.code ?? null}
-            onSelectPitch={(spot) => {
-              const match = pitches.find((p) => p.code === spot.code);
-              if (match) setSelectedPitch(match);
-            }}
-          />
-
-          <div>
-            <p className="text-sm font-medium mb-2">{tr.book.pitch_list_title}</p>
-            <div className="flex flex-wrap gap-2">
-              {pitches.map((spot) => (
-                <Button
-                  key={spot.code}
-                  type="button"
-                  size="sm"
-                  variant={selectedPitch?.code === spot.code ? "default" : "outline"}
-                  onClick={() => setSelectedPitch(spot)}
-                >
-                  {spot.code}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <Button onClick={() => setStep("pay")} disabled={!selectedPitch} className="w-full">
-            {tr.book.continue}
-            {selectedPitch ? ` — ${selectedPitch.code}` : ""}
-          </Button>
-        </div>
-      )}
-
-      {step === "pay" && selectedZone && selectedPitch && (
-        <Card className="rounded-2xl shadow-lg border-primary/10">
-          <CardHeader>
-            <Button variant="ghost" className="w-fit -ml-2 mb-2" onClick={() => setStep("pitch")}>
-              ← {tr.book.step_pitch}
-            </Button>
-            <CardTitle>
-              {typeSummary} · {selectedPitch.code}
-            </CardTitle>
-            <CardDescription>
-              {format(checkIn!, "dd MMM yyyy", { locale: dateLocale })} →{" "}
-              {format(checkOut!, "dd MMM yyyy", { locale: dateLocale })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>{tr.book.total}</span>
-                <span className="font-semibold">{formatPrice(totalCents)}</span>
-              </div>
-              <div className="flex justify-between text-primary">
-                <span>{tr.book.pay_full}</span>
-                <span className="font-semibold">{formatPrice(depositCents)}</span>
-              </div>
-            </div>
-
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
               {tr.book.pre_arrival_alert}
             </div>
 
-            <Button onClick={submitBooking} disabled={loading} className="w-full" size="lg">
+            <Button
+              onClick={submitBooking}
+              disabled={loading || plateBlocked || !vehiclePlate.trim()}
+              className="w-full"
+              size="lg"
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {tr.book.pay_full} — {formatPrice(depositCents)}
             </Button>

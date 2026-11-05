@@ -94,6 +94,7 @@ export async function PATCH(
           newCheckOut: body.check_out,
           vehiclePlate: reservation.vehicle_plate,
           applyOnPayment: false,
+          newTotalCents: quote.newTotalCents,
           locale: reservation.locale ?? "pt",
           accountingLines: quote.lines,
         });
@@ -107,6 +108,8 @@ export async function PATCH(
           status: "pending",
           stripe_session_id: session.id,
           notes: `Extensão até ${body.check_out}`,
+          period_check_in: oldCheckOut,
+          period_check_out: body.check_out,
         });
 
         await sendExtensionPaymentLink({

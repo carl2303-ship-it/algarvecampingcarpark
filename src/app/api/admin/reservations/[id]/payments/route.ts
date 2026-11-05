@@ -32,7 +32,7 @@ export async function POST(
 
     const { data: reservation, error: fetchError } = await supabase
       .from("reservations")
-      .select("id, total_cents, paid_cents, status")
+      .select("id, total_cents, paid_cents, status, check_in, check_out")
       .eq("id", id)
       .single();
 
@@ -64,6 +64,8 @@ export async function POST(
       status: "succeeded",
       payment_method: body.payment_method,
       notes: body.notes?.trim() || null,
+      period_check_in: reservation.check_in,
+      period_check_out: reservation.check_out,
     });
 
     if (insertError) {

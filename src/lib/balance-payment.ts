@@ -88,6 +88,8 @@ export async function sendBalancePaymentForReservation(
     amount_cents: balanceCents,
     status: "pending",
     notes: "Solde 50% (lien 48h avant arrivée)",
+    period_check_in: reservation.check_in,
+    period_check_out: reservation.check_out,
   });
 
   await sendBalancePaymentRequest({

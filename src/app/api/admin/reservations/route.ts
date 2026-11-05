@@ -135,6 +135,8 @@ export async function POST(request: Request) {
         status: "succeeded",
         payment_method: body.initial_payment_method,
         notes: "Paiement initial (admin)",
+        period_check_in: body.check_in,
+        period_check_out: body.check_out,
       });
     }
 

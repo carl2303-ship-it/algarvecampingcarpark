@@ -220,8 +220,8 @@ const fr = {
     reception_submit_hint:
       "Après envoi, la réception retrouve votre réservation par la plaque pour attribuer la place et encaisser.",
     hero_description:
-      "Indiquez vos coordonnées, choisissez le type de place, sélectionnez sur le plan et payez le total du séjour en ligne.",
-    step_dates: "Dates et coordonnées",
+      "Choisissez vos dates et le type de place, sélectionnez sur le plan avec le tarif, puis renseignez vos coordonnées juste avant le paiement.",
+    step_dates: "Dates",
     step_zone: "Type de place",
     step_pitch: "Place sur le plan",
     step_details: "Coordonnées",
@@ -230,7 +230,7 @@ const fr = {
     check_out: "Départ",
     online_period_hint:
       "Dates bloquées pour les réservations en ligne hors du {from} au {until} (chaque année). Dernière nuit le {until} ; le départ peut être le lendemain.",
-    select_dates: "Dates et coordonnées du client",
+    select_dates: "Dates et type de place",
     select_zone: "Type de place",
     select_pitch: "Choisissez votre place sur le plan",
     pitch_type_title: "Type de place",
