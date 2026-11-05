@@ -142,8 +142,13 @@ export async function getClientPaymentHistory(
     .in("status", ["succeeded", "adjustment"])
     .order("created_at", { ascending: true });
 
-  // Until migration 033 is applied, fall back without period columns / adjustments.
-  if (paymentsQuery.error?.message?.includes("period_check_in")) {
+  // Fallbacks while migrations 033/034 are not yet applied on the remote DB.
+  const errMsg = paymentsQuery.error?.message ?? "";
+  if (
+    errMsg.includes("period_check_in") ||
+    errMsg.includes("adjustment") ||
+    errMsg.includes("payment_status")
+  ) {
     paymentsQuery = await supabase
       .from("payments")
       .select("id, amount_cents, payment_method, notes, created_at, reservation_id, status")
