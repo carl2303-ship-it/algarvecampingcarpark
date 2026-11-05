@@ -42,7 +42,7 @@ const bookingSchema = z.object({
   locale: z.enum(["pt", "en", "fr", "de", "es"]).optional().default("pt"),
   gate_entry: z.boolean().optional(),
   reception_entry: z.boolean().optional(),
-  over_9m: z.boolean().optional(),
+  over_9m: z.boolean().optional().default(false),
   electricity_amperage: z.union([z.literal(6), z.literal(10)]).optional(),
 });
 
@@ -57,7 +57,7 @@ const receptionSchema = z.object({
   num_guests: z.number().int().min(1).max(10),
   locale: z.enum(["pt", "en", "fr", "de", "es"]).optional().default("pt"),
   reception_entry: z.literal(true),
-  over_9m: z.boolean().optional(),
+  over_9m: z.boolean().optional().default(false),
   electricity_amperage: z.union([z.literal(6), z.literal(10)]).optional(),
 });
 
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       let pricing;
       try {
         pricing = calculateTotalPrice(rates, data.check_in, data.check_out, data.num_guests, {
-          motorhomeOver9m: data.over_9m,
+          motorhomeOver9m: Boolean(data.over_9m),
           electricityAmperage: withElectricity ? (data.electricity_amperage ?? 6) : null,
           supplements,
         });
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
           payment_status: "pending",
           electricity: withElectricity,
           electricity_amperage: withElectricity ? (data.electricity_amperage ?? 6) : null,
-          motorhome_over_9m: data.over_9m ?? false,
+          motorhome_over_9m: Boolean(data.over_9m),
           expires_at: null,
           locale: data.locale,
         })
@@ -225,6 +225,8 @@ export async function POST(request: Request) {
 
     const supplements = await getPricingSupplements();
 
+    const motorhomeOver9m = Boolean(data.over_9m);
+
     const { available, pricing, pitch, zone } = await validatePitchBookingAvailability({
       zoneId: data.zone_id,
       pitchCode,
@@ -232,7 +234,7 @@ export async function POST(request: Request) {
       checkOut: data.check_out,
       numGuests: data.num_guests,
       electric: withElectricity,
-      over9m: data.over_9m,
+      over9m: motorhomeOver9m,
       electricityAmperage: withElectricity ? (data.electricity_amperage ?? 6) : null,
       supplements,
     });
@@ -315,7 +317,7 @@ export async function POST(request: Request) {
         payment_status: "pending",
         electricity: withElectricity,
         electricity_amperage: withElectricity ? (data.electricity_amperage ?? 6) : null,
-        motorhome_over_9m: data.over_9m ?? false,
+        motorhome_over_9m: motorhomeOver9m,
         expires_at: expiresAt,
         locale: data.locale,
       })

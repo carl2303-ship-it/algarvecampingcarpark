@@ -27,7 +27,6 @@ import type { TermsContent } from "@/lib/legal/terms-content";
 import type { ZoneAvailability } from "@/types/database";
 import {
   getSpotZoneSlug,
-  spotIsOver9m,
   type PitchMapSpot,
   type PricingZoneSlug,
 } from "@/lib/park-pitch-map-defaults";
@@ -96,7 +95,8 @@ export function BookingWizard({
   const [withElectricity, setWithElectricity] = useState(
     preferredSpot ? Boolean(preferredSpot.electric) : preferredSlug !== "sem-eletricidade"
   );
-  const [over9m, setOver9m] = useState(preferredSpot ? spotIsOver9m(preferredSpot) : false);
+  // Only the client's checkbox on the booking form activates +9 m — never the pitch itself.
+  const [over9m, setOver9m] = useState(false);
 
   const checkInStr = checkIn ? format(checkIn, "yyyy-MM-dd") : "";
   const checkOutStr = checkOut ? format(checkOut, "yyyy-MM-dd") : "";
@@ -304,7 +304,8 @@ export function BookingWizard({
           notes: notes || undefined,
           locale,
           gate_entry: gateEntry || undefined,
-          over_9m: over9m || undefined,
+          // Persist exactly what the client chose on the booking form checkbox.
+          over_9m: over9m,
           electricity_amperage: withElectricity ? 6 : undefined,
         }),
       });

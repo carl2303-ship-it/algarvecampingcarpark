@@ -133,7 +133,21 @@ export async function getClientPaymentHistory(
     return [];
   }
 
-  let paymentsQuery = await supabase
+  type PaymentHistoryRow = {
+    id: string;
+    amount_cents: number;
+    payment_method: string | null;
+    notes: string | null;
+    created_at: string;
+    reservation_id: string;
+    status: string;
+    period_check_in?: string | null;
+    period_check_out?: string | null;
+  };
+
+  let payments: PaymentHistoryRow[] = [];
+
+  const primary = await supabase
     .from("payments")
     .select(
       "id, amount_cents, payment_method, notes, created_at, reservation_id, status, period_check_in, period_check_out"
@@ -143,32 +157,32 @@ export async function getClientPaymentHistory(
     .order("created_at", { ascending: true });
 
   // Fallbacks while migrations 033/034 are not yet applied on the remote DB.
-  const errMsg = paymentsQuery.error?.message ?? "";
+  const errMsg = primary.error?.message ?? "";
   if (
     errMsg.includes("period_check_in") ||
     errMsg.includes("adjustment") ||
     errMsg.includes("payment_status")
   ) {
-    paymentsQuery = await supabase
+    const fallback = await supabase
       .from("payments")
       .select("id, amount_cents, payment_method, notes, created_at, reservation_id, status")
       .in("reservation_id", [...reservationById.keys()])
       .eq("status", "succeeded")
       .order("created_at", { ascending: true });
+
+    if (fallback.error) {
+      throw new Error(fallback.error.message);
+    }
+    payments = (fallback.data ?? []) as PaymentHistoryRow[];
+  } else if (primary.error) {
+    throw new Error(primary.error.message);
+  } else {
+    payments = (primary.data ?? []) as PaymentHistoryRow[];
   }
 
-  if (paymentsQuery.error) {
-    throw new Error(paymentsQuery.error.message);
-  }
-
-  return (paymentsQuery.data ?? []).flatMap((payment) => {
+  return payments.flatMap((payment) => {
     const reservation = reservationById.get(payment.reservation_id);
     if (!reservation) return [];
-    const row = payment as {
-      period_check_in?: string | null;
-      period_check_out?: string | null;
-      status?: string;
-    };
 
     return [
       {
@@ -179,8 +193,8 @@ export async function getClientPaymentHistory(
         created_at: payment.created_at,
         reservation_id: payment.reservation_id,
         // Prefer frozen period snapshot; fall back only for legacy rows.
-        check_in: row.period_check_in ?? reservation.check_in,
-        check_out: row.period_check_out ?? reservation.check_out,
+        check_in: payment.period_check_in ?? reservation.check_in,
+        check_out: payment.period_check_out ?? reservation.check_out,
         pitch_code: reservation.pitch_code,
         status: payment.status,
       },

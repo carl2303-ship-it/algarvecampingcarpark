@@ -132,7 +132,7 @@ export function ReceptionIntakeForm({
           num_guests: numGuests,
           locale,
           reception_entry: true,
-          over_9m: over9m || undefined,
+          over_9m: over9m,
           electricity_amperage: withElectricity ? 6 : undefined,
         }),
       });

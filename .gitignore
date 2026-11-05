@@ -44,8 +44,14 @@ supabase/.temp/
 *.tsbuildinfo
 next-env.d.ts
 
+# Accidental unzip of a source archive inside the repo
+/algarvecampingcarpark-master/
+
 # Local Netlify folder
 .netlify
 
 # Local media fallback (Netlify Blobs substitute in next dev)
 .data/
+
+# Database backups (never commit)
+/backups/
