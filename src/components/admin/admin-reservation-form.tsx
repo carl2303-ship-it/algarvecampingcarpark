@@ -429,15 +429,15 @@ export function AdminReservationForm({
     setLoadingEarlyQuote(true);
     setEarlyQuoteError(null);
 
+    // Quote only the anticipatory nights (new arrival → previous arrival).
     fetch(
-      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${earlyCheckIn}&check_out=${initialReservation.check_out}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
+      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${earlyCheckIn}&check_out=${initialReservation.check_in}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
       { signal: controller.signal }
     )
       .then((res) => res.json())
       .then((data) => {
         if (data.pricing?.totalCents != null) {
-          const extra = Math.max(0, data.pricing.totalCents - totalCents);
-          setEarlyQuoteCents(extra);
+          setEarlyQuoteCents(Math.max(0, data.pricing.totalCents));
           const oldIn = new Date(initialReservation.check_in + "T12:00:00");
           const newIn = new Date(earlyCheckIn + "T12:00:00");
           setEarlyNights(
@@ -466,7 +466,6 @@ export function AdminReservationForm({
     earlyCheckIn,
     zoneId,
     numGuests,
-    totalCents,
     motorhomeOver9m,
     quoteAmperageParam,
     quoteManualParam,

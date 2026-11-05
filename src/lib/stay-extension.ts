@@ -235,13 +235,8 @@ export async function quoteEarlyArrival(params: {
     manualSupplementIds: reservation.manual_supplement_ids ?? [],
     supplements,
   };
-  const newPricing = calculateTotalPrice(
-    rates,
-    newCheckIn,
-    reservation.check_out,
-    reservation.num_guests,
-    pricingOptions
-  );
+  // Charge the added nights on their own (do not rely on total_cents vs full reprice:
+  // historical totals can diverge from current rates and yield a €0 "supplement").
   const extraNightsPricing = calculateTotalPrice(
     rates,
     newCheckIn,
@@ -249,7 +244,8 @@ export async function quoteEarlyArrival(params: {
     reservation.num_guests,
     pricingOptions
   );
-  const extraCents = Math.max(0, newPricing.totalCents - reservation.total_cents);
+  const extraCents = Math.max(0, extraNightsPricing.totalCents);
+  const newTotalCents = reservation.total_cents + extraCents;
 
   const oldIn = new Date(reservation.check_in + "T12:00:00");
   const newIn = new Date(newCheckIn + "T12:00:00");
@@ -265,10 +261,10 @@ export async function quoteEarlyArrival(params: {
     newCheckIn,
     checkOut: reservation.check_out,
     oldTotalCents: reservation.total_cents,
-    newTotalCents: newPricing.totalCents,
+    newTotalCents,
     extraCents,
     nightsAdded,
-    lines: extraNightsPricing.totalCents === extraCents ? extraNightsPricing.lines : [],
+    lines: extraNightsPricing.lines,
   };
 }
 
