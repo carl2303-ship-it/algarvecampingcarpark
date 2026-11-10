@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import type { Locale } from "@/lib/constants";
 import { CONTACT_EMAIL } from "@/lib/constants";
 import { getTranslations } from "@/lib/i18n";
+import { addCalendarDays } from "@/lib/park-settings";
 import { formatPrice } from "@/lib/pricing";
 
 export type StaySummary = {
@@ -102,14 +103,17 @@ export function StayExtendForm({
       return;
     }
 
+    // Free extension applied without Stripe.
+    if (data.success && data.new_check_out) {
+      window.location.reload();
+      return;
+    }
+
     setError(typeof data.error === "string" ? data.error : t.unavailable);
   }
 
-  const minDate = (() => {
-    const d = new Date(stay.check_out + "T12:00:00");
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
-  })();
+  // First selectable new departure = current checkout + 1 day (calendar, not timezone-shifted).
+  const minDate = addCalendarDays(stay.check_out, 1);
 
   return (
     <div className="mx-auto max-w-lg space-y-6">

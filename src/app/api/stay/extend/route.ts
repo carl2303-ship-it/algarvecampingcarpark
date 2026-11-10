@@ -56,11 +56,28 @@ export async function POST(request: Request) {
       );
     }
 
+    const supabase = createAdminClient();
+
+    // Zero-charge extension (e.g. promo / complimentary nights): apply immediately.
     if (quote.extensionCents <= 0) {
-      return NextResponse.json(
-        { error: "Não há valor a pagar para esta extensão" },
-        { status: 400 }
-      );
+      const { error: updateError } = await supabase
+        .from("reservations")
+        .update({
+          check_out: quote.newCheckOut,
+          total_cents: quote.newTotalCents,
+        })
+        .eq("id", reservation.id);
+
+      if (updateError) {
+        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        payment_url: null,
+        extension_cents: 0,
+        new_check_out: quote.newCheckOut,
+      });
     }
 
     const cancelToken = createStayToken(reservation.id);
@@ -82,7 +99,6 @@ export async function POST(request: Request) {
       accountingLines: quote.lines,
     });
 
-    const supabase = createAdminClient();
     await supabase.from("payments").insert({
       reservation_id: reservation.id,
       amount_cents: quote.extensionCents,

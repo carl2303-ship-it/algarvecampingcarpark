@@ -26,6 +26,7 @@ import { COMPLETED_RESERVATION_STATUSES } from "@/lib/admin-reservation-status";
 import { getSpotZoneSlug, spotIsOver9m } from "@/lib/park-pitch-map-defaults";
 import type { PitchMapSpotRecord } from "@/lib/pitch-map";
 import type { Zone } from "@/types/database";
+import { addCalendarDays } from "@/lib/park-settings";
 import { formatPrice } from "@/lib/pricing";
 import type { PricingSupplement } from "@/lib/pricing-supplements";
 import type { ReservationEmailRow, ReservationEmailType } from "@/lib/reservation-emails";
@@ -367,15 +368,15 @@ export function AdminReservationForm({
     setLoadingExtendQuote(true);
     setExtendQuoteError(null);
 
+    // Quote only the extra nights (current checkout → new departure), same as server.
     fetch(
-      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${initialReservation.check_in}&check_out=${extendCheckOut}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
+      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${initialReservation.check_out}&check_out=${extendCheckOut}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
       { signal: controller.signal }
     )
       .then((res) => res.json())
       .then((data) => {
         if (data.pricing?.totalCents != null) {
-          const extra = Math.max(0, data.pricing.totalCents - totalCents);
-          setExtendQuoteCents(extra);
+          setExtendQuoteCents(Math.max(0, data.pricing.totalCents));
           const oldOut = new Date(initialReservation.check_out + "T12:00:00");
           const newOut = new Date(extendCheckOut + "T12:00:00");
           setExtendNights(
@@ -404,7 +405,6 @@ export function AdminReservationForm({
     extendCheckOut,
     zoneId,
     numGuests,
-    totalCents,
     motorhomeOver9m,
     quoteAmperageParam,
     quoteManualParam,
@@ -1048,7 +1048,11 @@ export function AdminReservationForm({
                   <Input
                     id="extend_check_out"
                     type="date"
-                    min={checkOut || undefined}
+                    min={
+                      initialReservation
+                        ? addCalendarDays(initialReservation.check_out, 1)
+                        : undefined
+                    }
                     value={extendCheckOut}
                     onChange={(event) => setExtendCheckOut(event.target.value)}
                     className="mt-1"

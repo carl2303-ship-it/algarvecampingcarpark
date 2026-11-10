@@ -53,6 +53,18 @@ type ReservationForExtend = {
   manual_supplement_ids?: string[] | null;
 };
 
+/** Extra nights only — never reprice the whole stay against stored total_cents. */
+export function computeExtensionCharge(
+  storedTotalCents: number,
+  extraNightsTotalCents: number
+): { extensionCents: number; newTotalCents: number } {
+  const extensionCents = Math.max(0, extraNightsTotalCents);
+  return {
+    extensionCents,
+    newTotalCents: storedTotalCents + extensionCents,
+  };
+}
+
 function emptyQuote(
   reservation: ReservationForExtend,
   newCheckOut: string,
@@ -91,10 +103,11 @@ export async function quoteStayExtension(params: {
     return emptyQuote(reservation, newCheckOut, "A nova data de partida deve ser posterior à atual");
   }
 
+  // Only the newly added nights must be free — the current stay already holds the pitch.
   if (reservation.pitch_code) {
     const conflict = await findPitchOverlapConflict({
       pitchCode: reservation.pitch_code,
-      checkIn: reservation.check_in,
+      checkIn: reservation.check_out,
       checkOut: newCheckOut,
       excludeReservationId: reservation.id,
     });
@@ -121,13 +134,9 @@ export async function quoteStayExtension(params: {
     manualSupplementIds: reservation.manual_supplement_ids ?? [],
     supplements,
   };
-  const newPricing = calculateTotalPrice(
-    rates,
-    reservation.check_in,
-    newCheckOut,
-    reservation.num_guests,
-    pricingOptions
-  );
+  // Charge the added nights on their own (same approach as early arrival).
+  // Do not use full-stay reprice − stored total_cents: historical totals can diverge
+  // from current rates and overcharge (or yield €0 and block the guest online).
   const extraNightsPricing = calculateTotalPrice(
     rates,
     reservation.check_out,
@@ -135,7 +144,10 @@ export async function quoteStayExtension(params: {
     reservation.num_guests,
     pricingOptions
   );
-  const extensionCents = Math.max(0, newPricing.totalCents - reservation.total_cents);
+  const { extensionCents, newTotalCents } = computeExtensionCharge(
+    reservation.total_cents,
+    extraNightsPricing.totalCents
+  );
 
   const oldOut = new Date(reservation.check_out + "T12:00:00");
   const newOut = new Date(newCheckOut + "T12:00:00");
@@ -150,10 +162,10 @@ export async function quoteStayExtension(params: {
     oldCheckOut: reservation.check_out,
     newCheckOut,
     oldTotalCents: reservation.total_cents,
-    newTotalCents: newPricing.totalCents,
+    newTotalCents,
     extensionCents,
     nightsAdded,
-    lines: extraNightsPricing.totalCents === extensionCents ? extraNightsPricing.lines : [],
+    lines: extraNightsPricing.lines,
   };
 }
 
