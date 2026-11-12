@@ -180,6 +180,7 @@ export function AdminReservationForm({
   const [extendSendLink, setExtendSendLink] = useState(true);
   const [extending, setExtending] = useState(false);
   const [extendQuoteCents, setExtendQuoteCents] = useState<number | null>(null);
+  const [extendAmountEuros, setExtendAmountEuros] = useState("");
   const [extendNights, setExtendNights] = useState(0);
   const [extendQuoteError, setExtendQuoteError] = useState<string | null>(null);
   const [loadingExtendQuote, setLoadingExtendQuote] = useState(false);
@@ -350,8 +351,9 @@ export function AdminReservationForm({
   }, [vehiclePlate, isEdit, initialReservation?.id]);
 
   useEffect(() => {
-    if (!canExtend || !initialReservation || !extendCheckOut || !zoneId) {
+    if (!canExtend || !initialReservation || !extendCheckOut) {
       setExtendQuoteCents(null);
+      setExtendAmountEuros("");
       setExtendNights(0);
       setExtendQuoteError(null);
       return;
@@ -359,6 +361,7 @@ export function AdminReservationForm({
 
     if (extendCheckOut <= initialReservation.check_out) {
       setExtendQuoteCents(null);
+      setExtendAmountEuros("");
       setExtendNights(0);
       setExtendQuoteError(adminT.reservationForm.extendUnavailable);
       return;
@@ -368,31 +371,32 @@ export function AdminReservationForm({
     setLoadingExtendQuote(true);
     setExtendQuoteError(null);
 
-    // Quote only the extra nights (current checkout → new departure), same as server.
+    // Same endpoint/options as PATCH → Stripe amount matches what the admin sees.
     fetch(
-      `/api/admin/reservations/quote?zone_id=${zoneId}&check_in=${initialReservation.check_out}&check_out=${extendCheckOut}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
+      `/api/admin/reservations/${initialReservation.id}/extend?check_out=${encodeURIComponent(extendCheckOut)}&num_guests=${numGuests}&over_9m=${motorhomeOver9m ? "true" : "false"}${quoteAmperageParam}${quoteManualParam}`,
       { signal: controller.signal }
     )
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.pricing?.totalCents != null) {
-          setExtendQuoteCents(Math.max(0, data.pricing.totalCents));
-          const oldOut = new Date(initialReservation.check_out + "T12:00:00");
-          const newOut = new Date(extendCheckOut + "T12:00:00");
-          setExtendNights(
-            Math.max(
-              0,
-              Math.round((newOut.getTime() - oldOut.getTime()) / (1000 * 60 * 60 * 24))
-            )
-          );
-        } else {
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.extension_cents == null) {
           setExtendQuoteCents(null);
-          setExtendQuoteError(adminT.reservationForm.extendUnavailable);
+          setExtendAmountEuros("");
+          setExtendNights(0);
+          setExtendQuoteError(
+            typeof data.error === "string"
+              ? data.error
+              : adminT.reservationForm.extendUnavailable
+          );
+          return;
         }
+        setExtendQuoteCents(data.extension_cents);
+        setExtendAmountEuros(centsToEurosInput(data.extension_cents));
+        setExtendNights(data.nights_added ?? 0);
       })
       .catch((err) => {
         if (err.name !== "AbortError") {
           setExtendQuoteCents(null);
+          setExtendAmountEuros("");
           setExtendQuoteError(adminT.reservationForm.quoteError);
         }
       })
@@ -403,7 +407,6 @@ export function AdminReservationForm({
     canExtend,
     initialReservation,
     extendCheckOut,
-    zoneId,
     numGuests,
     motorhomeOver9m,
     quoteAmperageParam,
@@ -717,6 +720,12 @@ export function AdminReservationForm({
   async function handleExtend() {
     if (!isEdit || !initialReservation?.id || !extendCheckOut) return;
 
+    const amountCents = eurosToCents(extendAmountEuros);
+    if (extendSendLink && amountCents < 0) {
+      setError(adminT.reservationForm.extendAmountInvalid);
+      return;
+    }
+
     setExtending(true);
     setError(null);
     setExtendMessage(null);
@@ -727,6 +736,11 @@ export function AdminReservationForm({
       body: JSON.stringify({
         check_out: extendCheckOut,
         send_payment_link: extendSendLink,
+        amount_cents: amountCents,
+        num_guests: numGuests,
+        motorhome_over_9m: motorhomeOver9m,
+        electricity_amperage: pitchHasElectricity ? (electricityAmperage ?? 6) : null,
+        manual_supplement_ids: manualSupplementIds,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -1078,6 +1092,26 @@ export function AdminReservationForm({
                 </div>
               </div>
 
+              {extendQuoteCents != null && !extendQuoteError && (
+                <div>
+                  <Label htmlFor="extend_amount_euros">
+                    {adminT.reservationForm.extendAmountLabel}
+                  </Label>
+                  <Input
+                    id="extend_amount_euros"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={extendAmountEuros}
+                    onChange={(event) => setExtendAmountEuros(event.target.value)}
+                    className="mt-1 max-w-xs"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {adminT.reservationForm.extendAmountHint}
+                  </p>
+                </div>
+              )}
+
               <label className="flex items-start gap-2 cursor-pointer text-sm">
                 <input
                   type="checkbox"
@@ -1096,7 +1130,8 @@ export function AdminReservationForm({
                   !extendCheckOut ||
                   extendQuoteCents == null ||
                   Boolean(extendQuoteError) ||
-                  loadingExtendQuote
+                  loadingExtendQuote ||
+                  (extendSendLink && extendAmountEuros.trim() === "")
                 }
                 onClick={handleExtend}
               >

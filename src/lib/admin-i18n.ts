@@ -354,11 +354,15 @@ export const adminT = {
     extendDescription:
       "Prolonger le départ ou avancer l'arrivée. Les paiements déjà enregistrés gardent leurs dates d'origine ; le supplément apparaît comme solde / nouvelle ligne.",
     extendNewDeparture: "Nouvelle date de départ",
-    extendQuote: "Supplément : {amount} ({nights} nuit(s))",
+    extendQuote: "Supplément calculé : {amount} ({nights} nuit(s))",
+    extendAmountLabel: "Montant du lien Stripe (€)",
+    extendAmountHint:
+      "Ce montant est celui envoyé au client. Ajustez-le si la réception a annoncé un autre prix.",
+    extendAmountInvalid: "Montant de prolongation invalide.",
     extendUnavailable: "Prolongation impossible pour ces dates.",
     extendSendLink: "Envoyer le lien de paiement Stripe au client",
     extendSubmit: "Prolonger le séjour",
-    extendSuccess: "Séjour prolongé jusqu'au {date}. Supplément : {amount}.",
+    extendSuccess: "Séjour prolongé jusqu'au {date}. Lien / supplément : {amount}.",
     extendSuccessNoCharge: "Séjour prolongé jusqu'au {date}.",
     extendError: "Erreur lors de la prolongation.",
     extendNotEligible: "La prolongation n'est disponible que pour les réservations confirmées ou en check-in.",
