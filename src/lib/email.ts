@@ -314,10 +314,12 @@ export async function sendExtensionPaymentLink({
   const lang = resolveLocale(locale);
   const t = getEmailCopy(lang).extension;
 
+  const amountLabel = formatPrice(extensionCents);
+  const subject = `${t.subject} · ${amountLabel}`;
   const result = await client.resend.emails.send({
     from: client.from,
     to: guestEmail,
-    subject: t.subject,
+    subject,
     html: `
       <h1>${t.title}</h1>
       <p>${fillTemplate(t.greeting, { name: guestName })}</p>
@@ -325,9 +327,9 @@ export async function sendExtensionPaymentLink({
       <ul>
         <li><strong>${t.oldDeparture}:</strong> ${oldCheckOut}</li>
         <li><strong>${t.newDeparture}:</strong> ${newCheckOut}</li>
-        <li><strong>${t.amount}:</strong> ${formatPrice(extensionCents)}</li>
+        <li><strong>${t.amount}:</strong> ${amountLabel}</li>
       </ul>
-      <p><a href="${paymentUrl}" style="display:inline-block;padding:12px 24px;background:#0f766e;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">${t.payCta}</a></p>
+      <p><a href="${paymentUrl}" style="display:inline-block;padding:12px 24px;background:#0f766e;color:white;text-decoration:none;border-radius:8px;font-weight:bold;">${t.payCta} — ${amountLabel}</a></p>
       <p>${fillTemplate(t.copyLink, { url: paymentUrl })}</p>
       <p>${fillTemplate(t.questions, { from: client.from })}</p>
     `,
@@ -338,7 +340,7 @@ export async function sendExtensionPaymentLink({
       reservationId,
       emailType: "extension_link",
       sentTo: guestEmail,
-      subject: t.subject,
+      subject,
     });
   }
 }

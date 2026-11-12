@@ -257,15 +257,25 @@ export async function createExtensionCheckoutSession({
   locale?: Locale;
   accountingLines?: AccountingLine[];
 }) {
+  if (!Number.isFinite(extensionCents) || extensionCents <= 0) {
+    throw new Error("Extension Stripe amount must be a positive prolongation supplement");
+  }
+
   const stripe = await getStripe();
   const plate = vehiclePlate?.trim() || "";
   const platePart = plate ? `Matrícula: ${plate} | ` : "";
-  const productDescription = `${platePart}Lugar ${pitchCode}: ${oldCheckOut} → ${newCheckOut}`;
+  const amountLabel = `${(extensionCents / 100).toFixed(2)} €`;
+  // Explicitly label as prolongation supplement so it is never confused with the
+  // original booking payment (A14: link showed the paid booking total again).
+  const productName = `${SITE_NAME} — Prolongation de séjour · ${amountLabel}${
+    plate ? ` · ${plate}` : ""
+  }`;
+  const productDescription = `${platePart}Supplément prolongation lieu ${pitchCode}: ${oldCheckOut} → ${newCheckOut} · ${amountLabel}`;
   const line_items = await stripeCheckoutLineItems({
     stripe,
     accountingLines,
     amountCents: extensionCents,
-    fallbackName: `${SITE_NAME} — Extensão de estadia${plate ? ` · ${plate}` : ""}`,
+    fallbackName: productName,
     fallbackDescription: productDescription,
   });
   return stripe.checkout.sessions.create({
@@ -279,6 +289,8 @@ export async function createExtensionCheckoutSession({
         reservation_id: reservationId,
         vehicle_plate: plate,
         pitch_code: pitchCode,
+        type: "extension",
+        extension_cents: String(extensionCents),
       },
     },
     metadata: {

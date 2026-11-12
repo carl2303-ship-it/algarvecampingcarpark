@@ -86,4 +86,30 @@ describe("extension vs full-stay delta (regression)", () => {
     assert.ok(fixed.extensionCents > 0);
     assert.equal(fixed.extensionCents, extraNights.totalCents);
   });
+
+  it("A14 case: extending ~same length must not re-charge the original booking total", () => {
+    // Guest paid 30 nights (stored total). Admin extends another 30 nights.
+    // Legacy formula (full reprice − stored total) equals the original payment again —
+    // so Stripe asked for 406 € a second time instead of the prolongation supplement.
+    const opts = { electricityAmperage: 6 as const, supplements: FALLBACK_SUPPLEMENTS };
+    const originalStay = calculateTotalPrice([winter], "2026-02-01", "2026-03-03", 2, opts);
+    const storedTotalCents = originalStay.totalCents; // e.g. booking payment
+    const extraNights = calculateTotalPrice([winter], "2026-03-03", "2026-04-02", 2, opts);
+    const fullReprice = calculateTotalPrice([winter], "2026-02-01", "2026-04-02", 2, opts);
+
+    const legacyDelta = Math.max(0, fullReprice.totalCents - storedTotalCents);
+    const fixed = computeExtensionCharge(storedTotalCents, extraNights.totalCents);
+
+    assert.equal(originalStay.nights, 30);
+    assert.equal(extraNights.nights, 30);
+    assert.equal(
+      legacyDelta,
+      storedTotalCents,
+      "legacy delta re-asks the original booking amount when extending the same length"
+    );
+    assert.equal(fixed.extensionCents, extraNights.totalCents);
+    assert.equal(fixed.newTotalCents, storedTotalCents + extraNights.totalCents);
+    // Stripe must charge the prolongation nights — not replay paid_cents / total_cents.
+    assert.notEqual(fixed.extensionCents, 0);
+  });
 });
