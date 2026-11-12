@@ -329,13 +329,14 @@ const fr: EmailCopy = {
     cta: "Prolonger le séjour",
   },
   extension: {
-    subject: `Prolongation de séjour — ${SITE_NAME}`,
-    title: "Prolongation de séjour",
+    subject: `Prolongation de séjour — paiement du supplément — ${SITE_NAME}`,
+    title: "Prolongation de séjour — supplément à payer",
     greeting: "Bonjour {name},",
-    intro: "Votre séjour sur l'emplacement <strong>{pitch}</strong> a été prolongé.",
+    intro:
+      "Votre séjour sur l'emplacement <strong>{pitch}</strong> a été prolongé. Ce lien concerne uniquement le <strong>supplément de prolongation</strong> (pas le paiement initial de la réservation).",
     oldDeparture: "Départ précédent",
     newDeparture: "Nouveau départ",
-    amount: "Montant supplémentaire",
+    amount: "Montant du supplément de prolongation",
     payCta: "Payer la prolongation",
     copyLink: "Ou copiez ce lien : {url}",
     questions: "Des questions ? {from}",
