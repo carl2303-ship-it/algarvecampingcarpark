@@ -379,6 +379,9 @@ const de = {
     extension_cost: "Betrag der Verlängerung",
     nights_added: "{n} zusätzliche Nacht/Nächte",
     unavailable: "Der Stellplatz ist bis zu diesem Datum nicht verfügbar.",
+    must_be_later: "Die neue Abreise muss nach der aktuellen Abreise liegen ({date}).",
+    conflict:
+      "Stellplatz {pitch} hat bereits eine andere Buchung ({from} → {to}). Online-Verlängerung nur möglich, wenn diese Nächte frei sind.",
     pay: "Bezahlen und verlängern",
     hint: "Zusätzliche Nächte werden erst nach der Zahlung reserviert.",
     contact: "Fragen? Kontaktieren Sie uns",

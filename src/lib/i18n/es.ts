@@ -379,6 +379,9 @@ const es = {
     extension_cost: "Importe de la extensión",
     nights_added: "{n} noche(s) extra",
     unavailable: "La plaza no está disponible hasta esa fecha.",
+    must_be_later: "La nueva salida debe ser posterior a la salida actual ({date}).",
+    conflict:
+      "La plaza {pitch} ya tiene otra reserva ({from} → {to}). La prolongación online solo es posible si esas noches están libres.",
     pay: "Pagar y prolongar",
     hint: "La plaza solo queda reservada para las noches extra después del pago.",
     contact: "¿Preguntas? Contáctenos",

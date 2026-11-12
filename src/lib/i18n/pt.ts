@@ -378,6 +378,9 @@ const pt = {
     extension_cost: "Valor da extensão",
     nights_added: "{n} noite(s) extra",
     unavailable: "O lugar não está disponível até essa data.",
+    must_be_later: "A nova partida tem de ser depois da partida atual ({date}).",
+    conflict:
+      "O lugar {pitch} já tem outra reserva ({from} → {to}). Online só é possível se essas noites estiverem livres.",
     pay: "Pagar e prolongar",
     hint: "O lugar só fica reservado para as noites extra depois do pagamento.",
     contact: "Questões? Contacte-nos",

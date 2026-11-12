@@ -47,7 +47,11 @@ export function StayExtendForm({
     if (!newCheckOut || newCheckOut <= stay.check_out) {
       setExtensionCents(null);
       setNightsAdded(0);
-      setQuoteError(newCheckOut && newCheckOut <= stay.check_out ? t.unavailable : null);
+      setQuoteError(
+        newCheckOut && newCheckOut <= stay.check_out
+          ? t.must_be_later.replace("{date}", stay.check_out)
+          : null
+      );
       return;
     }
 
@@ -63,7 +67,16 @@ export function StayExtendForm({
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           setExtensionCents(null);
-          setQuoteError(typeof data.error === "string" ? data.error : t.unavailable);
+          if (data.conflict?.check_in && data.conflict?.check_out) {
+            setQuoteError(
+              t.conflict
+                .replace("{pitch}", stay.pitch_code ?? "—")
+                .replace("{from}", data.conflict.check_in)
+                .replace("{to}", data.conflict.check_out)
+            );
+          } else {
+            setQuoteError(typeof data.error === "string" ? data.error : t.unavailable);
+          }
           return;
         }
         setExtensionCents(data.extension_cents ?? 0);
@@ -78,7 +91,15 @@ export function StayExtendForm({
       .finally(() => setLoadingQuote(false));
 
     return () => controller.abort();
-  }, [newCheckOut, stay.check_out, token, t.unavailable]);
+  }, [
+    newCheckOut,
+    stay.check_out,
+    stay.pitch_code,
+    token,
+    t.unavailable,
+    t.must_be_later,
+    t.conflict,
+  ]);
 
   async function handlePay() {
     if (!newCheckOut || extensionCents == null) return;

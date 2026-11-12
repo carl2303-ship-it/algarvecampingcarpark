@@ -376,6 +376,9 @@ const en = {
     extension_cost: "Extension amount",
     nights_added: "{n} extra night(s)",
     unavailable: "The pitch is not available until that date.",
+    must_be_later: "The new departure must be after the current departure ({date}).",
+    conflict:
+      "Pitch {pitch} already has another booking ({from} → {to}). Online extension is only possible if those nights are free.",
     pay: "Pay and extend",
     hint: "Extra nights are only reserved after payment.",
     contact: "Questions? Contact us",

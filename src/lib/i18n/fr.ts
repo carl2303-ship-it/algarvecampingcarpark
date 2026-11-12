@@ -379,6 +379,9 @@ const fr = {
     extension_cost: "Montant de la prolongation",
     nights_added: "{n} nuit(s) supplémentaire(s)",
     unavailable: "La place n'est pas disponible jusqu'à cette date.",
+    must_be_later: "La nouvelle date de départ doit être après le départ actuel ({date}).",
+    conflict:
+      "L'emplacement {pitch} a déjà une autre réservation ({from} → {to}). La prolongation en ligne n'est possible que si ces nuits sont libres.",
     pay: "Payer et prolonger",
     hint: "La place n'est réservée pour les nuits supplémentaires qu'après le paiement.",
     contact: "Des questions ? Contactez-nous",
