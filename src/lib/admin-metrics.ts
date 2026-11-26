@@ -278,7 +278,12 @@ export async function buildPeriodSnapshot(
         paymentsCount: row.paymentsCount,
         reservationsCount: row.reservationIds.size,
       }))
-      .sort((a, b) => b.totalCents - a.totalCents),
+      .sort((a, b) =>
+        a.vehiclePlate.localeCompare(b.vehiclePlate, "fr", {
+          sensitivity: "base",
+          numeric: true,
+        })
+      ),
   };
 }
 
