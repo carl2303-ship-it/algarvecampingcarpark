@@ -386,14 +386,14 @@ export async function buildDailyTransactionsPdf(params: {
     }
   };
 
-  page.drawText(sanitizePdfText("Algarve Camping Car Park - Transactions 24h"), {
+  page.drawText(sanitizePdfText("Algarve Camping Car Park - Transactions du jour"), {
     x: margin,
     y,
     size: 14,
     font: bold,
   });
   y -= 18;
-  page.drawText(sanitizePdfText(`Rapport du ${params.reportDate} (heure de Lisbonne)`), {
+  page.drawText(sanitizePdfText(`Rapport du ${params.reportDate} (jour civil, Lisbonne)`), {
     x: margin,
     y,
     size: 10,
@@ -402,7 +402,7 @@ export async function buildDailyTransactionsPdf(params: {
   y -= 14;
   page.drawText(
     sanitizePdfText(
-      `Periode : ${formatLisbonDateTime(params.periodStart.toISOString())} -> ${formatLisbonDateTime(params.periodEnd.toISOString())}`
+      `Periode : ${formatLisbonDateTime(params.periodStart.toISOString())} -> ${formatLisbonDateTime(params.periodEnd.toISOString())} (excl.)`
     ),
     { x: margin, y, size: 9, font }
   );
@@ -480,9 +480,28 @@ export async function buildDailyTransactionsPdf(params: {
   return pdf.save();
 }
 
+function lisbonCalendarDay(at: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(at);
+}
+
+/** Previous complete Lisbon calendar day (for the ~13h cron). */
+export function previousLisbonCalendarDay(at: Date = new Date()): string {
+  return addDays(lisbonCalendarDay(at), -1);
+}
+
 export async function generateAndStoreDailyPaymentReport(
   supabase: SupabaseClient,
-  options?: { force?: boolean; at?: Date }
+  options?: {
+    force?: boolean;
+    at?: Date;
+    /** YYYY-MM-DD in Lisbon; defaults to the Lisbon calendar day of `at`. */
+    reportDate?: string;
+  }
 ): Promise<{
   report_date: string;
   transaction_count: number;
@@ -491,14 +510,20 @@ export async function generateAndStoreDailyPaymentReport(
   id: string;
 }> {
   const at = options?.at ?? new Date();
-  const reportDate = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Lisbon",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(at);
-  const periodEnd = at;
-  const periodStart = new Date(at.getTime() - 24 * 60 * 60 * 1000);
+  const reportDate =
+    options?.reportDate && /^\d{4}-\d{2}-\d{2}$/.test(options.reportDate)
+      ? options.reportDate
+      : lisbonCalendarDay(at);
+
+  // Calendar day in Lisbon — never a rolling 24h window from cron clock time.
+  // Rolling windows left gaps/overlaps when the job did not run at the same hour each day
+  // (e.g. RECH883 €50 on 2026-11-22 10:29 fell between two reports).
+  const { startIso, endIsoExclusive } = periodBounds({
+    start: reportDate,
+    end: reportDate,
+  });
+  const periodStart = new Date(startIso);
+  const periodEnd = new Date(endIsoExclusive);
 
   if (!options?.force) {
     const { data: existing } = await supabase

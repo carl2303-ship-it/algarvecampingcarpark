@@ -129,8 +129,7 @@ export function AdminMetricsDashboard({
   async function generateNow() {
     setGenerating(true);
     try {
-      // Same behaviour as the 13h cron: create today's PDF if missing, otherwise reuse it.
-      // (Previously force:true always regenerated and could 500 on WinAnsi names while cron still "worked".)
+      // Today's Lisbon calendar day; reuse if it already exists.
       const res = await fetch("/api/admin/metrics/daily-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

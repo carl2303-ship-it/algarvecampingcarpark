@@ -1,6 +1,7 @@
 /**
- * Netlify scheduled function — runs daily at 12:00 UTC (~13:00 Lisbon in summer).
- * Calls the Next.js cron route with CRON_SECRET to generate the 24h payments PDF.
+ * Netlify scheduled function — runs daily at 12:00 UTC (~12:00/13:00 Lisbon).
+ * Calls the Next.js cron route with CRON_SECRET to rebuild yesterday's
+ * Lisbon calendar-day payments PDF (avoids gaps from rolling 24h windows).
  */
 export default async () => {
   const baseUrl =

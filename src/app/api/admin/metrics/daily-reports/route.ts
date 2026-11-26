@@ -31,11 +31,18 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    // Default matches the 13h cron: reuse today's report if it already exists.
-    // Only regenerate when the client explicitly sends { force: true }.
+    // Default: today's Lisbon calendar day; reuse if it already exists.
+    // Pass force:true or report_date to regenerate / backfill a specific day.
     const force = Boolean(body?.force);
+    const reportDate =
+      typeof body?.report_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.report_date)
+        ? body.report_date
+        : undefined;
     const supabase = createAdminClient();
-    const result = await generateAndStoreDailyPaymentReport(supabase, { force });
+    const result = await generateAndStoreDailyPaymentReport(supabase, {
+      force,
+      reportDate,
+    });
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
     console.error("Generate daily report error:", error);

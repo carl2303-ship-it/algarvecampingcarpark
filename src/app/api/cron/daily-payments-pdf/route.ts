@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { generateAndStoreDailyPaymentReport } from "@/lib/admin-metrics";
+import {
+  generateAndStoreDailyPaymentReport,
+  previousLisbonCalendarDay,
+} from "@/lib/admin-metrics";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -18,9 +21,16 @@ export async function GET(request: Request) {
   }
 
   try {
-    const force = new URL(request.url).searchParams.get("force") === "1";
+    const url = new URL(request.url);
+    // Default: rebuild yesterday's complete Lisbon calendar day (cron ~13h).
+    const force = url.searchParams.get("force") !== "0";
+    const reportDate =
+      url.searchParams.get("report_date") ?? previousLisbonCalendarDay();
     const supabase = createAdminClient();
-    const result = await generateAndStoreDailyPaymentReport(supabase, { force });
+    const result = await generateAndStoreDailyPaymentReport(supabase, {
+      force,
+      reportDate,
+    });
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
     console.error("Daily payments PDF cron error:", error);
