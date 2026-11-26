@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { generateAndStoreDailyPaymentReport } from "../src/lib/admin-metrics.ts";
+import { generateAndStoreDailyPaymentReport } from "../src/lib/admin-metrics";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
