@@ -134,11 +134,64 @@ async function loadCountryByGuestId(
   const map = new Map<string, string | null>();
   if (unique.length === 0) return map;
 
-  const { data } = await supabase.from("guests").select("id, country").in("id", unique);
-  for (const guest of data ?? []) {
-    map.set(guest.id, guest.country);
+  for (let i = 0; i < unique.length; i += IN_CHUNK_SIZE) {
+    const chunk = unique.slice(i, i + IN_CHUNK_SIZE);
+    const { data } = await supabase.from("guests").select("id, country").in("id", chunk);
+    for (const guest of data ?? []) {
+      map.set(guest.id, guest.country);
+    }
   }
   return map;
+}
+
+const PAYMENTS_PAGE_SIZE = 1000;
+const IN_CHUNK_SIZE = 100;
+
+/** PostgREST caps a single response (~1000 rows). Paginate so today's transfers are never dropped. */
+async function fetchAllSucceededPayments(
+  supabase: SupabaseClient,
+  startIso: string,
+  endIsoExclusive: string
+): Promise<PaymentRow[]> {
+  const all: PaymentRow[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from("payments")
+      .select("id, amount_cents, payment_method, created_at, reservation_id")
+      .eq("status", "succeeded")
+      .gte("created_at", startIso)
+      .lt("created_at", endIsoExclusive)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + PAYMENTS_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const batch = (data ?? []) as PaymentRow[];
+    all.push(...batch);
+    if (batch.length < PAYMENTS_PAGE_SIZE) break;
+    from += PAYMENTS_PAGE_SIZE;
+  }
+  return all;
+}
+
+async function loadReservationsByIds(
+  supabase: SupabaseClient,
+  reservationIds: string[]
+): Promise<Map<string, ReservationLite>> {
+  const reservationsById = new Map<string, ReservationLite>();
+  for (let i = 0; i < reservationIds.length; i += IN_CHUNK_SIZE) {
+    const chunk = reservationIds.slice(i, i + IN_CHUNK_SIZE);
+    const { data: reservations, error: reservationError } = await supabase
+      .from("reservations")
+      .select("id, guest_name, vehicle_plate, guest_id, created_at")
+      .in("id", chunk);
+    if (reservationError) throw reservationError;
+    for (const reservation of (reservations ?? []) as ReservationLite[]) {
+      reservationsById.set(reservation.id, reservation);
+    }
+  }
+  return reservationsById;
 }
 
 async function loadPaymentsWindow(
@@ -150,29 +203,10 @@ async function loadPaymentsWindow(
   reservationsById: Map<string, ReservationLite>;
   countryByGuestId: Map<string, string | null>;
 }> {
-  const { data: payments, error } = await supabase
-    .from("payments")
-    .select("id, amount_cents, payment_method, created_at, reservation_id")
-    .eq("status", "succeeded")
-    .gte("created_at", startIso)
-    .lt("created_at", endIsoExclusive)
-    .order("created_at", { ascending: true });
+  const payments = await fetchAllSucceededPayments(supabase, startIso, endIsoExclusive);
 
-  if (error) throw error;
-
-  const reservationIds = [...new Set((payments ?? []).map((p) => p.reservation_id))];
-  const reservationsById = new Map<string, ReservationLite>();
-
-  if (reservationIds.length > 0) {
-    const { data: reservations, error: reservationError } = await supabase
-      .from("reservations")
-      .select("id, guest_name, vehicle_plate, guest_id, created_at")
-      .in("id", reservationIds);
-    if (reservationError) throw reservationError;
-    for (const reservation of (reservations ?? []) as ReservationLite[]) {
-      reservationsById.set(reservation.id, reservation);
-    }
-  }
+  const reservationIds = [...new Set(payments.map((p) => p.reservation_id))];
+  const reservationsById = await loadReservationsByIds(supabase, reservationIds);
 
   const countryByGuestId = await loadCountryByGuestId(
     supabase,
@@ -180,7 +214,7 @@ async function loadPaymentsWindow(
   );
 
   return {
-    payments: (payments ?? []) as PaymentRow[],
+    payments,
     reservationsById,
     countryByGuestId,
   };
@@ -194,15 +228,31 @@ export async function buildPeriodSnapshot(
 
   const [{ payments, reservationsById }, reservationsCreated] = await Promise.all([
     loadPaymentsWindow(supabase, startIso, endIsoExclusive),
-    supabase
-      .from("reservations")
-      .select("id, guest_name, vehicle_plate, created_at")
-      .gte("created_at", startIso)
-      .lt("created_at", endIsoExclusive)
-      .then(({ data, error }) => {
+    (async () => {
+      const all: Array<{
+        id: string;
+        guest_name: string;
+        vehicle_plate: string | null;
+        created_at: string;
+      }> = [];
+      let from = 0;
+      for (;;) {
+        const { data, error } = await supabase
+          .from("reservations")
+          .select("id, guest_name, vehicle_plate, created_at")
+          .gte("created_at", startIso)
+          .lt("created_at", endIsoExclusive)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, from + PAYMENTS_PAGE_SIZE - 1);
         if (error) throw error;
-        return data ?? [];
-      }),
+        const batch = data ?? [];
+        all.push(...batch);
+        if (batch.length < PAYMENTS_PAGE_SIZE) break;
+        from += PAYMENTS_PAGE_SIZE;
+      }
+      return all;
+    })(),
   ]);
 
   const byMethodMap = new Map<string, { totalCents: number; count: number }>();

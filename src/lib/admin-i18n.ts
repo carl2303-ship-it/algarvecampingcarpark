@@ -253,9 +253,9 @@ export const adminT = {
     emptyClients: "Aucun client sur cette période.",
     pdfTitle: "PDF quotidien des transactions",
     pdfHint:
-      "Généré chaque jour à 13h (Lisbonne) avec les paiements des dernières 24 h : immatriculation, nom, pays, montant, méthode.",
+      "Le cron 13h (Lisbonne) archive la veille. « Générer maintenant » recalcule le jour civil d'aujourd'hui (espèces, virements, Stripe, etc.).",
     pdfGenerateNow: "Générer maintenant",
-    pdfGenerated: "PDF quotidien généré.",
+    pdfGenerated: "PDF du jour régénéré ({count} transaction(s)).",
     pdfAlreadyExists: "Le PDF du jour (calendrier Lisbonne) existe déjà.",
     pdfGenerateError: "Impossible de générer le PDF.",
     pdfEmpty: "Aucun rapport PDF pour l'instant.",

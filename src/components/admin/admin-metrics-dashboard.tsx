@@ -129,16 +129,20 @@ export function AdminMetricsDashboard({
   async function generateNow() {
     setGenerating(true);
     try {
-      // Today's Lisbon calendar day; reuse if it already exists.
+      // Always regenerate today's Lisbon day so virements/cash added after the
+      // first generate (or after an empty morning PDF) appear in the report.
       const res = await fetch("/api/admin/metrics/daily-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ force: false }),
+        body: JSON.stringify({ force: true }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? adminT.metrics.pdfGenerateError);
       toast.success(
-        data.created === false ? adminT.metrics.pdfAlreadyExists : adminT.metrics.pdfGenerated
+        adminT.metrics.pdfGenerated.replace(
+          "{count}",
+          String(data.transaction_count ?? "—")
+        )
       );
       await refreshReports();
     } catch (error) {
